@@ -1,11 +1,12 @@
+#include <RadioLib.h>
 #include <map>
 #include <ArduinoJson.h>
-#include <painlessMesh.h>
 #include <Ticker.h>
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_GFX.h>
 #include <ezButton.h>
+#include "Arduino.h"
 
 // OLED Settings
 #define OLED_SDA 21
@@ -13,7 +14,6 @@
 #define OLED_RST 16
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
 #define OLED_ADDR 0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
@@ -21,38 +21,70 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 #define TEAM_BLUE 0
 #define TEAM_YELLOW 1
 
+// Node variables
+uint8_t NodeId; // 8 characters + null terminator
+void setNodeId()
+{
+  NodeId = random(0, 255); // Random number between 0 and 255
+  Serial.print("Generated Node ID: ");
+  Serial.println(NodeId);
+}
+
 // Mesh Settings
-#define MESH_PREFIX "SPASLORAMESH"
-#define MESH_PASSWORD "SPASRATSSTAR"
-#define MESH_PORT 2137
-#define LORA_FREQ 433E6 // 433E6 (Asia/EU),  868E6 (EU), 915E6 (US)
-#define LORA_SF 12      // Spreading Factor (7-12, higher = longer range but slower)
-#define LORA_BW 125E3   // Bandwidth (125 kHz is common)
+SX1278 radio = new Module(18, 26, 14, 33); // CS, DIO0, RST, DIO1
 
-// buttons
-#define debounce 250 // 250ms debounce time
+// Message format
+#define WHO_IS_OUT_THERE 0x01
+#define I_AM_HERE 0x02
 
+int16_t seqNumber = 0;
+
+#pragma pack(push, 1)
+typedef struct
+{
+  uint8_t type;          // message type
+  uint32_t nodeId;       // node id
+  uint16_t seqNumber;    // sequence number
+  uint16_t neighbors[5]; // neighbor node ids
+  uint8_t neighborCount; // number of neighbors
+  uint8_t isLeader;      // is this node a leader
+} DiscoveryMessage;
+#pragma pack(pop)
+
+struct NodesTable
+{
+  uint32_t nodeId;
+  uint32_t nextHop;
+  uint64_t lastSeen;
+  bool isLeader;
+  int HopCount;
+};
+
+NodesTable nodesTable[10]; // Array to store node information
+
+// Buttons
+#define debounce 250          // 250ms debounce time
 ezButton teamYellowButton(0); // GPIO 0 (IO0)
 ezButton teamBlueButton(4);   // GPIO 4 (IO4)
 ezButton startGameButton(2);  // GPIO 2 (IO2)
 
-// leds
+// LEDs
 #define LED_YELLOW 13 // GPIO 13 (IO15)
 #define LED_BLUE 12   // GPIO 12 (IO13)
 
-// system variables
-painlessMesh mesh;
+// System variables
 Ticker teamScoreTicker;
 Ticker screenUpdateTicker;
 Ticker nodeScoreUpdateTicker;
 Ticker totalScoreTicker;
 
-// game variables
+// Game variables
 bool isGameInProgress = false;
 int gameDuration = 300;         // 5 minutes in seconds
 int pointControlledByTeam = 99; // 99 = none, 1 = blue, 2 = yellow
+String msg = "";
 
-// team variables
+// Team variables
 struct Team
 {
   int id;
@@ -75,7 +107,32 @@ struct NodeTeamScores
 
 NodeTeamScores nodeScores[10];
 
-// set all node scores and nodeid to 0
+// LoRa Settings
+#define LORA_BAND 433.0         // LoRa frequency band (433 MHz)
+#define LORA_SPREADING_FACTOR 7 // Spreading factor (7-12)
+#define LORA_BANDWIDTH 125      // Bandwidth (125 kHz)
+#define LORA_CODING_RATE 5      // Coding rate (4/5)
+#define LORA_SYNC_WORD 0x12     // Sync word for LoRa communication
+#define LORA_PREAMBLE_LENGTH 8  // Preamble length (in symbols)
+#define LORA_TX_POWER 10        // Transmission power (in dBm)
+#define LORA_RX_TIMEOUT 1000    // Receive timeout (in milliseconds)
+
+// Function declarations
+void resetNodeScores();
+void onRecive();
+void sendLoRaMsg(uint8_t *msg, size_t length);
+void sendDiscoveryPacket(uint16_t nodeId, uint16_t seqNumber, uint16_t *neighbors, uint8_t neighborCount);
+void discoveryLoop();
+void updateNodeTeamScore(uint32_t nodeId, int teamId, int score);
+void updateTotalTeamScores();
+void broadcastCurrentNodeScore();
+void receivedCallback(uint32_t from, String &msg);
+void updateDisplay();
+void updateTeamScore(int teamId, int score);
+void updateTeamScoreTest();
+void changeLedColor(int teamId);
+
+// Function definitions
 void resetNodeScores()
 {
   for (int i = 0; i < sizeof(nodeScores) / sizeof(nodeScores[0]); i++)
@@ -86,10 +143,86 @@ void resetNodeScores()
   }
 }
 
+void onRecive()
+{
+  uint8_t receivedBuffer[256];             // Buffer to store received bytes
+  size_t length = radio.getPacketLength(); // Get the length of the received packet
+  int state = radio.readData(receivedBuffer, length);
+  uint8_t type = receivedBuffer[0];
+  
+  if (type == WHO_IS_OUT_THERE)
+  {
+    DiscoveryMessage *packet = (DiscoveryMessage *)receivedBuffer;
+    for (int i = 0; i < sizeof(nodesTable) / sizeof(nodesTable[0]); i++)
+    {
+      if (nodesTable[i].nodeId == 0)
+      {
+        nodesTable[i].nodeId = packet->nodeId;
+        nodesTable[i].nextHop = packet->nodeId;
+        nodesTable[i].lastSeen = millis();
+        nodesTable[i].isLeader = packet->isLeader;
+        nodesTable[i].HopCount = 1;
+        break;
+      }
+    }
+    //this is mostly for debugging purposes
+    Serial.println("Node Table:");
+    for (int i = 0; i < sizeof(nodesTable) / sizeof(nodesTable[0]); i++)
+    {
+      if (nodesTable[i].nodeId != 0)
+      {
+        Serial.print("Node ID: ");
+        Serial.print(nodesTable[i].nodeId);
+        Serial.print(", Next Hop: ");
+        Serial.print(nodesTable[i].nextHop);
+        Serial.print(", Last Seen: ");
+        Serial.print(nodesTable[i].lastSeen);
+        Serial.print(", Is Leader: ");
+        Serial.print(nodesTable[i].isLeader);
+        Serial.print(", Hop Count: ");
+        Serial.println(nodesTable[i].HopCount);
+      }
+    }
+  }
+}
+
+void sendLoRaMsg(uint8_t *msg, size_t length)
+{
+  int state = radio.transmit(msg, length);
+  if (state == RADIOLIB_ERR_NONE)
+  {
+    Serial.println("Message sent!");
+  }
+  radio.startReceive(); // Start listening again its important to start receiving again after sending a message
+}
+
+void sendDiscoveryPacket(uint16_t nodeId, uint16_t seqNumber, uint16_t *neighbors, uint8_t neighborCount)
+{
+  DiscoveryMessage msg;
+  msg.type = WHO_IS_OUT_THERE;
+  msg.nodeId = nodeId;
+  msg.seqNumber = seqNumber;
+  msg.neighborCount = neighborCount;
+  msg.isLeader = 0x00;
+  memcpy(msg.neighbors, neighbors, sizeof(uint16_t) * neighborCount);
+  size_t msgSize = sizeof(msg) - sizeof(msg.neighbors) + sizeof(uint16_t) * neighborCount;
+  Serial.print("Sending discovery packet of size: ");
+  Serial.println(msgSize);
+  uint8_t *msgBuffer = (uint8_t *)&msg;
+  sendLoRaMsg(msgBuffer, msgSize);
+}
+
+void discoveryLoop()
+{
+    uint16_t neighbors[5] = {};
+    sendDiscoveryPacket(NodeId, seqNumber++, neighbors, sizeof(neighbors) / sizeof(neighbors[0]));
+    Serial.println("Discovery packet sent.");
+}
+
 void updateNodeTeamScore(uint32_t nodeId, int teamId, int score)
 {
   for (auto &node : nodeScores)
-  { // Iterate through the nodeScores array
+  {
     if (node.nodeId == nodeId)
     {
       if (teamId == TEAM_BLUE)
@@ -103,22 +236,20 @@ void updateNodeTeamScore(uint32_t nodeId, int teamId, int score)
       return;
     }
   }
-  // find empty slot in nodeScores array
   for (auto &node : nodeScores)
   {
     if (node.nodeId == 0)
-    { // Assuming 0 means uninitialized
+    {
       NodeTeamScores newNode;
       newNode.nodeId = nodeId;
       newNode.teamScores[TEAM_BLUE].score = 0;
       newNode.teamScores[TEAM_YELLOW].score = 0;
-      node = newNode; // Assign the new node to the empty slot
+      node = newNode;
       return;
     }
   }
 }
 
-// sum all node scores and update total team scores
 void updateTotalTeamScores()
 {
   totalTeamsScore[TEAM_BLUE].score = 0;
@@ -126,7 +257,7 @@ void updateTotalTeamScores()
 
   for (auto &node : nodeScores)
   {
-    if (node.nodeId != 0) // Check if the node is initialized
+    if (node.nodeId != 0)
     {
       totalTeamsScore[TEAM_BLUE].score += node.teamScores[TEAM_BLUE].score;
       totalTeamsScore[TEAM_YELLOW].score += node.teamScores[TEAM_YELLOW].score;
@@ -134,30 +265,22 @@ void updateTotalTeamScores()
   }
 }
 
-// send node scores to all nodes
 void broadcastCurrentNodeScore()
 {
   if (isGameInProgress)
   {
     JsonDocument doc;
-    doc["id"] = mesh.getNodeId();
     doc["tB"] = localTeamsScore[0].score;
     doc["tY"] = localTeamsScore[1].score;
 
     String jsonString;
     serializeJson(doc, jsonString);
-    if (mesh.sendBroadcast(jsonString, true))
-    {
-      Serial.println("Broadcasting current node scores...");
-    }
-    else
-    {
-      Serial.println("Failed to broadcast current node scores.");
-    }
+
+    Serial.println("Broadcasting current node scores...");
+    Serial.println("Failed to broadcast current node scores.");
   }
 }
 
-// receive node scores from all nodes
 void receivedCallback(uint32_t from, String &msg)
 {
   Serial.printf("Received from %u: %s\n", from, msg.c_str());
@@ -188,7 +311,6 @@ void updateDisplay()
   display.setCursor(0, 0);
 
   display.print("Connected nodes: ");
-  display.println(mesh.getNodeList().size());
 
   display.print("Game in progress: ");
   display.println(isGameInProgress ? "Yes" : "No");
@@ -220,109 +342,118 @@ void updateTeamScore(int teamId, int score)
   }
 }
 
-// TESTING TEAM SCORE UPDATE
 void updateTeamScoreTest()
 {
-
   if (pointControlledByTeam == TEAM_BLUE)
   {
-    updateTeamScore(TEAM_BLUE, 1); // Increment Blue team score by 1
+    updateTeamScore(TEAM_BLUE, 1);
   }
   else if (pointControlledByTeam == TEAM_YELLOW)
   {
-    updateTeamScore(TEAM_YELLOW, 1); // Increment Yellow team score by 1
+    updateTeamScore(TEAM_YELLOW, 1);
   }
 }
 
-// change led color based on team
 void changeLedColor(int teamId)
 {
   if (teamId == TEAM_BLUE)
   {
-    digitalWrite(LED_YELLOW, LOW); // Turn off yellow LED
-    digitalWrite(LED_BLUE, HIGH);  // Turn on blue LED
+    digitalWrite(LED_YELLOW, LOW);
+    digitalWrite(LED_BLUE, HIGH);
   }
   else if (teamId == TEAM_YELLOW)
   {
-    digitalWrite(LED_BLUE, LOW);    // Turn off blue LED
-    digitalWrite(LED_YELLOW, HIGH); // Turn on yellow LED
+    digitalWrite(LED_BLUE, LOW);
+    digitalWrite(LED_YELLOW, HIGH);
   }
   else
   {
-    digitalWrite(LED_BLUE, LOW);   // Turn off blue LED
-    digitalWrite(LED_YELLOW, LOW); // Turn off yellow LED
+    digitalWrite(LED_BLUE, LOW);
+    digitalWrite(LED_YELLOW, LOW);
   }
 }
 
+// Setup and loop
 void setup()
 {
-  // add serial monitor for debugging
   Serial.begin(115200);
   Serial.println("Starting...");
 
-  // Initialize OLED
-  Wire.begin(OLED_SDA, OLED_SCL); // SDA=GPIO4, SCL=GPIO15 (change pins if needed)
+  setNodeId();
+
+  Wire.begin(OLED_SDA, OLED_SCL);
   display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
   display.display();
   delay(1000);
 
-  // Initialize Mesh
-  mesh.init(MESH_PREFIX, MESH_PASSWORD, MESH_PORT);
-  mesh.onReceive(&receivedCallback);
-  mesh.onNewConnection([](uint32_t nodeId)
-                       { Serial.printf("New Connection: %u\n", nodeId); });
-  mesh.onDroppedConnection([](uint32_t nodeId)
-                           { Serial.printf("Dropped Connection: %u\n", nodeId); });
+  screenUpdateTicker.attach(1, updateDisplay);
+  screenUpdateTicker.active();
+  teamScoreTicker.attach(5, updateTeamScoreTest);
+  teamScoreTicker.active();
+  nodeScoreUpdateTicker.attach(30, discoveryLoop);
+  nodeScoreUpdateTicker.active();
+  totalScoreTicker.attach(3, updateTotalTeamScores);
+  totalScoreTicker.active();
 
-  // Tickers setup
-  screenUpdateTicker.attach(1, updateDisplay);                // Call updateDisplay every second
-  screenUpdateTicker.active();                                // Start the ticker
-  teamScoreTicker.attach(5, updateTeamScoreTest);             // Call updateTeamScoreTest every second
-  teamScoreTicker.active();                                   // Activate the ticker
-  nodeScoreUpdateTicker.attach(5, broadcastCurrentNodeScore); // Call broadcastCurrentNodeScore every second
-  nodeScoreUpdateTicker.active();                             // Activate the ticker
-  totalScoreTicker.attach(3, updateTotalTeamScores);          // Call updateTotalTeamScores every second
-  totalScoreTicker.active();                                  // Activate the ticker
+  teamBlueButton.setDebounceTime(debounce);
+  teamYellowButton.setDebounceTime(debounce);
+  startGameButton.setDebounceTime(debounce);
 
-  // button setup
-  teamBlueButton.setDebounceTime(debounce);   // Set debounce time to 50 milliseconds
-  teamYellowButton.setDebounceTime(debounce); // Set debounce time to 50 milliseconds
-  startGameButton.setDebounceTime(debounce);  // Set debounce time to 50 milliseconds
-
-  // Initialize LEDs
-  pinMode(LED_YELLOW, OUTPUT); // Set LED pin as output
-  pinMode(LED_BLUE, OUTPUT);   // Set LED pin as output
+  pinMode(LED_YELLOW, OUTPUT);
+  pinMode(LED_BLUE, OUTPUT);
 
   Serial.println("Mesh initialized.");
   Serial.print("Node ID: ");
-  Serial.println(mesh.getNodeId());
+  Serial.begin(115200);
+
+  int state = radio.begin(433.0);
+  radio.setSyncWord(LORA_SYNC_WORD);
+  radio.setPreambleLength(LORA_PREAMBLE_LENGTH);
+  radio.setOutputPower(LORA_TX_POWER);
+  radio.setFrequency(LORA_BAND);
+  radio.setSpreadingFactor(LORA_SPREADING_FACTOR);
+  radio.setBandwidth(LORA_BANDWIDTH);
+  radio.setCodingRate(LORA_CODING_RATE);
+
+  radio.setDio0Action(onRecive, RISING);
+  radio.startReceive();
+
+  if (state == RADIOLIB_ERR_NONE)
+  {
+    Serial.println("LoRa initialized!");
+  }
+  else
+  {
+    Serial.print("Failed, code: ");
+    Serial.println(state);
+    while (true)
+      ;
+  }
 }
 
-// Main loop
 void loop()
 {
-  mesh.update();
   teamBlueButton.loop();
   teamYellowButton.loop();
   startGameButton.loop();
-  // Check if the start game button is pressed
+
   if (startGameButton.isPressed())
   {
-    isGameInProgress = !isGameInProgress; // Toggle game state
+    isGameInProgress = !isGameInProgress;
     Serial.println(isGameInProgress ? "Game started." : "Game stopped.");
   }
 
   if (teamYellowButton.isPressed())
   {
-    pointControlledByTeam = TEAM_YELLOW; // Set point controlled by Yellow team
+    pointControlledByTeam = TEAM_YELLOW;
     Serial.println("Team Yellow button pressed. Score updated.");
-    changeLedColor(TEAM_YELLOW); // Change LED color to Yellow
+    changeLedColor(TEAM_YELLOW);
   }
 
   if (teamBlueButton.isPressed())
   {
-    pointControlledByTeam = TEAM_BLUE; // Set point controlled by Blue team
+    pointControlledByTeam = TEAM_BLUE;
     Serial.println("Team Blue button pressed. Score updated.");
-    changeLedColor(TEAM_BLUE); // Change LED color to Blue
+    changeLedColor(TEAM_BLUE);
   }
 }
