@@ -22,39 +22,55 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 #define TEAM_YELLOW 1
 
 // Node variables
-uint8_t NodeId; // 8 characters + null terminator
+//how to prevent nodes from rolling the same id? 65536 is enough to avoid collisions i think
+uint16_t NodeId; // 16 characters
 void setNodeId()
 {
-  NodeId = random(0, 255); // Random number between 0 and 255
+  NodeId = random(5, 65536); 
   Serial.print("Generated Node ID: ");
   Serial.println(NodeId);
 }
 
+uint16_t LeaderId = 0; // Id of leader node
+bool isLeader = false; // Is this node a leader?
 // Mesh Settings
 SX1278 radio = new Module(18, 26, 14, 33); // CS, DIO0, RST, DIO1
 
 // Message format
 #define WHO_IS_OUT_THERE 0x01
 #define I_AM_HERE 0x02
+#define SCORE_UPDATE 0x03
 
-int16_t seqNumber = 0;
+uint8_t seqNumber = 0;
 
 #pragma pack(push, 1)
 typedef struct
 {
   uint8_t type;          // message type
-  uint32_t nodeId;       // node id
-  uint16_t seqNumber;    // sequence number
+  uint16_t nodeId;       // node id
+  uint8_t seqNumber;    // sequence number
   uint16_t neighbors[5]; // neighbor node ids
   uint8_t neighborCount; // number of neighbors
   uint8_t isLeader;      // is this node a leader
 } DiscoveryMessage;
 #pragma pack(pop)
 
+#pragma pack(push, 1)
+typedef struct
+{
+  uint8_t type;          // message type
+  uint16_t nodeIdSender;       // node id from
+  uint16_t nodeIdReciver;     // node id to
+  uint8_t seqNumber;    // sequence number
+  uint16_t BlueScore;    // blue team score
+  uint16_t YellowScore;  // yellow team score
+} StandardMessage;
+#pragma pack(pop)
+
 struct NodesTable
 {
-  uint32_t nodeId;
-  uint32_t nextHop;
+  uint16_t nodeId;
+  uint16_t nextHop;
   uint64_t lastSeen;
   bool isLeader;
   int HopCount;
@@ -80,7 +96,7 @@ Ticker totalScoreTicker;
 
 // Game variables
 bool isGameInProgress = false;
-int gameDuration = 300;         // 5 minutes in seconds
+long gameDuration = 14400; // 4 hours in seconds  
 int pointControlledByTeam = 99; // 99 = none, 1 = blue, 2 = yellow
 String msg = "";
 
@@ -88,7 +104,7 @@ String msg = "";
 struct Team
 {
   int id;
-  int score;
+  uint16_t score;
 };
 
 Team totalTeamsScore[] = {
@@ -102,10 +118,11 @@ Team localTeamsScore[] = {
 struct NodeTeamScores
 {
   uint32_t nodeId;
-  Team teamScores[2]; // Index 0 for TEAM_BLUE, Index 1 for TEAM_YELLOW
+  Team teamScores[2]; // Index 1 for TEAM_BLUE, Index 2 for TEAM_YELLOW
 };
 
-NodeTeamScores nodeScores[10];
+#define NODE_SCORES_SIZE 10
+NodeTeamScores nodeScores[NODE_SCORES_SIZE];
 
 // LoRa Settings
 #define LORA_BAND 433.0         // LoRa frequency band (433 MHz)
@@ -116,30 +133,31 @@ NodeTeamScores nodeScores[10];
 #define LORA_PREAMBLE_LENGTH 8  // Preamble length (in symbols)
 #define LORA_TX_POWER 10        // Transmission power (in dBm)
 #define LORA_RX_TIMEOUT 1000    // Receive timeout (in milliseconds)
-
 // Function declarations
 void resetNodeScores();
 void onRecive();
+bool isChannelClear();
 void sendLoRaMsg(uint8_t *msg, size_t length);
 void sendDiscoveryPacket(uint16_t nodeId, uint16_t seqNumber, uint16_t *neighbors, uint8_t neighborCount);
+void sendTeamScoreUpdate(uint16_t reciverNodeId);
+void teamScoreUpdateLoop();
 void discoveryLoop();
-void updateNodeTeamScore(uint32_t nodeId, int teamId, int score);
+void updateNodeScores(uint32_t nodeId, int teamId, int score);
 void updateTotalTeamScores();
-void broadcastCurrentNodeScore();
-void receivedCallback(uint32_t from, String &msg);
 void updateDisplay();
 void updateTeamScore(int teamId, int score);
-void updateTeamScoreTest();
+void updateLocalTeamScore();
 void changeLedColor(int teamId);
 
 // Function definitions
 void resetNodeScores()
 {
-  for (int i = 0; i < sizeof(nodeScores) / sizeof(nodeScores[0]); i++)
+  // Reset all scores stored in this node to 0
+  for (int i = 0; i < NODE_SCORES_SIZE; i++)
   {
     nodeScores[i].nodeId = 0;
-    nodeScores[i].teamScores[TEAM_BLUE].score = 0;   // TEAM_BLUE
-    nodeScores[i].teamScores[TEAM_YELLOW].score = 0; // TEAM_YELLOW
+    nodeScores[i].teamScores[TEAM_BLUE].score = 0;
+    nodeScores[i].teamScores[TEAM_YELLOW].score = 0;
   }
 }
 
@@ -184,16 +202,62 @@ void onRecive()
       }
     }
   }
+  if(type == SCORE_UPDATE)
+  {
+    StandardMessage *packet = (StandardMessage *)receivedBuffer;
+    updateNodeScores(packet->nodeIdSender, TEAM_BLUE, packet->BlueScore);
+    updateNodeScores(packet->nodeIdSender, TEAM_YELLOW, packet->YellowScore);
+    Serial.print("Received score update from node: ");
+    Serial.println(packet->nodeIdSender);
+  }
+}
+// Listen for a very short time to check if channel is clear
+bool isChannelClear() {
+
+  radio.startReceive();
+
+  delay(10);
+
+  if (radio.available()) {
+    return false; // Channel is busy
+  }
+  
+  return true; // Channel is clear
 }
 
 void sendLoRaMsg(uint8_t *msg, size_t length)
 {
-  int state = radio.transmit(msg, length);
-  if (state == RADIOLIB_ERR_NONE)
-  {
-    Serial.println("Message sent!");
-  }
-  radio.startReceive(); // Start listening again its important to start receiving again after sending a message
+ const int maxAttempts = 5;
+ const int initialBackoff = 100; // ms
+ int attempt = 0;
+ bool sent = false;
+ 
+ while (attempt < maxAttempts && !sent) {
+   if (isChannelClear()) {
+     // Channel is clear, attempt to send
+     int state = radio.transmit(msg, length);
+     
+     if (state == RADIOLIB_ERR_NONE) {
+       Serial.println("Message sent successfully!");
+       sent = true;
+     } else {
+       Serial.print("Transmission failed, error: ");
+       Serial.println(state);
+     }
+   } else {
+     Serial.println("Channel busy, waiting...");
+     int backoffTime = initialBackoff * (1 << attempt); // 100, 200, 400, 800, 1600 ms
+     delay(backoffTime);
+   }
+   
+   attempt++;
+ }
+ 
+ if (!sent) {
+   Serial.println("Failed to send message after maximum attempts");
+ }
+ 
+ radio.startReceive();  // Start listening again its important to start receiving again after sending a message
 }
 
 void sendDiscoveryPacket(uint16_t nodeId, uint16_t seqNumber, uint16_t *neighbors, uint8_t neighborCount)
@@ -203,13 +267,57 @@ void sendDiscoveryPacket(uint16_t nodeId, uint16_t seqNumber, uint16_t *neighbor
   msg.nodeId = nodeId;
   msg.seqNumber = seqNumber;
   msg.neighborCount = neighborCount;
-  msg.isLeader = 0x00;
+  if(isLeader)
+  {
+    msg.isLeader = 0x01;
+  }
+  else
+  {
+    msg.isLeader = 0x00;
+  }
   memcpy(msg.neighbors, neighbors, sizeof(uint16_t) * neighborCount);
   size_t msgSize = sizeof(msg) - sizeof(msg.neighbors) + sizeof(uint16_t) * neighborCount;
   Serial.print("Sending discovery packet of size: ");
   Serial.println(msgSize);
   uint8_t *msgBuffer = (uint8_t *)&msg;
   sendLoRaMsg(msgBuffer, msgSize);
+}
+
+//sends teams score update to  node
+void sendTeamScoreUpdate(uint16_t reciverNodeId)
+{
+  StandardMessage msg;
+  msg.type = SCORE_UPDATE;
+  msg.nodeIdSender = NodeId;
+  msg.nodeIdReciver = reciverNodeId;
+  msg.seqNumber = seqNumber++;
+  msg.BlueScore = localTeamsScore[TEAM_BLUE].score;
+  msg.YellowScore = localTeamsScore[TEAM_YELLOW].score;
+  size_t msgSize = sizeof(msg);
+  uint8_t *msgBuffer = (uint8_t *)&msg;
+  sendLoRaMsg(msgBuffer, msgSize);
+  Serial.print("Sending team score update to node: " + LeaderId);
+}
+
+//team score update loop
+void teamScoreUpdateLoop()
+{
+  //check if the node is a leader if not send the score to the leader node
+  if (isLeader)
+  {
+    for (int i = 0; i < sizeof(nodesTable) / sizeof(nodesTable[0]); i++)
+    {
+      if (nodesTable[i].nodeId != 0 && nodesTable[i].isLeader == true)
+      {
+        sendTeamScoreUpdate(nodesTable[i].nodeId);
+        break;
+      }
+    }
+  }
+  else
+  {
+    sendTeamScoreUpdate(LeaderId);
+  }
 }
 
 void discoveryLoop()
@@ -219,8 +327,10 @@ void discoveryLoop()
     Serial.println("Discovery packet sent.");
 }
 
-void updateNodeTeamScore(uint32_t nodeId, int teamId, int score)
+// Updates the scores of a specific node for a given team
+void updateNodeScores(uint32_t nodeId, int teamId, int score)
 {
+  // Check if the node already exists in the list
   for (auto &node : nodeScores)
   {
     if (node.nodeId == nodeId)
@@ -236,6 +346,7 @@ void updateNodeTeamScore(uint32_t nodeId, int teamId, int score)
       return;
     }
   }
+  // If the node is not found, add it to the list
   for (auto &node : nodeScores)
   {
     if (node.nodeId == 0)
@@ -250,6 +361,7 @@ void updateNodeTeamScore(uint32_t nodeId, int teamId, int score)
   }
 }
 
+//count total points for each team
 void updateTotalTeamScores()
 {
   totalTeamsScore[TEAM_BLUE].score = 0;
@@ -263,44 +375,6 @@ void updateTotalTeamScores()
       totalTeamsScore[TEAM_YELLOW].score += node.teamScores[TEAM_YELLOW].score;
     }
   }
-}
-
-void broadcastCurrentNodeScore()
-{
-  if (isGameInProgress)
-  {
-    JsonDocument doc;
-    doc["tB"] = localTeamsScore[0].score;
-    doc["tY"] = localTeamsScore[1].score;
-
-    String jsonString;
-    serializeJson(doc, jsonString);
-
-    Serial.println("Broadcasting current node scores...");
-    Serial.println("Failed to broadcast current node scores.");
-  }
-}
-
-void receivedCallback(uint32_t from, String &msg)
-{
-  Serial.printf("Received from %u: %s\n", from, msg.c_str());
-
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, msg);
-
-  if (error)
-  {
-    Serial.print(F("deserializeJson() failed: "));
-    Serial.println(error.f_str());
-    return;
-  }
-
-  uint32_t nodeId = doc["id"];
-  int teamBlueScore = doc["tB"];
-  int teamYellowScore = doc["tY"];
-
-  updateNodeTeamScore(nodeId, TEAM_BLUE, teamBlueScore);
-  updateNodeTeamScore(nodeId, TEAM_YELLOW, teamYellowScore);
 }
 
 void updateDisplay()
@@ -341,8 +415,8 @@ void updateTeamScore(int teamId, int score)
     }
   }
 }
-
-void updateTeamScoreTest()
+//update the team score
+void updateLocalTeamScore()
 {
   if (pointControlledByTeam == TEAM_BLUE)
   {
@@ -388,9 +462,9 @@ void setup()
 
   screenUpdateTicker.attach(1, updateDisplay);
   screenUpdateTicker.active();
-  teamScoreTicker.attach(5, updateTeamScoreTest);
-  teamScoreTicker.active();
-  nodeScoreUpdateTicker.attach(30, discoveryLoop);
+  // teamScoreTicker.attach(5, updateTeamScoreTest);
+  // teamScoreTicker.active();
+  nodeScoreUpdateTicker.attach(30, discoveryLoop); // 30 seconds is completly arbitrary. I'll worry about it later
   nodeScoreUpdateTicker.active();
   totalScoreTicker.attach(3, updateTotalTeamScores);
   totalScoreTicker.active();
