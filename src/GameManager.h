@@ -23,13 +23,21 @@ public:
     struct Team
     {
         int id;
-        uint16_t score;
+        int score;
+    };
+    struct TotalTeamScore
+    {
+        uint16_t NodeId;
+        Team score[2];
     };
     Team localTeamsScore[2];
+    TotalTeamScore totalTeamScore[10];
     
     GameManager();  // Constructor declaration
     void updateTeamScore(int teamId, int score);
     void changeLedColor(int teamId);
+    void updateTotalTeamScore(uint16_t NodeId,Team *singleScore);
+    int getTotalScore(int TeamId);
 };
 
 #endif // GAME_MANAGER_H
