@@ -52,7 +52,7 @@ void DisplayManager::settingDisplayOLED(int currentSetting, int maxScore, int ma
     displayOLED.display();
 }
 
-void DisplayManager::updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, uint16_t LeaderId, GameManager::Team *totalTeamsScore)
+void DisplayManager::updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, uint16_t LeaderId, int blueScore, int yellowScore)
 {
     displayOLED.clearDisplay();
     displayOLED.setTextSize(1);
@@ -63,14 +63,10 @@ void DisplayManager::updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, u
     displayOLED.println(isGameInProgress ? "Yes" : "No");
 
     displayOLED.println("Teams:");
-    for (int i = 0; i < 2; i++)
-    {
-        displayOLED.print("Team ");
-        displayOLED.print(totalTeamsScore[i].id == TEAM_BLUE ? "Blue" : "Yellow");
-        displayOLED.print(": ");
-        displayOLED.println(totalTeamsScore[i].score);
-    }
-
+    displayOLED.print("Blue: ");
+    displayOLED.println(blueScore);
+    displayOLED.print("Yellow: ");
+    displayOLED.println(yellowScore);
     displayOLED.print("Node Id: ");
     displayOLED.println(NodeId);
     displayOLED.print("Leader Id: ");
@@ -78,6 +74,13 @@ void DisplayManager::updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, u
     displayOLED.display();
 };
 
-void DisplayManager::updateDisplayLCD(GameManager::Team *totalTeamScore)
+void DisplayManager::updateDisplayLCD(int blueScore, int yellowScore)
 {
+    displayLCD.clear();
+    displayLCD.setCursor(0, 0);
+    displayLCD.print("Blue: ");
+    displayLCD.print(blueScore);
+    displayLCD.setCursor(0, 1);
+    displayLCD.print("Yellow: ");
+    displayLCD.print(yellowScore);
 }

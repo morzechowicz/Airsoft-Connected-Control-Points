@@ -4,6 +4,7 @@
 #include <cstdint>
 #include "Arduino.h"
 #include <ezButton.h>
+#include "DisplayManager.h"
 
 // Team variables
 #define TEAM_BLUE 0
@@ -19,6 +20,11 @@
 #define LED_YELLOW 13
 #define LED_BLUE 12
 
+// default game settings
+#define DEFAULT_MAX_SCORE 60
+#define DEFAULT_MAX_TIME 60
+#define DEFAULT_TIME_TO_START 5
+#define DEFAULT_TIME_TO_CAPTURE 30
 
 
 
@@ -36,8 +42,9 @@ public:
         Team score[2];
     };
 
-    GameManager();  // Constructor declaration
-
+    GameManager();
+    void initialize(ezButton &teamYellowButton, ezButton &teamBlueButton, ezButton &startGameButton,DisplayManager &displayManager, void (*sendGameStatus)(bool));
+    void gameLoop(DisplayManager &displayManager, ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, uint16_t NodeId, uint16_t LeaderId);
     void updateTeamScore(int teamId, int score);
     void changeLedColor(int teamId);
     void updateTotalTeamScore(uint16_t NodeId,Team *singleScore);
@@ -46,6 +53,7 @@ public:
     void endConfigAction(ezButton &startGameButton);
     void yellowButtonConfigAction(ezButton &teamBlueButton);
     void blueButtonConfigAction(ezButton &teamYellowButton);
+    int endGameAction();
 
     //getters
     Team *getLocalTeamsScore() { return localTeamsScore; }
@@ -57,6 +65,7 @@ public:
     int getTimeToCapture() const { return timeToCapture; }
     int getCurrentTime() const { return currentTime; }
     int getCurrentSettingId() const { return currentSettingId; }
+    int getPointControlledByTeam() const { return pointControlledByTeam; }
 
     //setters
     bool setIsGameInProgress(bool isGameInProgress) { this->isGameInProgress = isGameInProgress; return this->isGameInProgress; }

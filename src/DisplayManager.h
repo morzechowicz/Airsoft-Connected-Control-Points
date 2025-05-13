@@ -3,7 +3,6 @@
 
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
-#include <GameManager.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
@@ -27,8 +26,8 @@ public:
     void initialize();
     void settingDisplayOLED(int currentSetting,int maxScore, int maxTime, int timeToStart, int timeToCapture);
     void updateCoundownOLED(int timeToStrart);
-    void updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, uint16_t LeaderId, GameManager::Team *totalTeamsScore);
-    void updateDisplayLCD(GameManager::Team *totalTeamScore);
+    void updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, uint16_t LeaderId, int blueScore, int yellowScore);
+    void updateDisplayLCD(int blueScore,int yellowScore); 
 private:
 
 };

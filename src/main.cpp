@@ -306,28 +306,11 @@ void loop()
   startGameButton.loop();
   if (gameManager.getConfigMode())
   {
-    // set game maxScore, maxTime and timeToStart
-    gameManager.blueButtonConfigAction(teamBlueButton);
-    gameManager.yellowButtonConfigAction(teamYellowButton);
-    gameManager.endConfigAction(startGameButton);
-    gameManager.startGameAction(startGameButton, sendGameStatus);
-    displayManager.settingDisplayOLED(gameManager.getCurrentSettingId(), gameManager.getMaxScore(), gameManager.getMaxTime(), gameManager.getTimeToStart(), gameManager.getTimeToCapture());
+    gameManager.initialize(teamYellowButton, teamBlueButton, startGameButton, displayManager, sendGameStatus);
   }
   else
   {
-    receiveLoRaLoop();
-    displayManager.updateDisplayOLED(gameManager.getIsGameInProgress(), NodeId, LeaderId, gameManager.getLocalTeamsScore());
-    if (teamYellowButton.isPressed())
-    {
-      gameManager.updateTeamScore(TEAM_YELLOW, 1);
-      gameManager.changeLedColor(TEAM_YELLOW);
-      // sendLocalScore(NodeId, gameManager.localTeamsScore[0].score, gameManager.localTeamsScore[1].score);
-    }
-    if (teamBlueButton.isPressed())
-    {
-      gameManager.updateTeamScore(TEAM_BLUE, 1);
-      gameManager.changeLedColor(TEAM_BLUE);
-      // sendLocalScore(NodeId, gameManager.localTeamsScore[0].score, gameManager.localTeamsScore[1].score);
-    }
+    gameManager.gameLoop(displayManager, teamBlueButton, teamYellowButton, startGameButton, NodeId, LeaderId);
   }
+  receiveLoRaLoop();
 }
