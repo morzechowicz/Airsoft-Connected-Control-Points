@@ -54,7 +54,7 @@ struct LoraTotalScore
 // Flag 0x02
 struct LoraGameStatus
 {
-  bool isGameInProgress;
+  int currentGameState;
 };
 // Flag 0x03
 struct LoraConfig
@@ -72,12 +72,10 @@ void initialize();
 bool isChannelClear();
 void sendLoRaMsg(uint8_t *msg, size_t length);
 void sendLoRaData(uint8_t flag, const void *data, size_t dataSize);
-void sendGameStatus(bool gameStatus);
+void sendGameStatus(int gameStatus);
 void sendTotalScore(int blueScore, int yellowScore);
 void sendLocalScore(uint16_t nodeId, int blueScore, int yellowScore);
 void sendConfig(int maxScore, int maxTime, int timeToStart, int timeToCapture);
-void setup();
-void loop();
 
 void sendLoRaData(uint8_t flag, const void *data, size_t dataSize)
 {
@@ -101,10 +99,10 @@ void sendLoRaData(uint8_t flag, const void *data, size_t dataSize)
   seqNumber++; // Increment sequence number for next message
 }
 
-void sendGameStatus(bool gameStatus)
+void sendGameStatus(int gameStatus)
 {
   LoraGameStatus status;
-  status.isGameInProgress = gameStatus;
+  status.currentGameState = gameStatus;
   sendLoRaData(0x02, &status, sizeof(LoraGameStatus));
 }
 
@@ -188,9 +186,9 @@ void receiveLoRaLoop()
         {
           LoraGameStatus gameStatus;
           memcpy(&gameStatus, buffer + 1, sizeof(LoraGameStatus));
-          gameManager.setIsGameInProgress(gameStatus.isGameInProgress);
-          Serial.print("Received GameStatus - IsGameInProgress: ");
-          Serial.println(gameManager.getIsGameInProgress());
+          gameManager.setCurrentGameState(gameStatus.currentGameState);
+          Serial.print("Received GameStatus : ");
+          Serial.println(gameManager.getCurrentGameState());
           break;
         }
         default:
@@ -304,13 +302,26 @@ void loop()
   teamYellowButton.loop();
   teamBlueButton.loop();
   startGameButton.loop();
-  if (gameManager.getConfigMode())
+
+  switch (gameManager.getCurrentGameState())
   {
-    gameManager.initialize(teamYellowButton, teamBlueButton, startGameButton, displayManager, sendGameStatus);
-  }
-  else
-  {
-    gameManager.gameLoop(displayManager, teamBlueButton, teamYellowButton, startGameButton, NodeId, LeaderId);
+  case 0: // Config mode
+    gameManager.initializeLoop(teamYellowButton, teamBlueButton, startGameButton, sendGameStatus);
+    displayManager.settingDisplayOLED(gameManager.getCurrentSettingId(), gameManager.getMaxScore(), gameManager.getMaxTime(), gameManager.getTimeToStart(), gameManager.getTimeToCapture());
+    break;
+  case 1: // countdown mode
+    gameManager.countdownLoop();
+    displayManager.updateCoundownOLED(gameManager.getTimeToStart());
+    break;
+  case 2: // Game mode
+    gameManager.gameLoop(teamBlueButton, teamYellowButton, startGameButton, NodeId, LeaderId);
+    displayManager.updateDisplayOLED(gameManager.getCurrentGameState() == 1, NodeId, LeaderId, gameManager.getLocalTeamsScore()[0].score, gameManager.getLocalTeamsScore()[1].score);
+    break;
+  case 3: // Game ended
+    gameManager.endGameLoop();
+    break;
+  default:
+    break;
   }
   receiveLoRaLoop();
 }

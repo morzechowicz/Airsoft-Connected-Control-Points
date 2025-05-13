@@ -4,7 +4,7 @@ GameManager::GameManager() : localTeamsScore{{TEAM_BLUE, 0},
                                              {TEAM_YELLOW, 0}},
                              totalTeamScore{{0, {0, 0}}},
                              maxScore(DEFAULT_MAX_SCORE), maxTime(DEFAULT_MAX_TIME), timeToStart(DEFAULT_TIME_TO_START), timeToCapture(DEFAULT_TIME_TO_CAPTURE), currentTime(0), currentSettingId(0),
-                             isGameInProgress(false), configMode(true), pointControlledByTeam(TEAM_NONE)
+                            currentGameState(GAME_STATE_CONFIG), pointControlledByTeam(TEAM_NONE)
 {
 }
 // i have and idea of preet battlefield with some point allready under control
@@ -81,15 +81,14 @@ int GameManager::getTotalScore(int TeamId)
     return totalScore;
 }
 
-bool GameManager::startGameAction(ezButton &startGameButton, void (*sendGameStatus)(bool))
+bool GameManager::startGameAction(ezButton &startGameButton, void (*sendGameStatus)(int))
 {
     if (startGameButton.isPressed())
     {
-        configMode = false;
-        isGameInProgress = true;
-        sendGameStatus(isGameInProgress);
+        currentGameState = GAME_STATE_PLAYING;
+        sendGameStatus(currentGameState);
     }
-    return isGameInProgress;
+    return true;
 }
 
 void GameManager::endConfigAction(ezButton &startGameButton)
@@ -125,9 +124,9 @@ void GameManager::yellowButtonConfigAction(ezButton &teamBlueButton)
             }
             break;
         case 3:
-            if (timeToStart > 1)
+            if (timeToStart > 30)
             {
-                timeToStart = timeToStart - 1;
+                timeToStart = timeToStart - 30;
             }
             break;
         case 4:
@@ -162,9 +161,9 @@ void GameManager::blueButtonConfigAction(ezButton &teamYellowButton)
             }
             break;
         case 3:
-            if (timeToStart < 10)
+            if (timeToStart < 600)
             {
-                timeToStart = timeToStart + 1;
+                timeToStart = timeToStart + 30;
             }
             break;
         case 4:
@@ -179,29 +178,25 @@ void GameManager::blueButtonConfigAction(ezButton &teamYellowButton)
     }
 }
 
-void GameManager::initialize(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, DisplayManager &displayManager, void (*sendGameStatus)(bool))
+void GameManager::initializeLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, void (*sendGameStatus)(int))
 {
     blueButtonConfigAction(teamBlueButton);
     yellowButtonConfigAction(teamYellowButton);
     endConfigAction(startGameButton);
     startGameAction(startGameButton, sendGameStatus);
-    displayManager.settingDisplayOLED(currentSettingId, maxScore, maxTime, timeToStart, timeToCapture);
 }
 
-void GameManager::gameLoop(DisplayManager &displayManager, ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, uint16_t NodeId, uint16_t LeaderId)
+void GameManager::gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, uint16_t NodeId, uint16_t LeaderId)
 {
-    // displayManager.updateDisplayOLED(isGameInProgress, NodeId, LeaderId, localTeamsScore);
     if (teamYellowButton.isPressed())
     {
         updateTeamScore(TEAM_YELLOW, 1);
         changeLedColor(TEAM_YELLOW);
-        // sendLocalScore(NodeId, gameManager.localTeamsScore[0].score, gameManager.localTeamsScore[1].score);
     }
     if (teamBlueButton.isPressed())
     {
         updateTeamScore(TEAM_BLUE, 1);
         changeLedColor(TEAM_BLUE);
-        // sendLocalScore(NodeId, gameManager.localTeamsScore[0].score, gameManager.localTeamsScore[1].score);
     }
     if (millis() % 60000 == 0)
     {
@@ -222,8 +217,7 @@ void GameManager::gameLoop(DisplayManager &displayManager, ezButton &teamBlueBut
 
 int GameManager::endGameAction()
 {
-    isGameInProgress = false;
-    configMode = false;
+    currentGameState = GAME_STATE_END;
     currentSettingId = 0;
     maxScore = DEFAULT_MAX_SCORE;
     maxTime = DEFAULT_MAX_TIME;
@@ -240,4 +234,27 @@ int GameManager::endGameAction()
         changeLedColor(TEAM_YELLOW);
     }
     return TEAM_NONE;
+}
+
+void GameManager::countdownLoop()
+{
+    //what i want to do is to count down from timeToStart to 0
+    //and when it reach 0 i want to start the game
+    if (timeToStart > 0)
+    {
+        if(millis() % 1000 == 0)
+        {
+            timeToStart--;
+        }
+    }
+    else
+    {
+        setCurrentGameState(GAME_STATE_PLAYING);
+    }
+}
+
+void GameManager::endGameLoop()
+{
+    //Why i created this function?
+    //does it even need a loop? loop for whtat? i need to thnik about this later
 }
