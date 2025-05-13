@@ -1,37 +1,83 @@
 #include <DisplayManager.h>
 
-DisplayManager::DisplayManager() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1) {}
+DisplayManager::DisplayManager() : displayOLED(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1), displayLCD(LCD_ADDR, 16, 2) {}
 
 void DisplayManager::initialize()
 {
     Wire.begin(OLED_SDA, OLED_SCL);
-    display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
-    display.display();
-    delay(1000);
+    displayOLED.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+    displayOLED.display();
+
+    Wire.begin(OLED_SDA, OLED_SCL);
+    displayLCD.begin(16, 2);
+    displayLCD.clear();
+    displayLCD.home();
+    displayLCD.print("Initializing...");
+    delay(2000);
+    displayLCD.clear();
+    displayLCD.home();
+    displayLCD.print("GET READY");
+    displayLCD.backlight();
 }
 
-void DisplayManager::updateDisplay(bool isGameInProgress, uint16_t NodeId, uint16_t LeaderId, GameManager::Team *totalTeamsScore)
+void DisplayManager::settingDisplayOLED(int currentSetting, int maxScore, int maxTime, int timeToStart, int timeToCapture)
 {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
+    displayOLED.clearDisplay();
+    displayOLED.setTextSize(1);
+    displayOLED.setTextColor(SSD1306_WHITE);
+    displayOLED.setCursor(0, 0);
 
-    display.print("Game in progress: ");
-    display.println(isGameInProgress ? "Yes" : "No");
+    displayOLED.print("Current Setting: ");
+    displayOLED.println(currentSetting);
+    displayOLED.print("Max Score: ");
+    if ((currentSetting == 1 && ((millis() / 1000) % 2 == 0)) || currentSetting != 1)
+        displayOLED.println(maxScore);
+    else
+        displayOLED.println("");
+    displayOLED.print("Max Time: ");
+    if ((currentSetting == 2 && ((millis() / 1000) % 2 == 0)) || currentSetting != 2)
+        displayOLED.println(maxTime);
+    else
+        displayOLED.println("");
+    displayOLED.print("Time to Start: ");
+    if ((currentSetting == 3 && ((millis() / 1000) % 2 == 0)) || currentSetting != 3)
+        displayOLED.println(timeToStart);
+    else
+        displayOLED.println("");
+    displayOLED.print("Time to Capture: ");
+    if ((currentSetting == 4 && ((millis() / 1000) % 2 == 0)) || currentSetting != 4)
+        displayOLED.println(timeToCapture);
+    else
+        displayOLED.println("");
+    displayOLED.display();
+}
 
-    display.println("Teams:");
+void DisplayManager::updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, uint16_t LeaderId, GameManager::Team *totalTeamsScore)
+{
+    displayOLED.clearDisplay();
+    displayOLED.setTextSize(1);
+    displayOLED.setTextColor(SSD1306_WHITE);
+    displayOLED.setCursor(0, 0);
+
+    displayOLED.print("Game in progress: ");
+    displayOLED.println(isGameInProgress ? "Yes" : "No");
+
+    displayOLED.println("Teams:");
     for (int i = 0; i < 2; i++)
     {
-        display.print("Team ");
-        display.print(totalTeamsScore[i].id == TEAM_BLUE ? "Blue" : "Yellow");
-        display.print(": ");
-        display.println(totalTeamsScore[i].score);
+        displayOLED.print("Team ");
+        displayOLED.print(totalTeamsScore[i].id == TEAM_BLUE ? "Blue" : "Yellow");
+        displayOLED.print(": ");
+        displayOLED.println(totalTeamsScore[i].score);
     }
 
-    display.print("Node Id: ");
-    display.println(NodeId);
-    display.print("Leader Id: ");
-    display.println(LeaderId);
-    display.display();
+    displayOLED.print("Node Id: ");
+    displayOLED.println(NodeId);
+    displayOLED.print("Leader Id: ");
+    displayOLED.println(LeaderId);
+    displayOLED.display();
 };
+
+void DisplayManager::updateDisplayLCD(GameManager::Team *totalTeamScore)
+{
+}

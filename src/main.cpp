@@ -11,18 +11,16 @@
 #include "DisplayManager.h"
 #include <cstdint>
 #include <cstddef>
-#include <RadioLib.h>
-
 
 // LoRa Settings
 #define LORA_BAND 433.0
 #define LORA_SYNC_WORD 0x12
 #define LORA_PREAMBLE_LENGTH 8
-#define LORA_TX_POWER 10
+#define LORA_TX_POWER 12
 #define LORA_RX_TIMEOUT 1000
 
 // Buttons
-#define debounce 250
+#define debounce 500
 ezButton teamYellowButton(0);
 ezButton teamBlueButton(4);
 ezButton startGameButton(2);
@@ -33,14 +31,109 @@ uint16_t LeaderId = 0;
 bool isLeader = false;
 
 // Game variables
-bool isGameInProgress = false;
-int pointControlledByTeam = 99;
 
 GameManager gameManager;
 DisplayManager displayManager;
 
 bool isReciving = false;
 SX1278 radio = new Module(18, 26, 14, 33);
+
+// LoraMsg structure
+// Flag 0x00
+struct LocalScore
+{
+  uint16_t NodeId;
+  int score[2];
+};
+// Flag 0x01
+struct LoraTotalScore
+{
+  int blueScore;
+  int yellowScore;
+};
+// Flag 0x02
+struct LoraGameStatus
+{
+  bool isGameInProgress;
+};
+// Flag 0x03
+struct LoraConfig
+{
+  int maxScore;
+  int maxTime;
+  int timeToStart;
+  int timeToCapture;
+};
+
+// Function prototypes
+void setReciving();
+void receiveLoRaLoop();
+void initialize();
+bool isChannelClear();
+void sendLoRaMsg(uint8_t *msg, size_t length);
+void sendLoRaData(uint8_t flag, const void *data, size_t dataSize);
+void sendGameStatus(bool gameStatus);
+void sendTotalScore(int blueScore, int yellowScore);
+void sendLocalScore(uint16_t nodeId, int blueScore, int yellowScore);
+void sendConfig(int maxScore, int maxTime, int timeToStart, int timeToCapture);
+void setup();
+void loop();
+
+void sendLoRaData(uint8_t flag, const void *data, size_t dataSize)
+{
+  uint8_t buffer[dataSize + 3]; // +3 for Flag, seq number, and checksum
+  static uint8_t seqNumber = 0; // Sequence number
+  uint8_t checksum = 0;
+
+  buffer[0] = flag;
+  memcpy(buffer + 1, data, dataSize);
+  buffer[dataSize + 1] = seqNumber;
+
+  // Calculate checksum by XORing all bytes in the buffer, including the flag and sequence number
+  for (size_t i = 0; i < dataSize + 2; i++)
+  {
+    checksum ^= buffer[i];
+  }
+  buffer[dataSize + 2] = checksum;
+
+  sendLoRaMsg(buffer, sizeof(buffer));
+
+  seqNumber++; // Increment sequence number for next message
+}
+
+void sendGameStatus(bool gameStatus)
+{
+  LoraGameStatus status;
+  status.isGameInProgress = gameStatus;
+  sendLoRaData(0x02, &status, sizeof(LoraGameStatus));
+}
+
+void sendTotalScore(int blueScore, int yellowScore)
+{
+  LoraTotalScore totalScore;
+  totalScore.blueScore = blueScore;
+  totalScore.yellowScore = yellowScore;
+  sendLoRaData(0x01, &totalScore, sizeof(LoraTotalScore));
+}
+
+void sendConfig(int maxScore, int maxTime, int timeToStart, int timeToCapture)
+{
+  LoraConfig config;
+  config.maxScore = maxScore;
+  config.maxTime = maxTime;
+  config.timeToStart = timeToStart;
+  config.timeToCapture = timeToCapture;
+  sendLoRaData(0x03, &config, sizeof(LoraConfig));
+}
+
+void sendLocalScore(uint16_t nodeId, int blueScore, int yellowScore)
+{
+  LocalScore localScore;
+  localScore.NodeId = nodeId;
+  localScore.score[0] = blueScore;
+  localScore.score[1] = yellowScore;
+  sendLoRaData(0x00, &localScore, sizeof(LocalScore));
+}
 
 void setReciving()
 {
@@ -49,13 +142,79 @@ void setReciving()
 
 void receiveLoRaLoop()
 {
-  if(isReciving)
+  if (isReciving)
   {
-    
+    uint8_t buffer[256];
+    size_t length = sizeof(buffer);
+    int state = radio.readData(buffer, length);
+    if (state == RADIOLIB_ERR_NONE)
+    {
+      uint8_t buffer[256];
+      size_t length = radio.getPacketLength();
+      radio.readData(buffer, length);
+
+      uint8_t flag = buffer[0];
+      uint8_t checksum = buffer[length - 1];
+      uint8_t calculatedChecksum = 0;
+
+      for (size_t i = 0; i < length - 1; i++)
+      {
+        calculatedChecksum ^= buffer[i];
+      }
+
+      if (calculatedChecksum == checksum)
+      {
+        switch (flag)
+        {
+        case 0x00: // LocalScore
+        {
+          LocalScore receivedScore;
+          memcpy(&receivedScore, buffer + 1, sizeof(LocalScore));
+          Serial.print("Received LocalScore from NodeId: ");
+          Serial.println(receivedScore.NodeId);
+          break;
+        }
+        case 0x01: // LoraTotalScore
+        {
+          LoraTotalScore totalScore;
+          memcpy(&totalScore, buffer + 1, sizeof(LoraTotalScore));
+          Serial.print("Received TotalScore - Blue: ");
+          Serial.print(totalScore.blueScore);
+          Serial.print(", Yellow: ");
+          Serial.println(totalScore.yellowScore);
+          break;
+        }
+        case 0x02: // LoraGameStatus
+        {
+          LoraGameStatus gameStatus;
+          memcpy(&gameStatus, buffer + 1, sizeof(LoraGameStatus));
+          gameManager.setIsGameInProgress(gameStatus.isGameInProgress);
+          Serial.print("Received GameStatus - IsGameInProgress: ");
+          Serial.println(gameManager.getIsGameInProgress());
+          break;
+        }
+        default:
+          Serial.println("Unknown flag received");
+          break;
+        }
+      }
+      else
+      {
+        Serial.println("Checksum mismatch, discarding packet");
+      }
+    }
+    else
+    {
+      Serial.print("Failed to read data, error: ");
+      Serial.println(state);
+    }
+
+    isReciving = false;
   }
+  radio.startReceive();
 }
 
-void initialize()
+void initializeLoRa()
 {
   int state = radio.begin(LORA_BAND);
   radio.setSyncWord(LORA_SYNC_WORD);
@@ -124,8 +283,12 @@ void sendLoRaMsg(uint8_t *msg, size_t length)
   radio.startReceive();
 }
 
+void setup()
+{
+  teamYellowButton.setDebounceTime(debounce);
+  teamBlueButton.setDebounceTime(debounce);
+  startGameButton.setDebounceTime(debounce);
 
-void setup() {
   Serial.begin(115200);
   Serial.println("Starting...");
 
@@ -133,10 +296,38 @@ void setup() {
   pinMode(LED_BLUE, OUTPUT);
 
   displayManager.initialize();
-  initialize();
+  initializeLoRa();
 }
 
-void loop() {
-
-  displayManager.updateDisplay(isGameInProgress, NodeId, LeaderId, gameManager.localTeamsScore);
+void loop()
+{
+  teamYellowButton.loop();
+  teamBlueButton.loop();
+  startGameButton.loop();
+  if (gameManager.getConfigMode())
+  {
+    // set game maxScore, maxTime and timeToStart
+    gameManager.blueButtonConfigAction(teamBlueButton);
+    gameManager.yellowButtonConfigAction(teamYellowButton);
+    gameManager.endConfigAction(startGameButton);
+    gameManager.startGameAction(startGameButton, sendGameStatus);
+    displayManager.settingDisplayOLED(gameManager.getCurrentSettingId(), gameManager.getMaxScore(), gameManager.getMaxTime(), gameManager.getTimeToStart(), gameManager.getTimeToCapture());
+  }
+  else
+  {
+    receiveLoRaLoop();
+    displayManager.updateDisplayOLED(gameManager.getIsGameInProgress(), NodeId, LeaderId, gameManager.getLocalTeamsScore());
+    if (teamYellowButton.isPressed())
+    {
+      gameManager.updateTeamScore(TEAM_YELLOW, 1);
+      gameManager.changeLedColor(TEAM_YELLOW);
+      // sendLocalScore(NodeId, gameManager.localTeamsScore[0].score, gameManager.localTeamsScore[1].score);
+    }
+    if (teamBlueButton.isPressed())
+    {
+      gameManager.updateTeamScore(TEAM_BLUE, 1);
+      gameManager.changeLedColor(TEAM_BLUE);
+      // sendLocalScore(NodeId, gameManager.localTeamsScore[0].score, gameManager.localTeamsScore[1].score);
+    }
+  }
 }
