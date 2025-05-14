@@ -25,9 +25,16 @@ public:
     DisplayManager();
     void initialize();
     void settingDisplayOLED(int currentSetting,int maxScore, int maxTime, int timeToStart, int timeToCapture);
-    void updateCoundownOLED(int timeToStrart);
-    void updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, uint16_t LeaderId, int blueScore, int yellowScore);
-    void updateDisplayLCD(int blueScore,int yellowScore); 
+
+    void countdownDisplayOled(int timeToStrart);
+    void countdownDisplayLCD(int timeToStrart);
+
+    void gameDisplayOLED(int isGameInProgress, uint16_t NodeId, uint16_t LeaderId, int blueScore, int yellowScore,int time);
+    void gameDisplayLCD(int blueScore,int yellowScore); 
+
+    void EndDisplayOLED(int blueScore, int yellowScore);
+    void EndDisplayLCD(int blueScore, int yellowScore);
+
 private:
 
 };

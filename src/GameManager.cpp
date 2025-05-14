@@ -4,7 +4,7 @@ GameManager::GameManager() : localTeamsScore{{TEAM_BLUE, 0},
                                              {TEAM_YELLOW, 0}},
                              totalTeamScore{{0, {0, 0}}},
                              maxScore(DEFAULT_MAX_SCORE), maxTime(DEFAULT_MAX_TIME), timeToStart(DEFAULT_TIME_TO_START), timeToCapture(DEFAULT_TIME_TO_CAPTURE), currentTime(0), currentSettingId(0),
-                            currentGameState(GAME_STATE_CONFIG), pointControlledByTeam(TEAM_NONE)
+                             currentGameState(GAME_STATE_CONFIG), pointControlledByTeam(TEAM_NONE), addPointFlag(false), addSecondFlag(false)
 {
 }
 // i have and idea of preet battlefield with some point allready under control
@@ -22,7 +22,7 @@ void GameManager::updateTeamScore(int teamId, int score)
     }
 }
 
-void GameManager::changeLedColor(int teamId)
+void GameManager::changeTeamControllingPoint(int teamId)
 {
     if (teamId == TEAM_BLUE)
     {
@@ -81,19 +81,9 @@ int GameManager::getTotalScore(int TeamId)
     return totalScore;
 }
 
-bool GameManager::startGameAction(ezButton &startGameButton, void (*sendGameStatus)(int))
+void GameManager::changeConfigAction(ezButton &changeConfigButton)
 {
-    if (startGameButton.isPressed())
-    {
-        currentGameState = GAME_STATE_PLAYING;
-        sendGameStatus(currentGameState);
-    }
-    return true;
-}
-
-void GameManager::endConfigAction(ezButton &startGameButton)
-{
-    if (startGameButton.isPressed())
+    if (changeConfigButton.isPressed())
     {
         Serial.println("Both buttons pressed");
         currentSettingId++;
@@ -106,7 +96,7 @@ void GameManager::endConfigAction(ezButton &startGameButton)
 
 void GameManager::yellowButtonConfigAction(ezButton &teamBlueButton)
 {
-    if (teamBlueButton.isReleased())
+    if (teamBlueButton.isPressed())
     {
         Serial.println("Blue button released");
         switch (currentSettingId)
@@ -143,7 +133,7 @@ void GameManager::yellowButtonConfigAction(ezButton &teamBlueButton)
 
 void GameManager::blueButtonConfigAction(ezButton &teamYellowButton)
 {
-    if (teamYellowButton.isReleased())
+    if (teamYellowButton.isPressed())
     {
         Serial.println("Yellow button released");
         switch (currentSettingId)
@@ -178,27 +168,25 @@ void GameManager::blueButtonConfigAction(ezButton &teamYellowButton)
     }
 }
 
-void GameManager::initializeLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, void (*sendGameStatus)(int))
+void GameManager::initializeLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, ezButton changeConfigButton, void (*sendGameStatus)(int))
 {
     blueButtonConfigAction(teamBlueButton);
     yellowButtonConfigAction(teamYellowButton);
-    endConfigAction(startGameButton);
-    startGameAction(startGameButton, sendGameStatus);
+    changeConfigAction(changeConfigButton);
+    startCountDownAction(startGameButton);
 }
 
 void GameManager::gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, uint16_t NodeId, uint16_t LeaderId)
 {
     if (teamYellowButton.isPressed())
     {
-        updateTeamScore(TEAM_YELLOW, 1);
-        changeLedColor(TEAM_YELLOW);
+        changeTeamControllingPoint(TEAM_YELLOW);
     }
     if (teamBlueButton.isPressed())
     {
-        updateTeamScore(TEAM_BLUE, 1);
-        changeLedColor(TEAM_BLUE);
+        changeTeamControllingPoint(TEAM_BLUE);
     }
-    if (millis() % 60000 == 0)
+    if (addPointFlag)
     {
         if (pointControlledByTeam == TEAM_BLUE)
         {
@@ -208,10 +196,46 @@ void GameManager::gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton,
         {
             updateTeamScore(TEAM_YELLOW, 1);
         }
+        addPointFlag = false;
     }
-    if (maxScore == getTotalScore(TEAM_BLUE) || maxScore == getTotalScore(TEAM_YELLOW))
+    if (maxScore <= getTotalScore(TEAM_BLUE) || maxScore <= getTotalScore(TEAM_YELLOW))
     {
-        endConfigAction(startGameButton);
+        endGameAction();
+    }
+    if (maxTime < 0)
+    {
+        endGameAction();
+    }
+}
+
+void GameManager::minuteCallBack(GameManager *instance)
+{
+    instance->addPoint();
+    instance->maxTime--;
+}
+
+void GameManager::addPoint()
+{
+    addPointFlag = true;
+}
+
+void GameManager::secondCallBack(GameManager *instance)
+{
+    instance->addSecond();
+    instance->timeToStart--;
+}
+
+void GameManager::addSecond()
+{
+    addSecondFlag = true;
+}
+void GameManager::startCountDownAction(ezButton &button)
+{
+    if (button.isPressed())
+    {
+        Serial.println("Start countdown");
+        currentGameState = GAME_STATE_COUNTDOWN;
+        secondTicker.attach(1, secondCallBack, this);
     }
 }
 
@@ -226,35 +250,38 @@ int GameManager::endGameAction()
     if (totalTeamScore->score[0].score > totalTeamScore->score[1].score)
     {
         return TEAM_BLUE;
-        changeLedColor(TEAM_BLUE);
+        changeTeamControllingPoint(TEAM_BLUE);
     }
     else if (totalTeamScore->score[0].score < totalTeamScore->score[1].score)
     {
         return TEAM_YELLOW;
-        changeLedColor(TEAM_YELLOW);
+        changeTeamControllingPoint(TEAM_YELLOW);
     }
     return TEAM_NONE;
 }
 
-void GameManager::countdownLoop()
+void GameManager::countdownLoop(void (*sendGameStatus)(int))
 {
-    //what i want to do is to count down from timeToStart to 0
-    //and when it reach 0 i want to start the game
-    if (timeToStart > 0)
+    // what i want to do is to count down from timeToStart to 0
+    // and when it reach 0 i want to start the game
+    if (addSecondFlag)
     {
-        if(millis() % 1000 == 0)
-        {
-            timeToStart--;
-        }
+        Serial.print("Time to start: ");
+        Serial.println(timeToStart);
+        addSecondFlag = false;
     }
-    else
+
+    if (timeToStart < 0)
     {
-        setCurrentGameState(GAME_STATE_PLAYING);
+        Serial.println("Start game");
+        currentGameState = GAME_STATE_PLAYING;
+        sendGameStatus(currentGameState);
+        minuteTicker.attach(60, minuteCallBack, this);
     }
 }
 
 void GameManager::endGameLoop()
 {
-    //Why i created this function?
-    //does it even need a loop? loop for whtat? i need to thnik about this later
+    // Why i created this function?
+    // does it even need a loop? loop for whtat? i need to thnik about this later
 }

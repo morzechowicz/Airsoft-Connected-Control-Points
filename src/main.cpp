@@ -14,16 +14,20 @@
 
 // LoRa Settings
 #define LORA_BAND 433.0
+#define LORA_BANDWIDTH 125E3
 #define LORA_SYNC_WORD 0x12
 #define LORA_PREAMBLE_LENGTH 8
 #define LORA_TX_POWER 12
 #define LORA_RX_TIMEOUT 1000
+#define LORA_SF 9
+#define LORA_CODING_RATE 5
 
 // Buttons
 #define debounce 500
 ezButton teamYellowButton(0);
 ezButton teamBlueButton(4);
 ezButton startGameButton(2);
+ezButton changeConfig(15);
 
 // Node variables
 uint16_t NodeId;
@@ -97,6 +101,8 @@ void sendLoRaData(uint8_t flag, const void *data, size_t dataSize)
   sendLoRaMsg(buffer, sizeof(buffer));
 
   seqNumber++; // Increment sequence number for next message
+
+  radio.startReceive();
 }
 
 void sendGameStatus(int gameStatus)
@@ -104,6 +110,8 @@ void sendGameStatus(int gameStatus)
   LoraGameStatus status;
   status.currentGameState = gameStatus;
   sendLoRaData(0x02, &status, sizeof(LoraGameStatus));
+  Serial.print("Game status sent: ");
+  Serial.println(status.currentGameState);
 }
 
 void sendTotalScore(int blueScore, int yellowScore)
@@ -122,6 +130,15 @@ void sendConfig(int maxScore, int maxTime, int timeToStart, int timeToCapture)
   config.timeToStart = timeToStart;
   config.timeToCapture = timeToCapture;
   sendLoRaData(0x03, &config, sizeof(LoraConfig));
+  Serial.print("Config sent: ");
+  Serial.print("Max Score: ");
+  Serial.print(config.maxScore); 
+  Serial.print(", Max Time: ");
+  Serial.print(config.maxTime);
+  Serial.print(", Time to Start: ");
+  Serial.print(config.timeToStart);
+  Serial.print(", Time to Capture: ");
+  Serial.println(config.timeToCapture);
 }
 
 void sendLocalScore(uint16_t nodeId, int blueScore, int yellowScore)
@@ -147,9 +164,6 @@ void receiveLoRaLoop()
     int state = radio.readData(buffer, length);
     if (state == RADIOLIB_ERR_NONE)
     {
-      uint8_t buffer[256];
-      size_t length = radio.getPacketLength();
-      radio.readData(buffer, length);
 
       uint8_t flag = buffer[0];
       uint8_t checksum = buffer[length - 1];
@@ -217,7 +231,12 @@ void initializeLoRa()
   int state = radio.begin(LORA_BAND);
   radio.setSyncWord(LORA_SYNC_WORD);
   radio.setPreambleLength(LORA_PREAMBLE_LENGTH);
+  radio.setBandwidth(LORA_BANDWIDTH);
   radio.setOutputPower(LORA_TX_POWER);
+  radio.setSpreadingFactor(LORA_SF);
+  radio.setCodingRate(LORA_CODING_RATE);
+
+
   radio.setDio0Action(setReciving, RISING);
   radio.startReceive();
 
@@ -286,6 +305,7 @@ void setup()
   teamYellowButton.setDebounceTime(debounce);
   teamBlueButton.setDebounceTime(debounce);
   startGameButton.setDebounceTime(debounce);
+  changeConfig.setDebounceTime(debounce);
 
   Serial.begin(115200);
   Serial.println("Starting...");
@@ -302,20 +322,21 @@ void loop()
   teamYellowButton.loop();
   teamBlueButton.loop();
   startGameButton.loop();
+  changeConfig.loop();
 
   switch (gameManager.getCurrentGameState())
   {
   case 0: // Config mode
-    gameManager.initializeLoop(teamYellowButton, teamBlueButton, startGameButton, sendGameStatus);
+    gameManager.initializeLoop(teamYellowButton, teamBlueButton,startGameButton, changeConfig, sendGameStatus);
     displayManager.settingDisplayOLED(gameManager.getCurrentSettingId(), gameManager.getMaxScore(), gameManager.getMaxTime(), gameManager.getTimeToStart(), gameManager.getTimeToCapture());
     break;
   case 1: // countdown mode
-    gameManager.countdownLoop();
-    displayManager.updateCoundownOLED(gameManager.getTimeToStart());
+    gameManager.countdownLoop(sendGameStatus);
+    displayManager.countdownDisplayOled(gameManager.getTimeToStart());
     break;
   case 2: // Game mode
     gameManager.gameLoop(teamBlueButton, teamYellowButton, startGameButton, NodeId, LeaderId);
-    displayManager.updateDisplayOLED(gameManager.getCurrentGameState() == 1, NodeId, LeaderId, gameManager.getLocalTeamsScore()[0].score, gameManager.getLocalTeamsScore()[1].score);
+    displayManager.gameDisplayOLED(gameManager.getCurrentGameState(), NodeId, LeaderId, gameManager.getLocalTeamsScore()[0].score, gameManager.getLocalTeamsScore()[1].score,gameManager.getMaxTime());
     break;
   case 3: // Game ended
     gameManager.endGameLoop();

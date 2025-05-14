@@ -4,6 +4,7 @@
 #include <cstdint>
 #include "Arduino.h"
 #include <ezButton.h>
+#include <Ticker.h>
 
 // Game States
 #define GAME_STATE_CONFIG 0
@@ -28,7 +29,7 @@
 // default game settings
 #define DEFAULT_MAX_SCORE 60 // in points
 #define DEFAULT_MAX_TIME 60 // in minutes
-#define DEFAULT_TIME_TO_START 300 //in seconds
+#define DEFAULT_TIME_TO_START 1 //in seconds
 #define DEFAULT_TIME_TO_CAPTURE 15 //in seconds
 
 
@@ -48,20 +49,20 @@ public:
     };
 
     GameManager();
-    void initializeLoop(ezButton &teamYellowButton, ezButton &teamBlueButton, ezButton &startGameButton, void (*sendGameStatus)(int));
+    void initializeLoop(ezButton &teamYellowButton, ezButton &teamBlueButton, ezButton &startGameButton,ezButton changeConfigButton, void (*sendGameStatus)(int));
     void gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, uint16_t NodeId, uint16_t LeaderId);
-    void countdownLoop();
+    void countdownLoop(void (*sendGameStatus)(int));
     void endGameLoop();
 
     void updateTeamScore(int teamId, int score);
-    void changeLedColor(int teamId);
+    void changeTeamControllingPoint(int teamId);
     void updateTotalTeamScore(uint16_t NodeId,Team *singleScore);
     int getTotalScore(int teamId);
-    bool startGameAction(ezButton &startGameButton, void (*sendGameStatus)(int));
-    void endConfigAction(ezButton &startGameButton);
+    void changeConfigAction(ezButton &startGameButton);
     void yellowButtonConfigAction(ezButton &teamBlueButton);
     void blueButtonConfigAction(ezButton &teamYellowButton);
     int endGameAction();
+    void startCountDownAction(ezButton &button);
 
     //getters
     Team *getLocalTeamsScore() { return localTeamsScore; }
@@ -79,7 +80,12 @@ public:
 private:
     Team localTeamsScore[2];
     TotalTeamScore totalTeamScore[10];
-    
+    Ticker minuteTicker;
+    Ticker secondTicker;
+
+    bool addPointFlag;
+    bool addSecondFlag;
+
     int currentGameState;
     int pointControlledByTeam;
     
@@ -90,6 +96,11 @@ private:
     int currentTime;    // id 4
 
     int currentSettingId;
+
+    static void minuteCallBack(GameManager* instance);
+    static void secondCallBack(GameManager* instance);
+    void addSecond();
+    void addPoint();
 };
 
 #endif // GAME_MANAGER_H

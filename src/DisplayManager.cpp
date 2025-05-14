@@ -30,29 +30,29 @@ void DisplayManager::settingDisplayOLED(int currentSetting, int maxScore, int ma
     displayOLED.print("Current Setting: ");
     displayOLED.println(currentSetting);
     displayOLED.print("Max Score: ");
-    if ((currentSetting == 1 && ((millis() / 1000) % 2 == 0)) || currentSetting != 1)
+    if ((currentSetting == 1 && ((millis() / 500) % 2 == 0)) || currentSetting != 1)
         displayOLED.println(maxScore);
     else
         displayOLED.println("");
     displayOLED.print("Max Time: ");
-    if ((currentSetting == 2 && ((millis() / 1000) % 2 == 0)) || currentSetting != 2)
+    if ((currentSetting == 2 && ((millis() / 500) % 2 == 0)) || currentSetting != 2)
         displayOLED.println(maxTime);
     else
         displayOLED.println("");
     displayOLED.print("Time to Start: ");
-    if ((currentSetting == 3 && ((millis() / 1000) % 2 == 0)) || currentSetting != 3)
+    if ((currentSetting == 3 && ((millis() / 500) % 2 == 0)) || currentSetting != 3)
         displayOLED.println(timeToStart);
     else
         displayOLED.println("");
     displayOLED.print("Time to Capture: ");
-    if ((currentSetting == 4 && ((millis() / 1000) % 2 == 0)) || currentSetting != 4)
+    if ((currentSetting == 4 && ((millis() / 500) % 2 == 0)) || currentSetting != 4)
         displayOLED.println(timeToCapture);
     else
         displayOLED.println("");
     displayOLED.display();
 }
 
-void DisplayManager::updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, uint16_t LeaderId, int blueScore, int yellowScore)
+void DisplayManager::gameDisplayOLED(int isGameInProgress, uint16_t NodeId, uint16_t LeaderId, int blueScore, int yellowScore,int time)
 {
     displayOLED.clearDisplay();
     displayOLED.setTextSize(1);
@@ -60,7 +60,7 @@ void DisplayManager::updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, u
     displayOLED.setCursor(0, 0);
 
     displayOLED.print("Game in progress: ");
-    displayOLED.println(isGameInProgress ? "Yes" : "No");
+    displayOLED.println(isGameInProgress == 2 ? "Yes" : "No");
 
     displayOLED.println("Teams:");
     displayOLED.print("Blue: ");
@@ -71,10 +71,12 @@ void DisplayManager::updateDisplayOLED(bool isGameInProgress, uint16_t NodeId, u
     displayOLED.println(NodeId);
     displayOLED.print("Leader Id: ");
     displayOLED.println(LeaderId);
+    displayOLED.print("Time: ");
+    displayOLED.println(time);
     displayOLED.display();
 };
 
-void DisplayManager::updateDisplayLCD(int blueScore, int yellowScore)
+void DisplayManager::gameDisplayLCD(int blueScore, int yellowScore)
 {
     displayLCD.clear();
     displayLCD.setCursor(0, 0);
@@ -83,4 +85,15 @@ void DisplayManager::updateDisplayLCD(int blueScore, int yellowScore)
     displayLCD.setCursor(0, 1);
     displayLCD.print("Yellow: ");
     displayLCD.print(yellowScore);
+}
+
+void DisplayManager::countdownDisplayOled(int timeToStart)
+{
+    displayOLED.clearDisplay();
+    displayOLED.setTextSize(1);
+    displayOLED.setTextColor(SSD1306_WHITE);
+    displayOLED.setCursor(0, 0);
+    displayOLED.print("Starting in: ");
+    displayOLED.print(timeToStart);
+    displayOLED.display();
 }
