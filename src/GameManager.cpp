@@ -4,7 +4,7 @@ GameManager::GameManager() : localTeamsScore{{TEAM_BLUE, 0},
                                              {TEAM_YELLOW, 0}},
                              totalTeamScore{{0, {0, 0}}},
                              maxScore(DEFAULT_MAX_SCORE), maxTime(DEFAULT_MAX_TIME), timeToStart(DEFAULT_TIME_TO_START), timeToCapture(DEFAULT_TIME_TO_CAPTURE), currentTime(0), currentSettingId(0),
-                             currentGameState(GAME_STATE_CONFIG), pointControlledByTeam(TEAM_NONE), addPointFlag(false), addSecondFlag(false)
+                             currentGameState(GAME_STATE_CONFIG), pointControlledByTeam(TEAM_NONE), addPointFlag(false), addSecondFlag(false), winner(TEAM_NONE)
 {
 }
 // i have and idea of preet battlefield with some point allready under control
@@ -200,11 +200,11 @@ void GameManager::gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton,
     }
     if (maxScore <= getTotalScore(TEAM_BLUE) || maxScore <= getTotalScore(TEAM_YELLOW))
     {
-        endGameAction();
+        winner = endGameAction();
     }
     if (maxTime < 0)
     {
-        endGameAction();
+        winner = endGameAction();
     }
 }
 

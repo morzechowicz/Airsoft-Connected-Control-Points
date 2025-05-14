@@ -340,6 +340,7 @@ void loop()
     break;
   case 3: // Game ended
     gameManager.endGameLoop();
+    displayManager.endDisplayOLED(gameManager.getLocalTeamsScore()[0].score, gameManager.getLocalTeamsScore()[1].score,gameManager.getWinner());
     break;
   default:
     break;

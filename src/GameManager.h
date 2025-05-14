@@ -74,6 +74,7 @@ public:
     int getCurrentSettingId() const { return currentSettingId; }
     int getPointControlledByTeam() const { return pointControlledByTeam; }
     int getCurrentGameState() const { return currentGameState; }
+    int getWinner() const { return winner; }
 
     //setters
     int setCurrentGameState(int gameState) { currentGameState = gameState; return currentGameState; }
@@ -96,6 +97,7 @@ private:
     int currentTime;    // id 4
 
     int currentSettingId;
+    int winner;
 
     static void minuteCallBack(GameManager* instance);
     static void secondCallBack(GameManager* instance);

@@ -20,6 +20,25 @@ void DisplayManager::initialize()
     displayLCD.backlight();
 }
 
+void DisplayManager::idleDisplayLCD()
+{
+    displayLCD.clear();
+    displayLCD.setCursor(0, 0);
+    displayLCD.print("GET READY");
+    displayLCD.setCursor(0, 1);
+
+    static unsigned long lastUpdate = 0;
+    static int dotCount = 1;
+    unsigned long now = millis();
+    if (now - lastUpdate > 500) {
+        lastUpdate = now;
+        dotCount = dotCount % 3 + 1; // cycles 1,2,3
+    }
+    String msg = "Waiting for init";
+    for (int i = 0; i < dotCount; ++i) msg += ".";
+    displayLCD.print(msg);
+}
+
 void DisplayManager::settingDisplayOLED(int currentSetting, int maxScore, int maxTime, int timeToStart, int timeToCapture)
 {
     displayOLED.clearDisplay();
@@ -96,4 +115,41 @@ void DisplayManager::countdownDisplayOled(int timeToStart)
     displayOLED.print("Starting in: ");
     displayOLED.print(timeToStart);
     displayOLED.display();
+}
+
+void DisplayManager::countdownDisplayLCD(int timeToStart)
+{
+    displayLCD.clear();
+    displayLCD.setCursor(0, 0);
+    displayLCD.print("Starting in: ");
+    displayLCD.print(timeToStart);
+}
+
+void DisplayManager::endDisplayOLED(int blueScore, int yellowScore,int winner)
+{
+    displayOLED.clearDisplay();
+    displayOLED.setTextSize(1);
+    displayOLED.setTextColor(SSD1306_WHITE);
+    displayOLED.setCursor(0, 0);
+    displayOLED.print("Game Over");
+    displayOLED.setCursor(0, 10);
+    displayOLED.print("Blue: ");
+    displayOLED.println(blueScore);
+    displayOLED.setCursor(0, 20);
+    displayOLED.print("Yellow: ");
+    displayOLED.println(yellowScore);
+    displayOLED.display();
+}
+
+void DisplayManager::endDisplayLCD(int blueScore, int yellowScore,int winner)
+{
+    displayLCD.clear();
+    displayLCD.setCursor(0, 0);
+    displayLCD.print("Game Over");
+    displayLCD.setCursor(0, 1);
+    displayLCD.print("Blue: ");
+    displayLCD.print(blueScore);
+    displayLCD.setCursor(0, 2);
+    displayLCD.print("Yellow: ");
+    displayLCD.print(yellowScore);
 }
