@@ -40,6 +40,7 @@ GameManager gameManager;
 DisplayManager displayManager;
 
 bool isReciving = false;
+bool isTransmiting = false;
 SX1278 radio = new Module(18, 26, 14, 33);
 
 // LoraMsg structure
@@ -101,8 +102,6 @@ void sendLoRaData(uint8_t flag, const void *data, size_t dataSize)
   sendLoRaMsg(buffer, sizeof(buffer));
 
   seqNumber++; // Increment sequence number for next message
-
-  radio.startReceive();
 }
 
 void sendGameStatus(int gameStatus)
@@ -152,12 +151,18 @@ void sendLocalScore(uint16_t nodeId, int blueScore, int yellowScore)
 
 void setReciving()
 {
-  isReciving = true;
+  // idk why but dio0 gets activated when transmitting
+  // this is a band aid solution but i hope it works
+  Serial.println("Received data");
+  if(!isTransmiting)
+  {
+    isReciving = true;
+  }
 }
 
 void receiveLoRaLoop()
 {
-  if (isReciving)
+  if (isReciving && !isTransmiting)
   {
     uint8_t buffer[256];
     size_t length = sizeof(buffer);
@@ -262,6 +267,7 @@ bool isChannelClear()
 
 void sendLoRaMsg(uint8_t *msg, size_t length)
 {
+  isTransmiting = true;
   const int maxAttempts = 5;
   const int initialBackoff = 100;
   int attempt = 0;
@@ -296,6 +302,8 @@ void sendLoRaMsg(uint8_t *msg, size_t length)
   {
     Serial.println("Failed to send message after maximum attempts");
   }
+
+  isTransmiting = false;
 
   radio.startReceive();
 }
