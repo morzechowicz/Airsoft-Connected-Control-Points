@@ -13,7 +13,9 @@ private:
 
 public:
     void configureGame();
+    void startCountDown();
     void startGame();
+    void endGame();
 };
 
 #endif
