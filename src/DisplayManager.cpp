@@ -138,6 +138,12 @@ void DisplayManager::endDisplayOLED(int blueScore, int yellowScore,int winner)
     displayOLED.setCursor(0, 20);
     displayOLED.print("Yellow: ");
     displayOLED.println(yellowScore);
+    if(winner == 0)
+    {
+        displayOLED.println("BLUE TEAM WON");
+    }else{
+        displayOLED.println("YELLOW TEAM WON");
+    }
     displayOLED.display();
 }
 
