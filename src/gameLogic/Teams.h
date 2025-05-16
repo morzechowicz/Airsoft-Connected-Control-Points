@@ -1,6 +1,7 @@
 #pragma once
 
-enum class GameState {
+enum class TeamId {
+    None = -1,
     Bluefor,
     RedFor,
     OpFor,

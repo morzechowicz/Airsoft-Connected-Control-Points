@@ -1,21 +1,23 @@
 #ifndef GAME_LOGIC_H  // Header guard to prevent multiple inclusions
-#define GAME_LOGIN_H
+#define GAME_LOGIC_H
 
 #include "Team.h"
 #include "GameState.h"
-
+#include <LoRaManager.h>
 
 class GameLogic
 {
-private:
-    Team teams[2];
-    GameState gameState;
-
 public:
     void configureGame();
     void startCountDown();
     void startGame();
     void endGame();
+
+private:
+        Team teams[2];
+        GameState gameState;
+        LoRaManager loRa;
+
 };
 
 #endif
