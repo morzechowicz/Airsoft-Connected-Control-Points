@@ -138,6 +138,12 @@ void DisplayManager::endDisplayOLED(int blueScore, int yellowScore,int winner)
     displayOLED.setCursor(0, 20);
     displayOLED.print("Yellow: ");
     displayOLED.println(yellowScore);
+    if(winner == 0)
+    {
+        displayOLED.println("BLUE TEAM WON");
+    }else{
+        displayOLED.println("YELLOW TEAM WON");
+    }
     displayOLED.display();
 }
 
@@ -145,11 +151,15 @@ void DisplayManager::endDisplayLCD(int blueScore, int yellowScore,int winner)
 {
     displayLCD.clear();
     displayLCD.setCursor(0, 0);
-    displayLCD.print("Game Over");
+    if(winner == 0)
+    {
+        displayLCD.print("BLUE TEAM WON");
+    }else{
+        displayLCD.print("YELLOW TEAM WON");
+    }
     displayLCD.setCursor(0, 1);
-    displayLCD.print("Blue: ");
+    displayLCD.print("B: ");
     displayLCD.print(blueScore);
-    displayLCD.setCursor(0, 2);
-    displayLCD.print("Yellow: ");
+    displayLCD.print("Y: ");
     displayLCD.print(yellowScore);
 }
