@@ -13,7 +13,7 @@
 #include <cstddef>
 
 // LoRa Settings
-#define LORA_BAND 433.0
+#define LORA_BAND 434.0f
 #define LORA_BANDWIDTH 125E3
 #define LORA_SYNC_WORD 0x12
 #define LORA_PREAMBLE_LENGTH 8
@@ -32,7 +32,8 @@ ezButton changeConfig(15);
 // Node variables
 uint16_t NodeId;
 uint16_t LeaderId = 0;
-bool isLeader = false;
+bool isLeader = true; // default is true all nodes can change its config but on recive it forgets aobut it
+// yeah i know it works kinda backwords...
 
 // Game variables
 
@@ -48,7 +49,8 @@ SX1278 radio = new Module(18, 26, 14, 33);
 struct LocalScore
 {
   uint16_t NodeId;
-  int score[2];
+  int blueScore;
+  int yellowScore;
 };
 // Flag 0x01
 struct LoraTotalScore
@@ -66,8 +68,18 @@ struct LoraConfig
 {
   int maxScore;
   int maxTime;
-  int timeToStart;
+  int coutdownTime;
   int timeToCapture;
+};
+// Flag 0x04
+struct LoraCountDown
+{
+  int countdown;
+};
+// Flag 0x05
+struct LoraGameEnd
+{
+  int gameEnd;
 };
 
 // Function prototypes
@@ -80,7 +92,7 @@ void sendLoRaData(uint8_t flag, const void *data, size_t dataSize);
 void sendGameStatus(int gameStatus);
 void sendTotalScore(int blueScore, int yellowScore);
 void sendLocalScore(uint16_t nodeId, int blueScore, int yellowScore);
-void sendConfig(int maxScore, int maxTime, int timeToStart, int timeToCapture);
+void sendConfig(int maxScore, int maxTime, int coutdownTime, int timeToCapture);
 
 void sendLoRaData(uint8_t flag, const void *data, size_t dataSize)
 {
@@ -121,12 +133,14 @@ void sendTotalScore(int blueScore, int yellowScore)
   sendLoRaData(0x01, &totalScore, sizeof(LoraTotalScore));
 }
 
-void sendConfig(int maxScore, int maxTime, int timeToStart, int timeToCapture)
+
+
+void sendConfig(int maxScore, int maxTime, int coutdownTime, int timeToCapture)
 {
   LoraConfig config;
   config.maxScore = maxScore;
   config.maxTime = maxTime;
-  config.timeToStart = timeToStart;
+  config.coutdownTime = coutdownTime;
   config.timeToCapture = timeToCapture;
   sendLoRaData(0x03, &config, sizeof(LoraConfig));
   Serial.print("Config sent: ");
@@ -135,7 +149,7 @@ void sendConfig(int maxScore, int maxTime, int timeToStart, int timeToCapture)
   Serial.print(", Max Time: ");
   Serial.print(config.maxTime);
   Serial.print(", Time to Start: ");
-  Serial.print(config.timeToStart);
+  Serial.print(config.coutdownTime);
   Serial.print(", Time to Capture: ");
   Serial.println(config.timeToCapture);
 }
@@ -144,28 +158,28 @@ void sendLocalScore(uint16_t nodeId, int blueScore, int yellowScore)
 {
   LocalScore localScore;
   localScore.NodeId = nodeId;
-  localScore.score[0] = blueScore;
-  localScore.score[1] = yellowScore;
+  localScore.blueScore = blueScore;
+  localScore.yellowScore = yellowScore;
   sendLoRaData(0x00, &localScore, sizeof(LocalScore));
 }
 
-void setReciving()
+void setReciving(void)
 {
   // idk why but dio0 gets activated when transmitting
   // this is a band aid solution but i hope it works
-  Serial.println("Received data");
   if(!isTransmiting)
   {
+    Serial.println("Received data");
     isReciving = true;
   }
 }
 
 void receiveLoRaLoop()
 {
-  if (isReciving && !isTransmiting)
+  if (isReciving)
   {
     uint8_t buffer[256];
-    size_t length = sizeof(buffer);
+    size_t length = radio.getPacketLength();
     int state = radio.readData(buffer, length);
     if (state == RADIOLIB_ERR_NONE)
     {
@@ -187,6 +201,10 @@ void receiveLoRaLoop()
         {
           LocalScore receivedScore;
           memcpy(&receivedScore, buffer + 1, sizeof(LocalScore));
+          if(isLeader)
+          {
+            gameManager.updateTotalTeamScore(receivedScore.NodeId,receivedScore.blueScore,receivedScore.yellowScore);
+          }
           Serial.print("Received LocalScore from NodeId: ");
           Serial.println(receivedScore.NodeId);
           break;
@@ -210,6 +228,34 @@ void receiveLoRaLoop()
           Serial.println(gameManager.getCurrentGameState());
           break;
         }
+        case 0x03:
+        {
+          LoraConfig gameConfig;
+          memcpy(&gameConfig, buffer + 1, sizeof(LoraConfig));
+          gameManager.setGameSettings(gameConfig.maxScore,gameConfig.maxTime,gameConfig.coutdownTime,gameConfig.timeToCapture);
+          Serial.println("Recived Config switching off leader mode ");
+          isLeader = false;
+          delay(2000);
+          Serial.println("config:");
+          Serial.print("maxScore:");
+          Serial.println(gameConfig.maxScore);
+          Serial.print("maxTime:");
+          Serial.println(gameConfig.maxTime);
+          Serial.print("coutdownTime:");
+          Serial.println(gameConfig.coutdownTime);
+          Serial.print("timeToCapture:");
+          Serial.println(gameConfig.timeToCapture);
+          gameManager.startCountDownAction();
+          Serial.println("starting countdown");
+          break;
+        }
+        //this is not needed i think 03 does all of that and more
+        // case 0x04:
+        // {
+        //   LoraCountDown coutdown;
+        //   memcpy(&coutdown, buffer + 1, sizeof(LoraCountDown));
+        //   break;
+        // }
         default:
           Serial.println("Unknown flag received");
           break;
@@ -227,8 +273,9 @@ void receiveLoRaLoop()
     }
 
     isReciving = false;
+    radio.startReceive();
+    Serial.println("lora is reciving after start");
   }
-  radio.startReceive();
 }
 
 void initializeLoRa()
@@ -240,11 +287,12 @@ void initializeLoRa()
   radio.setOutputPower(LORA_TX_POWER);
   radio.setSpreadingFactor(LORA_SF);
   radio.setCodingRate(LORA_CODING_RATE);
-
-
+  
+  
   radio.setDio0Action(setReciving, RISING);
+  
   radio.startReceive();
-
+  Serial.println("lora is reciving start ");
   if (state == RADIOLIB_ERR_NONE)
   {
     Serial.println("LoRa initialized!");
@@ -261,7 +309,8 @@ void initializeLoRa()
 bool isChannelClear()
 {
   radio.startReceive();
-  delay(10);
+  Serial.println("lora is reciving channel busy");
+  delay(200);
   return !radio.available();
 }
 
@@ -306,6 +355,7 @@ void sendLoRaMsg(uint8_t *msg, size_t length)
   isTransmiting = false;
 
   radio.startReceive();
+  Serial.println("lora is reciving");
 }
 
 void setup()
@@ -321,6 +371,11 @@ void setup()
   pinMode(LED_YELLOW, OUTPUT);
   pinMode(LED_BLUE, OUTPUT);
 
+  randomSeed(analogRead(34));
+  NodeId = random(1, 65535);
+  Serial.print("Generated NodeId: ");
+  Serial.println(NodeId);
+
   displayManager.initialize();
   initializeLoRa();
 }
@@ -335,20 +390,24 @@ void loop()
   switch (gameManager.getCurrentGameState())
   {
   case 0: // Config mode
-    gameManager.initializeLoop(teamYellowButton, teamBlueButton,startGameButton, changeConfig, sendGameStatus);
+    gameManager.initializeLoop(teamYellowButton, teamBlueButton,startGameButton, changeConfig, sendConfig);
     displayManager.settingDisplayOLED(gameManager.getCurrentSettingId(), gameManager.getMaxScore(), gameManager.getMaxTime(), gameManager.getTimeToStart(), gameManager.getTimeToCapture());
+    displayManager.idleDisplayLCD();
     break;
   case 1: // countdown mode
     gameManager.countdownLoop(sendGameStatus);
     displayManager.countdownDisplayOled(gameManager.getTimeToStart());
+    displayManager.countdownDisplayLCD(gameManager.getTimeToStart());
     break;
   case 2: // Game mode
-    gameManager.gameLoop(teamBlueButton, teamYellowButton, startGameButton, NodeId, LeaderId);
-    displayManager.gameDisplayOLED(gameManager.getCurrentGameState(), NodeId, LeaderId, gameManager.getLocalTeamsScore()[0].score, gameManager.getLocalTeamsScore()[1].score,gameManager.getMaxTime());
+    gameManager.gameLoop(teamBlueButton, teamYellowButton, startGameButton, isLeader,sendLocalScore,sendTotalScore);
+    displayManager.gameDisplayOLED(gameManager.getCurrentGameState(), NodeId, LeaderId, gameManager.getTotalScore(TEAM_BLUE),gameManager.getTotalScore(TEAM_YELLOW),gameManager.getMaxTime());
+    displayManager.gameDisplayLCD(gameManager.getTotalScore(TEAM_BLUE),gameManager.getTotalScore(TEAM_YELLOW));
     break;
   case 3: // Game ended
     gameManager.endGameLoop();
-    displayManager.endDisplayOLED(gameManager.getLocalTeamsScore()[0].score, gameManager.getLocalTeamsScore()[1].score,gameManager.getWinner());
+    displayManager.endDisplayOLED(gameManager.getTotalScore(TEAM_BLUE),gameManager.getTotalScore(TEAM_YELLOW),gameManager.getWinner());
+    displayManager.endDisplayLCD(gameManager.getTotalScore(TEAM_BLUE),gameManager.getTotalScore(TEAM_YELLOW),gameManager.getWinner());
     break;
   default:
     break;

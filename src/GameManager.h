@@ -29,7 +29,7 @@
 // default game settings
 #define DEFAULT_MAX_SCORE 60 // in points
 #define DEFAULT_MAX_TIME 60 // in minutes
-#define DEFAULT_TIME_TO_START 1 //in seconds
+#define DEFAULT_TIME_TO_START 5 //in seconds
 #define DEFAULT_TIME_TO_CAPTURE 15 //in seconds
 
 
@@ -44,31 +44,32 @@ public:
     };
     struct TotalTeamScore
     {
-        uint16_t NodeId;
-        Team score[2];
+        int blueScore;
+        int yellowScore;
     };
 
     GameManager();
-    void initializeLoop(ezButton &teamYellowButton, ezButton &teamBlueButton, ezButton &startGameButton,ezButton changeConfigButton, void (*sendGameStatus)(int));
-    void gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, uint16_t NodeId, uint16_t LeaderId);
+    void initializeLoop(ezButton &teamYellowButton, ezButton &teamBlueButton, ezButton &startGameButton,ezButton changeConfigButton, void (*sendGameStatus)(int,int,int,int));
+    void gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton,bool isLeader,void (*sendLocalScoreUpdate)(uint16_t, int, int),void (*sendTotalScoreUpdate)(int,int));
     void countdownLoop(void (*sendGameStatus)(int));
     void endGameLoop();
 
     void updateTeamScore(int teamId, int score);
     void changeTeamControllingPoint(int teamId);
-    void updateTotalTeamScore(uint16_t NodeId,Team *singleScore);
+    void updateTotalTeamScore(uint16_t NodeId,int blueScore,int yellowScore);
     int getTotalScore(int teamId);
     void changeConfigAction(ezButton &startGameButton);
     void yellowButtonConfigAction(ezButton &teamBlueButton);
     void blueButtonConfigAction(ezButton &teamYellowButton);
     int endGameAction();
-    void startCountDownAction(ezButton &button);
+    void startCountDownAction();
+    void setGameSettings(int maxScore,int maxTime,int coutdownTime,int timeToCapture);
 
     //getters
     Team *getLocalTeamsScore() { return localTeamsScore; }
     int getMaxScore() const { return maxScore; }
     int getMaxTime() const { return maxTime; }
-    int getTimeToStart() const { return timeToStart; }
+    int getTimeToStart() const { return coutdownTime; }
     int getTimeToCapture() const { return timeToCapture; }
     int getCurrentTime() const { return currentTime; }
     int getCurrentSettingId() const { return currentSettingId; }
@@ -80,7 +81,7 @@ public:
     int setCurrentGameState(int gameState) { currentGameState = gameState; return currentGameState; }
 private:
     Team localTeamsScore[2];
-    TotalTeamScore totalTeamScore[10];
+    TotalTeamScore totalTeamScore;
     Ticker minuteTicker;
     Ticker secondTicker;
 
@@ -92,7 +93,7 @@ private:
     
     int maxScore;      // in minutes 1 point every minute id 0
     int maxTime;       // max time in minutes id 1
-    int timeToStart;    // coutdown time in minuts id 2
+    int coutdownTime;    // coutdown time in minuts id 2
     int timeToCapture; // time to capture in seconds id 3
     int currentTime;    // id 4
 

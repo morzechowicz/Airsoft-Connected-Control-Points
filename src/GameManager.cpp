@@ -2,8 +2,8 @@
 
 GameManager::GameManager() : localTeamsScore{{TEAM_BLUE, 0},
                                              {TEAM_YELLOW, 0}},
-                             totalTeamScore{{0, {0, 0}}},
-                             maxScore(DEFAULT_MAX_SCORE), maxTime(DEFAULT_MAX_TIME), timeToStart(DEFAULT_TIME_TO_START), timeToCapture(DEFAULT_TIME_TO_CAPTURE), currentTime(0), currentSettingId(0),
+                             totalTeamScore{0,0},
+                             maxScore(DEFAULT_MAX_SCORE), maxTime(DEFAULT_MAX_TIME), coutdownTime(DEFAULT_TIME_TO_START), timeToCapture(DEFAULT_TIME_TO_CAPTURE), currentTime(0), currentSettingId(0),
                              currentGameState(GAME_STATE_CONFIG), pointControlledByTeam(TEAM_NONE), addPointFlag(false), addSecondFlag(false), winner(TEAM_NONE)
 {
 }
@@ -20,6 +20,14 @@ void GameManager::updateTeamScore(int teamId, int score)
             break;
         }
     }
+}
+
+void GameManager::setGameSettings(int maxScore,int maxTime,int coutdownTime,int timeToCapture)
+{
+    GameManager::maxScore = maxScore;
+    GameManager::maxTime = maxTime;
+    GameManager::coutdownTime = coutdownTime;
+    GameManager::timeToCapture = timeToCapture;
 }
 
 void GameManager::changeTeamControllingPoint(int teamId)
@@ -44,41 +52,22 @@ void GameManager::changeTeamControllingPoint(int teamId)
     }
 }
 
-void GameManager::updateTotalTeamScore(uint16_t NodeId, Team *singleScore)
+void GameManager::updateTotalTeamScore(uint16_t NodeId, int blueScore,int yellowScore)
 {
-    for (int i = 0; i < 10; i++)
-    {
-        if (totalTeamScore[i].NodeId == NodeId)
-        {
-            totalTeamScore[i].score[0] = singleScore[0];
-            totalTeamScore[i].score[1] = singleScore[1];
-            return;
-        }
-    }
-
-    for (int i = 0; i < 10; i++)
-    {
-        if (totalTeamScore[i].NodeId == 0)
-        {
-            totalTeamScore[i].NodeId = NodeId;
-            totalTeamScore[i].score[0] = singleScore[0];
-            totalTeamScore[i].score[1] = singleScore[1];
-            return;
-        }
-    }
+    totalTeamScore.blueScore += blueScore;
+    totalTeamScore.yellowScore += yellowScore;
 }
 
 int GameManager::getTotalScore(int TeamId)
 {
-    int totalScore = 0;
-    for (int i = 0; i < 10; i++)
+    if(TEAM_BLUE)
     {
-        if (totalTeamScore[i].NodeId != 0)
-        {
-            totalScore += totalTeamScore[i].score[TeamId].score;
-        }
+        return totalTeamScore.blueScore;
     }
-    return totalScore;
+    if(TEAM_YELLOW)
+    {
+       return totalTeamScore.yellowScore;
+    }
 }
 
 void GameManager::changeConfigAction(ezButton &changeConfigButton)
@@ -114,9 +103,9 @@ void GameManager::yellowButtonConfigAction(ezButton &teamBlueButton)
             }
             break;
         case 3:
-            if (timeToStart > 30)
+            if (coutdownTime > 30)
             {
-                timeToStart = timeToStart - 30;
+                coutdownTime = coutdownTime - 30;
             }
             break;
         case 4:
@@ -151,9 +140,9 @@ void GameManager::blueButtonConfigAction(ezButton &teamYellowButton)
             }
             break;
         case 3:
-            if (timeToStart < 600)
+            if (coutdownTime < 600)
             {
-                timeToStart = timeToStart + 30;
+                coutdownTime = coutdownTime + 30;
             }
             break;
         case 4:
@@ -168,15 +157,19 @@ void GameManager::blueButtonConfigAction(ezButton &teamYellowButton)
     }
 }
 
-void GameManager::initializeLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, ezButton changeConfigButton, void (*sendGameStatus)(int))
+void GameManager::initializeLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, ezButton changeConfigButton, void (*sendConfig)(int, int, int, int))
 {
     blueButtonConfigAction(teamBlueButton);
     yellowButtonConfigAction(teamYellowButton);
     changeConfigAction(changeConfigButton);
-    startCountDownAction(startGameButton);
+    if (startGameButton.isPressed())
+    {
+        sendConfig(maxScore, maxTime, coutdownTime, timeToCapture);
+        startCountDownAction();
+    }
 }
 
-void GameManager::gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, uint16_t NodeId, uint16_t LeaderId)
+void GameManager::gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton, ezButton &startGameButton, bool isLeader, void (*sendLocalScoreUpdate)(uint16_t, int, int),void (*sendTotalScoreUpdate)(int,int))
 {
     if (teamYellowButton.isPressed())
     {
@@ -196,6 +189,21 @@ void GameManager::gameLoop(ezButton &teamBlueButton, ezButton &teamYellowButton,
         {
             updateTeamScore(TEAM_YELLOW, 1);
         }
+
+        //node sends it score while leader update everyone else
+        if (!isLeader)
+        {
+            sendLocalScoreUpdate(1, localTeamsScore[TEAM_BLUE].score, localTeamsScore[TEAM_YELLOW].score);
+        }
+        else
+        {
+            Serial.println("total score ");
+            Serial.println(getTotalScore(TEAM_BLUE));
+            Serial.println(getTotalScore(TEAM_YELLOW));
+            sendTotalScoreUpdate(getTotalScore(TEAM_BLUE), getTotalScore(TEAM_YELLOW));
+        }
+
+
         addPointFlag = false;
     }
     if (maxScore <= getTotalScore(TEAM_BLUE) || maxScore <= getTotalScore(TEAM_YELLOW))
@@ -222,21 +230,19 @@ void GameManager::addPoint()
 void GameManager::secondCallBack(GameManager *instance)
 {
     instance->addSecond();
-    instance->timeToStart--;
+    instance->coutdownTime--;
 }
 
 void GameManager::addSecond()
 {
     addSecondFlag = true;
 }
-void GameManager::startCountDownAction(ezButton &button)
+void GameManager::startCountDownAction()
 {
-    if (button.isPressed())
-    {
-        Serial.println("Start countdown");
-        currentGameState = GAME_STATE_COUNTDOWN;
-        secondTicker.attach(1, secondCallBack, this);
-    }
+    Serial.println("Start countdown");
+    Serial.print(coutdownTime);
+    currentGameState = GAME_STATE_COUNTDOWN;
+    secondTicker.attach(1, secondCallBack, this); // start second ticker
 }
 
 int GameManager::endGameAction()
@@ -245,14 +251,14 @@ int GameManager::endGameAction()
     currentSettingId = 0;
     maxScore = DEFAULT_MAX_SCORE;
     maxTime = DEFAULT_MAX_TIME;
-    timeToStart = DEFAULT_TIME_TO_START;
+    coutdownTime = DEFAULT_TIME_TO_START;
     timeToCapture = DEFAULT_TIME_TO_CAPTURE;
-    if (totalTeamScore->score[0].score > totalTeamScore->score[1].score)
+    if (totalTeamScore.blueScore > totalTeamScore.yellowScore)
     {
         return TEAM_BLUE;
         changeTeamControllingPoint(TEAM_BLUE);
     }
-    else if (totalTeamScore->score[0].score < totalTeamScore->score[1].score)
+    else if (totalTeamScore.blueScore < totalTeamScore.yellowScore)
     {
         return TEAM_YELLOW;
         changeTeamControllingPoint(TEAM_YELLOW);
@@ -262,20 +268,23 @@ int GameManager::endGameAction()
 
 void GameManager::countdownLoop(void (*sendGameStatus)(int))
 {
-    // what i want to do is to count down from timeToStart to 0
+    // what i want to do is to count down from coutdownTime to 0
     // and when it reach 0 i want to start the game
     if (addSecondFlag)
     {
         Serial.print("Time to start: ");
-        Serial.println(timeToStart);
+        Serial.println(coutdownTime);
         addSecondFlag = false;
     }
 
-    if (timeToStart < 0)
+    if (coutdownTime < 0)
     {
         Serial.println("Start game");
         currentGameState = GAME_STATE_PLAYING;
-        sendGameStatus(currentGameState);
+        // sendGameStatus(currentGameState);
+        // this starts counting minutes
+        // im adding this commnet couse im fucking stupid and wasted to much time trying to remmeber why i added this
+        // dont think about it
         minuteTicker.attach(60, minuteCallBack, this);
     }
 }
