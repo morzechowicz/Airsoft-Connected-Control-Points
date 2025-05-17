@@ -8,9 +8,9 @@
 class GameLogic
 {
 public:
-    void configureGame();
     void startCountDown();
     void startGame();
+    void gameLoop();
     void endGame();
 
 private:

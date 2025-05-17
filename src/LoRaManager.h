@@ -10,7 +10,8 @@ class LoRaManager
 {
 public:
     LoRaManager();
-
+    LoRaManager(SX1278 radioModule);
+    
     void sendNewConfig(Config config);
     void sendAllTotalTeamsScore(const Team* teams, size_t teamCount);
     void sendGameFinished(const Team* teams, size_t teamCount);

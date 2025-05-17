@@ -2,8 +2,8 @@
 
 enum class TeamId {
     None = -1,
-    Bluefor,
+    Blufor,
     RedFor,
     OpFor,
-    YellowFor
+    YellowFor // hehe pissFor 
 };

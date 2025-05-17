@@ -3,7 +3,7 @@
 
 #include <Display.h>
 
-class DispalyOled : public Display
+class DisplayOled : public Display
 {
 public:
     void displaySettings() override;
