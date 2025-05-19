@@ -20,9 +20,9 @@ class DisplayOled : public Display
 public:
     DisplayOled() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST) {}
 
-    void displaySettings(Config config) override;
+    void displaySettings(Config config,int configState) override;
     void displayCountdown(int countdown) override;
-    void displayGame(ControlPoint controlPoint) override;
+    void displayGame(ControlPoint controlPoint, int timeLeft) override;
     void displayCapturing(TeamId capturingTeam, int progres) override;
     void displayFinished(TeamId winner, ControlPoint controlPoint) override;
 

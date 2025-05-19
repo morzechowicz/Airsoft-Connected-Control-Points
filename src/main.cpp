@@ -118,7 +118,7 @@ void loop()
       gameState = GameState::CountDown;
       secondCLock.start();
     }
-    displayOLED.displaySettings(config);
+    displayOLED.displaySettings(config,configState);
     break;
   case GameState::CountDown:
     if (secondCLock.getElapsedTime() > 1000) // for the time being this stays like this i cant be bothered to add another setting rihgt now also nobody cares
@@ -175,7 +175,7 @@ void loop()
     }
     // Capture Logic
     CapturePoint();
-    displayOLED.displayGame(controlPoint);
+    displayOLED.displayGame(controlPoint,gameClock.getElapsedTimeInMinutes() - config.getDurration());
     break;
   case GameState::Finished:
     // here we just display winner until idk button press or what ever

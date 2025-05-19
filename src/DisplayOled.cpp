@@ -1,20 +1,24 @@
 #include <DisplayOled.h>
 
-void DisplayOled::displaySettings(Config config)
+void DisplayOled::displaySettings(Config config,int configState)
 {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 0);
     display.print("Settings:");
-    display.println("Duration(min): ");
-    display.print(config.getDurration());
-    display.println("Countdown(sec): ");
+    display.println(configState == 0 ? "<--" : "");
+    display.print("Countdown(sec): ");
     display.print(config.getCountdown());
-    display.println("Capturing Time(sec):");
-    display.print(config.getCaptureTime());
-    display.println("Target Points:");
+    display.println(configState == 1 ? "<--" : "");
+    display.print("Duration(min): ");
+    display.print(config.getDurration());
+    display.println(configState == 2 ? "<--" : "");
+    display.print("Target Points:");
     display.print(config.getPointsTarget());
+    display.println(configState == 3 ? "<--" : "");
+    display.print("Capturing Time(sec):");
+    display.print(config.getCaptureTime());
     display.display();
 }
 
@@ -30,7 +34,7 @@ void DisplayOled::displayCountdown(int countdown)
     display.display();
 }
 
-void DisplayOled::displayGame(ControlPoint controlPoint)
+void DisplayOled::displayGame(ControlPoint controlPoint, int timeLeft)
 {
     display.clearDisplay();
     display.println("Controlled by:");
@@ -47,7 +51,8 @@ void DisplayOled::displayGame(ControlPoint controlPoint)
         break;
     }
     display.println("Time left:");
-    display.print("Later"); //add later
+    display.print(timeLeft);
+    display.print(" min");
     display.println("Blue:");
     display.print(controlPoint.getTeamPoints(TeamId::Blufor));
     display.print(" | Yellow:");
@@ -63,7 +68,7 @@ void DisplayOled::displayCapturing(TeamId capturingTeam, int progres)
     display.println(" is capturing!");
     display.print("Captured:");
     display.println("");
-    int numOfHashes = (progres / 21) * 100;
+    int numOfHashes = (progres * 21) * 100;
     for(int i = 0; i < numOfHashes; i++)
     {
         display.print("#");

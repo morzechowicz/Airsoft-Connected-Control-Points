@@ -2,12 +2,13 @@
 #define CLOCKER_H
 
 #include <stdint.h>
+#include <Arduino.h>
 
 class Clocker
 {
 private:
-    uint32_t startTime;
-    uint32_t elapsedTime;
+    uint64_t startTime;
+    uint64_t elapsedTime;
     bool running;
 
 public:
@@ -16,8 +17,8 @@ public:
     void start();
     void stop();
     void reset();
-    uint32_t getElapsedTime() const;
-    bool isRunning() const;
+    uint64_t getElapsedTime();
+    bool isRunning() {return running;};
     int getElapsedTimeInMinutes();
 };
 
