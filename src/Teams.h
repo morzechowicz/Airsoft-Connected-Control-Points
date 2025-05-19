@@ -5,5 +5,6 @@ enum class TeamId {
     Blufor,
     RedFor,
     OpFor,
-    YellowFor // hehe pissFor 
+    YellowFor, // hehe pissFor 
+    Draw // YOU GET NOTHING YOU LOSE GOOD DAY SIR
 };

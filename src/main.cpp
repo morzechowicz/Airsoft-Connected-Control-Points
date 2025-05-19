@@ -17,9 +17,8 @@ Team yellow(TeamId::YellowFor, 0);
 SX1278 radio = new Module(18, 14, 26, 33);
 LoRaManager loRaManager(radio);
 ButtonManager buttonManager;
-ControlPoint controlPoint;
+ControlPoint controlPoint(2);
 DisplayOled displayOLED;
-Team teams[2] = {blue, yellow};
 Config config(15, 15, 15, 15);
 GameLogic gameLogic;
 Clocker pointClock;
@@ -43,37 +42,12 @@ bool isGameOver()
     return true;
   }
   // winning by points
-  for (int i = 0; i < sizeof(teams); ++i)
+  if(controlPoint.pointsTargetReached(config.getPointsTarget()))
   {
-    if (teams[i].getTeamPoints() > config.getPointsTarget())
-    {
-      return true;
-    }
+    Serial.println("POINTS REACHED");
+    return true;
   }
   return false;
-}
-
-TeamId whoWon()
-{
-  int currentHighiest = 0;
-  TeamId currentWinner = TeamId::None;
-  for (int i = 0; i < sizeof(teams); ++i)
-  {
-    if (teams[i].getTeamPoints() > currentHighiest)
-    {
-      currentHighiest = teams[i].getTeamPoints();
-      if (teams[i].getTeamPoints() == currentHighiest)
-      {
-        currentWinner = TeamId::None; // maybe i should have one more type for draw?
-      }
-      else
-      {
-        currentWinner = teams[i].getTeamId();
-      }
-    }
-  }
-
-  return currentWinner;
 }
 
 void CapturePoint()
@@ -134,7 +108,8 @@ void setup()
 {
   Serial.begin(115200);
   gameState = GameState::Config;
-  controlPoint.setLocalTeams(teams, 2);
+  controlPoint.addTeam(TeamId::Blufor);
+  controlPoint.addTeam(TeamId::YellowFor);
 }
 
 void loop()
@@ -172,29 +147,14 @@ void loop()
   case GameState::Ongoing:
     if (pointClock.getElapsedTime() >= 60000) // like the last one :/ will do later
     {
-      TeamId controllingTeam = controlPoint.getControllingTeam();
-      if (controllingTeam != TeamId::None)
-      {
-        for (int i = 0; i < sizeof(teams); ++i)
-        {
-          if (teams[i].getTeamId() == controllingTeam)
-          {
-            teams[i].addPoints(1); // yes i know ill change it later
-            Serial.print("Team ");
-            Serial.print((controllingTeam == TeamId::Blufor) ? "Blue" : "Yellow");
-            Serial.println(" scored a point!");
-            break;
-          }
-        }
-      }
-
+      controlPoint.increamentScore(1);    
       if (isGameOver())
       {
         gameState = GameState::Finished;
         gameClock.stop();
         gameClock.reset();
 
-        winner = whoWon();
+        winner = controlPoint.whoWon();
         Serial.println("GAME OVER");
         if (winner == TeamId::Blufor)
         {
@@ -204,13 +164,19 @@ void loop()
         {
           Serial.print("YELLOWFOR WON");
         }
-        if (winner == TeamId::None)
+        if (winner == TeamId::Draw)
         {
           Serial.print("DRAW");
         }
+        if(winner == TeamId::None)
+        {
+          Serial.print("a NONE in a WINNER if? how queer! Ive never seen such a thing ");
+          Serial.println("I guess we make an none now");
+          Serial.println("for real i have no idea what to put here");
+        }
+        pointClock.stop();
       }
       pointClock.reset();
-      pointClock.stop();
     }
     // Capture Logic
     CapturePoint();

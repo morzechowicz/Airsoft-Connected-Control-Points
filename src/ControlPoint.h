@@ -4,20 +4,25 @@
 #include "Team.h"
 #include "Teams.h"
 #include <cstddef>
+#include <Arduino.h>
 
 class ControlPoint {
 private:
     TeamId controllingTeamId;
-    Team localTeams[2];
+    Team* teams;
+    size_t maxTeams;
+    size_t teamCount;
 
 public:
-    ControlPoint() : controllingTeamId(TeamId::None) {}
+    ControlPoint(size_t maxTeams) : controllingTeamId(TeamId::None) {}
 
     void setControllingTeam(TeamId teamId) { controllingTeamId = teamId; }
     TeamId getControllingTeam() const { return controllingTeamId; }
     bool isControlled() const { return controllingTeamId != TeamId::None; }
-
-    void setLocalTeams(const Team* team, size_t teamCount);
+    void increamentScore(int points);
+    void addTeam(TeamId teamid);
+    bool pointsTargetReached(int pointsTarget);
+    TeamId whoWon();
 };
 
 #endif
