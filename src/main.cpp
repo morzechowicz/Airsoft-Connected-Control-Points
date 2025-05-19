@@ -26,6 +26,10 @@ Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
 
+// TO DO:
+//  displaying info on lcd and oled logic
+//  lora logic mainly keeping points in main node and getting team changes from other node
+
 TeamId winner = TeamId::None;
 int configState = 0;
 bool MainNode = false;
@@ -58,16 +62,72 @@ TeamId whoWon()
     if (teams[i].getTeamPoints() > currentHighiest)
     {
       currentHighiest = teams[i].getTeamPoints();
-      if(teams[i].getTeamPoints() == currentHighiest)
+      if (teams[i].getTeamPoints() == currentHighiest)
       {
         currentWinner = TeamId::None; // maybe i should have one more type for draw?
-      }else{
+      }
+      else
+      {
         currentWinner = teams[i].getTeamId();
       }
     }
   }
 
   return currentWinner;
+}
+
+void CapturePoint()
+{
+  static Clocker captureClock;                // Tracks how long a button is held
+  static TeamId capturingTeam = TeamId::None; // Tracks which team is trying to capture
+
+  if (buttonManager.playerButton1.isPressed())
+  {
+    if (capturingTeam != TeamId::Blufor && controlPoint.getControllingTeam() != TeamId::Blufor)
+    {
+      capturingTeam = TeamId::Blufor;
+      captureClock.reset(); // Start tracking capture time
+      Serial.println("Team Blue started capturing!");
+    }
+    if (captureClock.getElapsedTime() >= config.getCaptureTime() / 2)
+    {
+      controlPoint.setControllingTeam(TeamId::None); // Neutralize the point
+      Serial.println("Point neutralized!");
+    }
+    if (captureClock.getElapsedTime() >= config.getCaptureTime())
+    {
+      controlPoint.setControllingTeam(TeamId::Blufor); // Fully captured
+      Serial.println("Team Blue fully captured the point!");
+    }
+    displayOLED.displayCapturing(capturingTeam, controlPoint.getControllingTeam());
+  }
+  else if (buttonManager.playerButton2.isPressed())
+  {
+    if (capturingTeam != TeamId::YellowFor && controlPoint.getControllingTeam() != TeamId::YellowFor)
+    {
+      capturingTeam = TeamId::YellowFor;
+      captureClock.reset(); // Start tracking capture time
+      Serial.println("Team Yellow started capturing!");
+    }
+    if (captureClock.getElapsedTime() >= config.getCaptureTime() / 2)
+    {
+      controlPoint.setControllingTeam(TeamId::None); // Neutralize the point
+      Serial.println("Point neutralized!");
+    }
+    if (captureClock.getElapsedTime() >= config.getCaptureTime())
+    {
+      controlPoint.setControllingTeam(TeamId::YellowFor); // Fully captured
+      Serial.println("Team Yellow fully captured the point!");
+    }
+    displayOLED.displayCapturing(capturingTeam, controlPoint.getControllingTeam());
+  }
+  else
+  {
+    // If no button is pressed, reset capture logic
+    // YES I WANT IT THIS WAY
+    capturingTeam = TeamId::None;
+    captureClock.reset();
+  }
 }
 
 void setup()
@@ -88,6 +148,7 @@ void loop()
       gameState = GameState::CountDown;
       secondCLock.start();
     }
+    displayOLED.displaySettings(config);
     break;
   case GameState::CountDown:
     if (secondCLock.getElapsedTime() > 1000) // for the time being this stays like this i cant be bothered to add another setting rihgt now also nobody cares
@@ -106,6 +167,7 @@ void loop()
       pointClock.start();
       gameClock.start();
     }
+    displayOLED.displayCountdown(config.getCountdown());
     break;
   case GameState::Ongoing:
     if (pointClock.getElapsedTime() >= 60000) // like the last one :/ will do later
@@ -134,15 +196,15 @@ void loop()
 
         winner = whoWon();
         Serial.println("GAME OVER");
-        if(winner == TeamId::Blufor)
+        if (winner == TeamId::Blufor)
         {
           Serial.print("BLUFOR WON");
         }
-         if(winner == TeamId::YellowFor)
+        if (winner == TeamId::YellowFor)
         {
           Serial.print("YELLOWFOR WON");
         }
-        if(winner == TeamId::None)
+        if (winner == TeamId::None)
         {
           Serial.print("DRAW");
         }
@@ -151,61 +213,16 @@ void loop()
       pointClock.stop();
     }
     // Capture Logic
-    static Clocker captureClock;                // Tracks how long a button is held
-    static TeamId capturingTeam = TeamId::None; // Tracks which team is trying to capture
-
-    if (buttonManager.playerButton1.isPressed())
-    {
-      if (capturingTeam != TeamId::Blufor)
-      {
-        capturingTeam = TeamId::Blufor;
-        captureClock.reset(); // Start tracking capture time
-        Serial.println("Team Blue started capturing!");
-      }
-      if (captureClock.getElapsedTime() >= config.getCaptureTime() / 2)
-      {
-        controlPoint.setControllingTeam(TeamId::None); // Neutralize the point
-        Serial.println("Point neutralized!");
-      }
-      if (captureClock.getElapsedTime() >= config.getCaptureTime())
-      {
-        controlPoint.setControllingTeam(TeamId::Blufor); // Fully captured
-        Serial.println("Team Blue fully captured the point!");
-      }
-    }
-    else if (buttonManager.playerButton2.isPressed())
-    {
-      if (capturingTeam != TeamId::YellowFor)
-      {
-        capturingTeam = TeamId::YellowFor;
-        captureClock.reset(); // Start tracking capture time
-        Serial.println("Team Yellow started capturing!");
-      }
-      if (captureClock.getElapsedTime() >= config.getCaptureTime() / 2)
-      {
-        controlPoint.setControllingTeam(TeamId::None); // Neutralize the point
-        Serial.println("Point neutralized!");
-      }
-      if (captureClock.getElapsedTime() >= config.getCaptureTime())
-      {
-        controlPoint.setControllingTeam(TeamId::YellowFor); // Fully captured
-        Serial.println("Team Yellow fully captured the point!");
-      }
-    }
-    else
-    {
-      // If no button is pressed, reset capture logic
-      // YES I WANT IT THIS WAY
-      capturingTeam = TeamId::None;
-      captureClock.reset();
-    }
+    CapturePoint();
+    displayOLED.displayGame(controlPoint);
     break;
   case GameState::Finished:
-    //here we just display winner until idk button press or what ever
-    if(buttonManager.configButton1.isPressed())
+    // here we just display winner until idk button press or what ever
+    if (buttonManager.configButton1.isPressed())
     {
       gameState = GameState::Config;
     }
+    displayOLED.displayFinished(winner,controlPoint);
     break;
   default:
     // maybe just set state to config? not like there are any other ways default could happen

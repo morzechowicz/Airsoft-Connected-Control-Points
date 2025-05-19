@@ -6,6 +6,12 @@
 #include <Config.h>
 #include <ControlPoint.h>
 
+//note to self
+// communication standard
+// side node MUST ACK RESPONSO FROM MAIN NODE
+// main node does not need any for total score
+// but IT ABSOLUTLY NEEDS ACK FOR GAME STATUS
+
 class LoRaManager
 {
 public:
