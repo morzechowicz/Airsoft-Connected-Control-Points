@@ -9,7 +9,7 @@ public:
     virtual void displaySettings(Config config);
     virtual void displayCountdown(int countdown);
     virtual void displayGame(ControlPoint controlPoint);
-    virtual void displayCapturing(TeamId capturingTeam,TeamId currentTeam);
+    virtual void displayCapturing(TeamId capturingTeam, int progres) ;
     virtual void displayFinished(TeamId winner,ControlPoint controlPoint);
 };
 

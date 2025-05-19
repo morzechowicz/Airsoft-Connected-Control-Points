@@ -67,7 +67,7 @@ void CapturePoint() {
             Serial.println("Team Blue fully captured the point!");
         }
         gracePeriodActive = false; // Reset grace period
-        displayOLED.displayCapturing(capturingTeam, controlPoint.getControllingTeam());
+        displayOLED.displayCapturing(capturingTeam, (captureClock.getElapsedTime()/config.getCaptureTime() * 100));
     } else if (buttonManager.yellowButton.isPressed()) {
         if (capturingTeam != TeamId::YellowFor && controlPoint.getControllingTeam() != TeamId::YellowFor) {
             capturingTeam = TeamId::YellowFor;
@@ -83,7 +83,7 @@ void CapturePoint() {
             Serial.println("Team Yellow fully captured the point!");
         }
         gracePeriodActive = false; 
-        displayOLED.displayCapturing(capturingTeam, controlPoint.getControllingTeam());
+        displayOLED.displayCapturing(capturingTeam, (captureClock.getElapsedTime()/config.getCaptureTime() * 100));
     } else {
         if (!gracePeriodActive) {
             gracePeriodActive = true;

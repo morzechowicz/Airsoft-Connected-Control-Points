@@ -2,6 +2,7 @@
 #define DISPLAY_LCD_H
 
 #include <Display.h>
+#include "ControlPoint.h"
 
 class DispalyLCD : public Display
 {

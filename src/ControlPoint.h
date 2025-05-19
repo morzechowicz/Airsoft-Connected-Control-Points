@@ -23,6 +23,8 @@ public:
     void addTeam(TeamId teamid);
     bool pointsTargetReached(int pointsTarget);
     TeamId whoWon();
+
+    int getTeamPoints(TeamId teamId);
 };
 
 #endif

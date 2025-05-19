@@ -1,17 +1,33 @@
-#ifndef DISPLAY_OLED_H  // Header guard to prevent multiple inclusions
+#ifndef DISPLAY_OLED_H // Header guard to prevent multiple inclusions
 #define DISPLAY_OLED_H
 
 #include <Display.h>
+#include <Wire.h>
+#include <Adafruit_SSD1306.h>
+#include "ControlPoint.h"
 
+// OLED Settings
+#define OLED_SDA 21
+#define OLED_SCL 22
+#define OLED_RST 16
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+#define OLED_ADDR 0x3C
 
 class DisplayOled : public Display
 {
 public:
+    DisplayOled() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST) {}
+
     void displaySettings(Config config) override;
     void displayCountdown(int countdown) override;
     void displayGame(ControlPoint controlPoint) override;
-    void displayCapturing(TeamId capturingTeam,TeamId currentTeam) override;
-    void displayFinished(TeamId winner,ControlPoint controlPoint) override;
+    void displayCapturing(TeamId capturingTeam, int progres) override;
+    void displayFinished(TeamId winner, ControlPoint controlPoint) override;
+
+private:
+    Adafruit_SSD1306 display;
 };
 
 #endif

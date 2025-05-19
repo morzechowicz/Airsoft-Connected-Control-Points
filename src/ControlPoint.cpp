@@ -66,3 +66,15 @@ bool ControlPoint::pointsTargetReached(int pointsTarget)
   }
   return false;
 }
+
+int ControlPoint::getTeamPoints(TeamId teamId)
+{
+    for (int i = 0; i < teamCount; ++i)
+    {
+        if (teams[i].getTeamId() == teamId)
+        {
+            return teams[i].getTeamPoints();
+        }
+    }
+    return 0;
+}

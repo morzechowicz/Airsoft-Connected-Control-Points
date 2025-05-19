@@ -18,6 +18,7 @@ public:
     void reset();
     uint32_t getElapsedTime() const;
     bool isRunning() const;
+    int getElapsedTimeInMinutes();
 };
 
 #endif
