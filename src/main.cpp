@@ -81,7 +81,7 @@ void CapturePoint()
   static Clocker captureClock;                // Tracks how long a button is held
   static TeamId capturingTeam = TeamId::None; // Tracks which team is trying to capture
 
-  if (buttonManager.playerButton1.isPressed())
+  if (buttonManager.blueButton.isPressed())
   {
     if (capturingTeam != TeamId::Blufor && controlPoint.getControllingTeam() != TeamId::Blufor)
     {
@@ -101,7 +101,7 @@ void CapturePoint()
     }
     displayOLED.displayCapturing(capturingTeam, controlPoint.getControllingTeam());
   }
-  else if (buttonManager.playerButton2.isPressed())
+  else if (buttonManager.yellowButton.isPressed())
   {
     if (capturingTeam != TeamId::YellowFor && controlPoint.getControllingTeam() != TeamId::YellowFor)
     {
@@ -143,7 +143,7 @@ void loop()
   {
   case GameState::Config:
     config.handleButtonPresses(buttonManager, configState);
-    if (buttonManager.configButton2.isPressed())
+    if (buttonManager.startButton.isPressed())
     {
       gameState = GameState::CountDown;
       secondCLock.start();
@@ -218,7 +218,7 @@ void loop()
     break;
   case GameState::Finished:
     // here we just display winner until idk button press or what ever
-    if (buttonManager.configButton1.isPressed())
+    if (buttonManager.changeButton.isPressed())
     {
       gameState = GameState::Config;
     }

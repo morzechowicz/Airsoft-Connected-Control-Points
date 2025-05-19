@@ -5,29 +5,29 @@
 
 class ButtonManager {
 public:
-    ezButton playerButton1;
-    ezButton playerButton2;
+    ezButton blueButton;
+    ezButton yellowButton;
 
-    ezButton configButton1;
-    ezButton configButton2;
+    ezButton changeButton;
+    ezButton startButton;
 
     ButtonManager()
-        : playerButton1(2), playerButton2(3), 
-          configButton1(4), configButton2(5)  
+        : blueButton(2), yellowButton(3), 
+          changeButton(4), startButton(5)  
     {}
 
     void begin() {
-        playerButton1.setDebounceTime(50);
-        playerButton2.setDebounceTime(50);
-        configButton1.setDebounceTime(50);
-        configButton2.setDebounceTime(50);
+        blueButton.setDebounceTime(50);
+        yellowButton.setDebounceTime(50);
+        changeButton.setDebounceTime(50);
+        startButton.setDebounceTime(50);
     }
 
     void update() {
-        playerButton1.loop();
-        playerButton2.loop();
-        configButton1.loop();
-        configButton2.loop();
+        blueButton.loop();
+        yellowButton.loop();
+        changeButton.loop();
+        startButton.loop();
     }
 };
 

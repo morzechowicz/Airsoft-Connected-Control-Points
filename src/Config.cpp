@@ -2,13 +2,13 @@
 #include <Arduino.h> // For Serial (for error messages)
 
 void Config::handleButtonPresses(ButtonManager& buttonManager, int& configState) {
-    if (buttonManager.configButton1.isPressed()) {
+    if (buttonManager.changeButton.isPressed()) {
         configState++;
         if (configState > 3) {
             configState = 0;
         }
     }
-    if (buttonManager.playerButton1.isPressed()) {
+    if (buttonManager.blueButton.isPressed()) {
         switch (configState) {
             case 0:
                 countdown += 15;
@@ -26,7 +26,7 @@ void Config::handleButtonPresses(ButtonManager& buttonManager, int& configState)
                 break;
         }
     }
-    if (buttonManager.playerButton2.isPressed()) {
+    if (buttonManager.yellowButton.isPressed()) {
         switch (configState) {
             case 0:
                 countdown -= 15;
