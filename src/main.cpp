@@ -7,20 +7,16 @@
 #include <GameState.h>
 #include <DisplayOled.h>
 #include <Config.h>
-#include <GameLogic.h>
 #include <ControlPoint.h>
 #include <Clocker.h>
 
 GameState gameState;
-Team blue(TeamId::Blufor, 0);
-Team yellow(TeamId::YellowFor, 0);
 SX1278 radio = new Module(18, 14, 26, 33);
 LoRaManager loRaManager(radio);
 ButtonManager buttonManager;
 ControlPoint controlPoint(2);
 DisplayOled displayOLED;
 Config config(15, 15, 15, 15);
-GameLogic gameLogic;
 Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
@@ -50,58 +46,55 @@ bool isGameOver()
   return false;
 }
 
-void CapturePoint()
-{
-  static Clocker captureClock;                // Tracks how long a button is held
-  static TeamId capturingTeam = TeamId::None; // Tracks which team is trying to capture
+void CapturePoint() {
+    static Clocker captureClock;
+    static Clocker graceClock;
+    static TeamId capturingTeam = TeamId::None;
+    static bool gracePeriodActive = false;
 
-  if (buttonManager.blueButton.isPressed())
-  {
-    if (capturingTeam != TeamId::Blufor && controlPoint.getControllingTeam() != TeamId::Blufor)
-    {
-      capturingTeam = TeamId::Blufor;
-      captureClock.reset(); // Start tracking capture time
-      Serial.println("Team Blue started capturing!");
+    if (buttonManager.blueButton.isPressed()) {
+        if (capturingTeam != TeamId::Blufor && controlPoint.getControllingTeam() != TeamId::Blufor) {
+            capturingTeam = TeamId::Blufor;
+            captureClock.reset();
+            Serial.println("Team Blue started capturing!");
+        }
+        if (captureClock.getElapsedTime() >= config.getCaptureTime() / 2) {
+            controlPoint.setControllingTeam(TeamId::None);
+            Serial.println("Point neutralized!");
+        }
+        if (captureClock.getElapsedTime() >= config.getCaptureTime()) {
+            controlPoint.setControllingTeam(TeamId::Blufor);
+            Serial.println("Team Blue fully captured the point!");
+        }
+        gracePeriodActive = false; // Reset grace period
+        displayOLED.displayCapturing(capturingTeam, controlPoint.getControllingTeam());
+    } else if (buttonManager.yellowButton.isPressed()) {
+        if (capturingTeam != TeamId::YellowFor && controlPoint.getControllingTeam() != TeamId::YellowFor) {
+            capturingTeam = TeamId::YellowFor;
+            captureClock.reset();
+            Serial.println("Team Yellow started capturing!");
+        }
+        if (captureClock.getElapsedTime() >= config.getCaptureTime() / 2) {
+            controlPoint.setControllingTeam(TeamId::None);
+            Serial.println("Point neutralized!");
+        }
+        if (captureClock.getElapsedTime() >= config.getCaptureTime()) {
+            controlPoint.setControllingTeam(TeamId::YellowFor);
+            Serial.println("Team Yellow fully captured the point!");
+        }
+        gracePeriodActive = false; 
+        displayOLED.displayCapturing(capturingTeam, controlPoint.getControllingTeam());
+    } else {
+        if (!gracePeriodActive) {
+            gracePeriodActive = true;
+            graceClock.reset();
+        }
+        if (graceClock.getElapsedTime() > 500) {
+            capturingTeam = TeamId::None;
+            captureClock.reset();
+            gracePeriodActive = false;
+        }
     }
-    if (captureClock.getElapsedTime() >= config.getCaptureTime() / 2)
-    {
-      controlPoint.setControllingTeam(TeamId::None); // Neutralize the point
-      Serial.println("Point neutralized!");
-    }
-    if (captureClock.getElapsedTime() >= config.getCaptureTime())
-    {
-      controlPoint.setControllingTeam(TeamId::Blufor); // Fully captured
-      Serial.println("Team Blue fully captured the point!");
-    }
-    displayOLED.displayCapturing(capturingTeam, controlPoint.getControllingTeam());
-  }
-  else if (buttonManager.yellowButton.isPressed())
-  {
-    if (capturingTeam != TeamId::YellowFor && controlPoint.getControllingTeam() != TeamId::YellowFor)
-    {
-      capturingTeam = TeamId::YellowFor;
-      captureClock.reset(); // Start tracking capture time
-      Serial.println("Team Yellow started capturing!");
-    }
-    if (captureClock.getElapsedTime() >= config.getCaptureTime() / 2)
-    {
-      controlPoint.setControllingTeam(TeamId::None); // Neutralize the point
-      Serial.println("Point neutralized!");
-    }
-    if (captureClock.getElapsedTime() >= config.getCaptureTime())
-    {
-      controlPoint.setControllingTeam(TeamId::YellowFor); // Fully captured
-      Serial.println("Team Yellow fully captured the point!");
-    }
-    displayOLED.displayCapturing(capturingTeam, controlPoint.getControllingTeam());
-  }
-  else
-  {
-    // If no button is pressed, reset capture logic
-    // YES I WANT IT THIS WAY
-    capturingTeam = TeamId::None;
-    captureClock.reset();
-  }
 }
 
 void setup()
@@ -110,6 +103,8 @@ void setup()
   gameState = GameState::Config;
   controlPoint.addTeam(TeamId::Blufor);
   controlPoint.addTeam(TeamId::YellowFor);
+
+  buttonManager.begin();
 }
 
 void loop()
@@ -195,4 +190,5 @@ void loop()
     gameState = GameState::Config;
     break;
   }
+  buttonManager.update();
 }
