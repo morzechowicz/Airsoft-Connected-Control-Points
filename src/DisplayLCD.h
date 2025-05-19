@@ -6,10 +6,11 @@
 class DispalyLCD : public Display
 {
 public:
-    void displaySettings() override;
-    void displayCountdown() override;
-    void displayGame() override;
-    void displayFinished() override;
+    void displaySettings(Config config) override;
+    void displayCountdown(int countdown) override;
+    void displayGame(ControlPoint controlPoint) override;
+    void displayCapturing(TeamId capturingTeam,TeamId currentTeam) override;
+    void displayFinished(TeamId winner,ControlPoint controlPoint) override;
 };
 
 #endif
