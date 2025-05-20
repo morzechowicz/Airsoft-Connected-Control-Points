@@ -12,7 +12,7 @@
 
 GameState gameState;
 SX1278 radio = new Module(18, 14, 26, 33);
-LoRaManager loRaManager(radio);
+// LoRaManager loRaManager(radio);
 ButtonManager buttonManager;
 ControlPoint controlPoint(2);
 DisplayOled displayOLED;
@@ -46,10 +46,10 @@ bool isGameOver()
     return false;
 }
 
-    static Clocker captureClock;
-    static Clocker graceClock;
-    static TeamId capturingTeam = TeamId::None;
-    static bool gracePeriodActive = false;
+static Clocker captureClock;
+static Clocker graceClock;
+static TeamId capturingTeam = TeamId::None;
+static bool gracePeriodActive = false;
 
 void CapturePoint()
 {
@@ -72,8 +72,9 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::Blufor);
             Serial.println("Team Blue fully captured the point!");
         }
-        gracePeriodActive = false; // Reset grace period
-        displayOLED.displayCapturing(capturingTeam, ((captureClock.getElapsedTimeInSeconds() / config.getCaptureTime()) * 100));
+        gracePeriodActive = false; 
+        float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
+        displayOLED.displayCapturing(capturingTeam, (percentage * 100));
     }
     else if (buttonManager.yellowButton.getState() == LOW)
     {
@@ -94,8 +95,9 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::YellowFor);
             Serial.println("Team Yellow fully captured the point!");
         }
-        gracePeriodActive = false;
-        displayOLED.displayCapturing(capturingTeam, (captureClock.getElapsedTimeInSeconds() / config.getCaptureTime() * 100));
+        gracePeriodActive = false; 
+        float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
+        displayOLED.displayCapturing(capturingTeam, (percentage * 100));
     }
     else
     {
@@ -103,11 +105,15 @@ void CapturePoint()
         {
             gracePeriodActive = true;
             graceClock.reset();
+            graceClock.start();
         }
         if (graceClock.getElapsedTime() > 500)
         {
             capturingTeam = TeamId::None;
+            captureClock.stop();
             captureClock.reset();
+            graceClock.stop();
+            graceClock.reset();
             gracePeriodActive = false;
         }
     }
@@ -195,7 +201,7 @@ void loop()
         }
         // Capture Logic
         CapturePoint();
-        if(buttonManager.yellowButton.getState() == HIGH && buttonManager.blueButton.getState() == HIGH)
+        if (buttonManager.yellowButton.getState() == HIGH && buttonManager.blueButton.getState() == HIGH)
         {
             displayOLED.displayGame(controlPoint, config.getDurration() - gameClock.getElapsedTimeInMinutes());
         }
