@@ -72,7 +72,7 @@ void DisplayOled::displayGame(ControlPoint controlPoint, int timeLeft)
     display.display();
 }
 
-void DisplayOled::displayCapturing(TeamId capturingTeam, int progres)
+void DisplayOled::displayCapturing(TeamId capturingTeam, float progres)
 {
     display.clearDisplay();
     display.setTextSize(1);
@@ -82,10 +82,14 @@ void DisplayOled::displayCapturing(TeamId capturingTeam, int progres)
     display.println(" is capturing!");
     display.print("Captured:");
     display.println("");
-    int numOfHashes = (progres * 21) * 100;
+    int numOfHashes = (progres * 21);
     for(int i = 0; i < numOfHashes; i++)
     {
         display.print("#");
+    }
+    if(progres == 1)
+    {
+        display.println("Captured!");
     }
     display.display();
 }

@@ -22,7 +22,7 @@ public:
     void displaySettings(Config config,int configState) override;
     void displayCountdown(int countdown) override;
     void displayGame(ControlPoint controlPoint, int timeLeft) override;
-    void displayCapturing(TeamId capturingTeam, int progres) override;
+    void displayCapturing(TeamId capturingTeam, float progres) override;
     void displayFinished(TeamId winner, ControlPoint controlPoint) override;
 
 private:

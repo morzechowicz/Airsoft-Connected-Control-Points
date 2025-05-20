@@ -62,7 +62,7 @@ void CapturePoint()
             captureClock.reset();
             Serial.println("Team Blue started capturing!");
         }
-        if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None)
+        if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::Blufor)
         {
             controlPoint.setControllingTeam(TeamId::None);
             Serial.println("Point neutralized!");
@@ -78,7 +78,7 @@ void CapturePoint()
         {
             percentage = 1;
         }
-        displayOLED.displayCapturing(capturingTeam, (percentage * 100));
+        displayOLED.displayCapturing(capturingTeam, percentage);
     }
     else if (buttonManager.yellowButton.getState() == LOW)
     {
@@ -89,12 +89,12 @@ void CapturePoint()
             captureClock.reset();
             Serial.println("Team Yellow started capturing!");
         }
-        if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None)
+        if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::YellowFor)
         {
             controlPoint.setControllingTeam(TeamId::None);
             Serial.println("Point neutralized!");
         }
-        if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::YellowFor)
+        if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::YellowFor )
         {
             controlPoint.setControllingTeam(TeamId::YellowFor);
             Serial.println("Team Yellow fully captured the point!");
@@ -105,7 +105,7 @@ void CapturePoint()
         {
             percentage = 1;
         }
-        displayOLED.displayCapturing(capturingTeam, (percentage * 100));
+        displayOLED.displayCapturing(capturingTeam, percentage);
     }
     else
     {
