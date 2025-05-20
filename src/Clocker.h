@@ -20,6 +20,7 @@ public:
     uint64_t getElapsedTime();
     bool isRunning() {return running;};
     int getElapsedTimeInMinutes();
+    int getElapsedTimeInSeconds();
 };
 
 #endif

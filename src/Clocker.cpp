@@ -22,8 +22,7 @@ void Clocker::stop()
 void Clocker::reset()
 {
     elapsedTime = 0;
-    startTime = 0;
-    running = false;
+    startTime = millis();
 }
 
 uint64_t Clocker::getElapsedTime()
@@ -37,5 +36,12 @@ uint64_t Clocker::getElapsedTime()
 
 int Clocker::getElapsedTimeInMinutes()
 {
+    elapsedTime = millis() - startTime;
     return elapsedTime / 60000;
+}
+
+int Clocker::getElapsedTimeInSeconds()
+{
+    elapsedTime = millis() - startTime;
+    return elapsedTime / 1000;
 }

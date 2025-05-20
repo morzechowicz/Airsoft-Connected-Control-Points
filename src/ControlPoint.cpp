@@ -1,10 +1,5 @@
 #include <controlpoint.h>
 
-ControlPoint::ControlPoint(size_t maxTeams) : controllingTeamId(TeamId::None),maxTeams(maxTeams)
- {
-    teams = new Team[maxTeams];
- }
-
 void ControlPoint::addTeam(TeamId teamid)
 {
     if (teamCount < maxTeams)

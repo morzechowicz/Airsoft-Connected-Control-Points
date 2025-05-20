@@ -14,7 +14,11 @@ private:
     size_t teamCount;
 
 public:
-    ControlPoint(size_t maxTeams) : controllingTeamId(TeamId::None) {}
+    ControlPoint(size_t maxTeams) : controllingTeamId(TeamId::None),maxTeams(maxTeams)
+    {
+        Serial.println("ControlPoint initialized");
+        teams = new Team[2];
+    }
 
     void setControllingTeam(TeamId teamId) { controllingTeamId = teamId; }
     TeamId getControllingTeam() const { return controllingTeamId; }

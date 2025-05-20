@@ -2,6 +2,8 @@
 #define DISPLAY_H
 
 #include <Config.h>
+#include <ControlPoint.h>
+#include <Teams.h>
 
 class Display
 {
