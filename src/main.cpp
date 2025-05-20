@@ -72,8 +72,12 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::Blufor);
             Serial.println("Team Blue fully captured the point!");
         }
-        gracePeriodActive = false; 
+        gracePeriodActive = false;
         float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
+        if (percentage > 1)
+        {
+            percentage = 1;
+        }
         displayOLED.displayCapturing(capturingTeam, (percentage * 100));
     }
     else if (buttonManager.yellowButton.getState() == LOW)
@@ -95,8 +99,12 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::YellowFor);
             Serial.println("Team Yellow fully captured the point!");
         }
-        gracePeriodActive = false; 
+        gracePeriodActive = false;
         float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
+        if (percentage > 1)
+        {
+            percentage = 1;
+        }
         displayOLED.displayCapturing(capturingTeam, (percentage * 100));
     }
     else
