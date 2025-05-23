@@ -1,13 +1,14 @@
 #include "LoRaMsgHandler.h"
 
-LoRaMsgHandler::LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState)
-    : config(config), controlPoint(controlPoint), gameState(gameState)
+LoRaMsgHandler::LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg)
+    : config(config), controlPoint(controlPoint), gameState(gameState), lastLoraMsg(lastLoraMsg)
     {
         splitter = StringSplitter('/');
     }
 
 void LoRaMsgHandler::handleMessage(const String &msg) {
     String recived = msg;
+    lastLoraMsg = recived;
     splitter.split(recived);
     switch (splitter.getItem(0)[0]) {
     case 'C': // Configuration update

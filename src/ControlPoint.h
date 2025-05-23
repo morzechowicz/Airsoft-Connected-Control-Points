@@ -10,14 +10,17 @@ class ControlPoint
 {
 private:
     TeamId controllingTeamId;
+    int nodeId;
     Team *teams;
     size_t maxTeams;
     size_t teamCount;
+    bool leader = false;
     struct Nodes
     {
         int nodeId;
         TeamId controllingTeam;
     };
+
 
 public:
     ControlPoint(size_t maxTeams) : controllingTeamId(TeamId::None), maxTeams(maxTeams)
@@ -40,6 +43,10 @@ public:
     
 
     int getTeamPoints(TeamId teamId);
+    int getNodeId() {return nodeId;}
+    bool getLeader() { return leader; }
+    void setNodeId(int id) { nodeId = id; }
+    void setLeader (bool isLeader) { leader = isLeader; }
 };
 
 #endif

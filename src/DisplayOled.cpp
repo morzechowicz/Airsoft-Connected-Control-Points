@@ -108,3 +108,28 @@ void DisplayOled::displayFinished(TeamId winner, ControlPoint ControlPoint)
     display.print(ControlPoint.getTeamPoints(TeamId::YellowFor));
     display.display();
 }
+
+void DisplayOled::displayNetworkStatus(int nodesCount,bool leaderStatus,bool connecting,String lastLoraMsg)
+{
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.println("Network Status:");
+    display.print("Nodes: ");
+    display.print(nodesCount);
+    display.println("");
+    if (leaderStatus)
+    {
+        display.println("Leader");
+    }
+    else
+    {
+        display.println("Not Leader");
+    }
+    if(connecting)
+    {
+        display.println("information has been sent");
+    }
+    display.print("Last Lora Msg: ");
+    display.display();
+}

@@ -81,7 +81,6 @@ void ControlPoint::addNode(int nodeId)
     {
         if (nodes[i].nodeId == nodeId)
         {
-            Serial.println("Node already exists");
             present = true;
         }
     }
@@ -90,6 +89,10 @@ void ControlPoint::addNode(int nodeId)
         nodeCount++;
         nodes[nodeCount - 1].nodeId = nodeId;
         nodes[nodeCount - 1].controllingTeam = TeamId::None;
+        Serial.println("Node added Id: ");
+        Serial.print(nodeId);
+        Serial.print(" Node count: ");
+        Serial.print(nodeCount);
     }
     if(present)
     {

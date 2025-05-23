@@ -13,6 +13,8 @@ public:
 
     String createConfigMessage(const Config &config);
     String createNodeControlledMessage(int nodeId, TeamId teamId);
+    String createNodeInfo();
+
 private:
     LoRaCom &loracom;
     Config &config;

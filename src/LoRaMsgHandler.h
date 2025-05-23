@@ -8,7 +8,7 @@
 
 class LoRaMsgHandler {
 public:
-    LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState);
+    LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg);
     void handleMessage(const String &msg);
 
 private:
@@ -16,6 +16,7 @@ private:
     TeamId teamId;
     int receivedId;
     Config &config;
+    String &lastLoraMsg;
     ControlPoint &controlPoint;
     GameState &gameState;
     StringSplitter splitter;

@@ -13,3 +13,7 @@ String LoRaMsg::createConfigMessage(const Config &config) {
 String LoRaMsg::createNodeControlledMessage(int nodeId, TeamId teamId) {
     return "N/" + String(nodeId) + "/" + String(static_cast<int>(teamId));
 }
+
+String LoRaMsg::createNodeInfo() {
+    return "L/" + String(controlPoint.getNodeId());
+}

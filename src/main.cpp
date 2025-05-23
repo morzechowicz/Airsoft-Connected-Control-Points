@@ -12,6 +12,9 @@
 #include <LoRaHandler.h>
 #include "LoRaMsg.h"
 
+// somewhore to store msg for now
+String msg;
+String lastLoraMsg = "";
 
 GameState gameState;
 ButtonManager buttonManager;
@@ -21,11 +24,12 @@ Config config(15, 15, 15, 15);
 Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
+Clocker networkClock;
 // LoRaManager lora;
-LoRaMsgHandler msgHandler(config, controlPoint, gameState);
-SX1278 radio = new Module(18,26,14,44);
+LoRaMsgHandler msgHandler(config, controlPoint, gameState,lastLoraMsg);
+SX1278 radio = new Module(18, 26, 14, 44);
 LoRaCom loraCom(radio);
-LoRaHandler lrradio(loraCom,msgHandler);
+LoRaHandler lrradio(loraCom, msgHandler);
 LoRaMsg loramsg(loraCom, config, controlPoint);
 
 // TO DO:
@@ -101,7 +105,7 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::None);
             Serial.println("Point neutralized!");
         }
-        if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::YellowFor )
+        if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::YellowFor)
         {
             controlPoint.setControllingTeam(TeamId::YellowFor);
             Serial.println("Team Yellow fully captured the point!");
@@ -145,6 +149,8 @@ void setup()
     buttonManager.begin();
     lrradio.begin();
 
+    // add itself to the list
+    controlPoint.addNode(controlPoint.getNodeId());
     // lora.begin();
     Serial.println("Ready");
 }
@@ -155,10 +161,49 @@ void loop()
     // lora.recivingLoop();
     switch (gameState)
     {
+    case GameState::Network:
+        // here we just display network until idk button press or what ever
+        if (buttonManager.blueButton.isPressed())
+        {
+            networkClock.reset();
+            networkClock.start();
+            msg = loramsg.createNodeInfo();
+            loraCom.sendMsg(msg);
+        }
+        if (buttonManager.yellowButton.isPressed())
+        {
+            if (controlPoint.getLeader())
+            {
+                controlPoint.setLeader(false);
+                Serial.println("I am not the leader anymore");
+            }
+            else
+            {
+                controlPoint.setLeader(true);
+                Serial.println("I am the leader now");
+            }
+        }
+        if (buttonManager.changeButton.isPressed())
+        {
+            gameState = GameState::Config;
+        }
+
+        if (networkClock.getElapsedTimeInSeconds() > 5)
+        {
+            displayOLED.displayNetworkStatus(controlPoint.getNodeId(), controlPoint.getLeader(), true,lastLoraMsg);
+        }
+        else
+        {
+            displayOLED.displayNetworkStatus(controlPoint.getNodeId(), controlPoint.getLeader(), false,lastLoraMsg);
+            networkClock.stop();
+        }
+        break;
     case GameState::Config:
         config.handleButtonPresses(buttonManager, configState);
         if (buttonManager.startButton.isPressed())
         {
+            msg = loramsg.createConfigMessage(config);
+            loraCom.sendMsg(msg);
             // lora.sendNewConfig(config);
             gameState = GameState::CountDown;
             secondCLock.start();
