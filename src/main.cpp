@@ -11,8 +11,6 @@
 #include <Clocker.h>
 
 GameState gameState;
-SX1278 radio = new Module(18, 14, 26, 33);
-// LoRaManager loRaManager(radio);
 ButtonManager buttonManager;
 ControlPoint controlPoint(2);
 DisplayOled displayOLED;
@@ -20,6 +18,7 @@ Config config(15, 15, 15, 15);
 Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
+LoRaManager lora;
 
 // TO DO:
 //  displaying info on lcd and oled logic
@@ -136,17 +135,20 @@ void setup()
     controlPoint.addTeam(TeamId::Blufor);
     controlPoint.addTeam(TeamId::YellowFor);
     buttonManager.begin();
+    lora.begin();
     Serial.println("Ready");
 }
 
 void loop()
 {
+    lora.recivingLoop();
     switch (gameState)
     {
     case GameState::Config:
         config.handleButtonPresses(buttonManager, configState);
         if (buttonManager.startButton.isPressed())
         {
+            lora.sendNewConfig(config);
             gameState = GameState::CountDown;
             secondCLock.start();
         }
@@ -229,3 +231,148 @@ void loop()
     }
     buttonManager.update();
 }
+// #include <Arduino.h>
+// #include <RadioLib.h>
+// #include <ButtonManager.h>
+
+// ButtonManager buttonManager;
+// SX1278 radio = new Module(18, 26, 14, 33);
+
+// volatile bool receivedFlag = false;
+// int transmissionState = RADIOLIB_ERR_NONE;
+
+// // flag to indicate that a packet was sent
+// volatile bool transmittedFlag = false;
+// void setFlagR(void)
+// {
+//     // we got a packet, set the flag
+//     receivedFlag = true;
+// }
+
+// void setFlagS(void)
+// {
+//     // we sent a packet, set the flag
+//     transmittedFlag = true;
+// }
+// void setup()
+// {
+//     Serial.begin(115200);
+//     Serial.println("Starting up...");
+//     buttonManager.begin();
+//     radio.begin();
+
+//     // initialize SX1278 with default settings
+//     Serial.print(F("[SX1278] Initializing ... "));
+//     int state = radio.begin();
+//     if (state == RADIOLIB_ERR_NONE)
+//     {
+//         Serial.println(F("success!"));
+//     }
+//     else
+//     {
+//         Serial.print(F("failed, code "));
+//         Serial.println(state);
+//         while (true)
+//         {
+//             delay(10);
+//         }
+//     }
+
+//     radio.setDio0Action(setFlagR,RISING);
+//     // start listening for LoRa packets
+//     Serial.print(F("[SX1278] Starting to listen ... "));
+//     state = radio.startReceive();
+//     if (state == RADIOLIB_ERR_NONE)
+//     {
+//         Serial.println(F("success!"));
+//     }
+//     else
+//     {
+//         Serial.print(F("failed, code "));
+//         Serial.println(state);
+//         while (true)
+//         {
+//             delay(10);
+//         }
+//     }
+//     Serial.println("Ready");
+// }
+// int count = 0;
+// void loop()
+// {
+//     buttonManager.update();
+//     if (buttonManager.changeButton.isPressed())
+//     {
+//         String str = "Hello World! #" + String(count++);
+//         transmissionState = radio.transmit(str);
+
+//         Serial.println("Change button pressed");
+
+//         if (transmissionState == RADIOLIB_ERR_NONE)
+//         {
+//             // packet was successfully sent
+//             Serial.println(F("transmission finished!"));
+
+//             // NOTE: when using interrupt-driven transmit method,
+//             //       it is not possible to automatically measure
+//             //       transmission data rate using getDataRate()
+//         }
+//         else
+//         {
+//             Serial.print(F("failed, code "));
+//             Serial.println(transmissionState);
+//         }
+//     }
+//     if (receivedFlag)
+//     {
+//         // reset flag
+//         receivedFlag = false;
+
+//         // you can read received data as an Arduino String
+//         String str;
+//         int state = radio.readData(str);
+
+//         // you can also read received data as byte array
+//         /*
+//           byte byteArr[8];
+//           int numBytes = radio.getPacketLength();
+//           int state = radio.readData(byteArr, numBytes);
+//         */
+
+//         if (state == RADIOLIB_ERR_NONE)
+//         {
+//             // packet was successfully received
+//             Serial.println(F("[SX1278] Received packet!"));
+
+//             // print data of the packet
+//             Serial.print(F("[SX1278] Data:\t\t"));
+//             Serial.println(str);
+
+//             // print RSSI (Received Signal Strength Indicator)
+//             Serial.print(F("[SX1278] RSSI:\t\t"));
+//             Serial.print(radio.getRSSI());
+//             Serial.println(F(" dBm"));
+
+//             // print SNR (Signal-to-Noise Ratio)
+//             Serial.print(F("[SX1278] SNR:\t\t"));
+//             Serial.print(radio.getSNR());
+//             Serial.println(F(" dB"));
+
+//             // print frequency error
+//             Serial.print(F("[SX1278] Frequency error:\t"));
+//             Serial.print(radio.getFrequencyError());
+//             Serial.println(F(" Hz"));
+//         }
+//         else if (state == RADIOLIB_ERR_CRC_MISMATCH)
+//         {
+//             // packet was received, but is malformed
+//             Serial.println(F("[SX1278] CRC error!"));
+//         }
+//         else
+//         {
+//             // some other error occurred
+//             Serial.print(F("[SX1278] Failed, code "));
+//             Serial.println(state);
+//         }
+//     }
+// }

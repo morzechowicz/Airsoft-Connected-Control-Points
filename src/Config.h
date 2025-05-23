@@ -5,16 +5,16 @@
 
 class Config {
 public:
-    Config(long countdown, long durration, int pointsTarget, long captureTime)
-        : countdown(countdown), durration(durration), pointsTarget(pointsTarget), captureTime(captureTime) {}
+    Config(long countdown, long duration, int pointsTarget, long captureTime)
+        : countdown(countdown), duration(duration), pointsTarget(pointsTarget), captureTime(captureTime) {}
 
     void configLoop();
 
-    // New method to handle button presses and update config values
     void handleButtonPresses(ButtonManager& buttonManager, int& configState);
+    void fromString(String &data);
 
     long getCountdown() const { return countdown; }
-    long getDurration() const { return durration; }
+    long getDurration() const { return duration; }
     int getPointsTarget() const { return pointsTarget; }
     long getCaptureTime() const { return captureTime; }
 
@@ -25,7 +25,7 @@ public:
 
 private:
     long countdown;
-    long durration;
+    long duration;
     int pointsTarget;
     long captureTime;
 };

@@ -73,3 +73,43 @@ int ControlPoint::getTeamPoints(TeamId teamId)
     }
     return 0;
 }
+
+void ControlPoint::addNode(int nodeId)
+{
+    bool present = false;
+    for (size_t i = 0; i < nodeCount; i++)
+    {
+        if (nodes[i].nodeId == nodeId)
+        {
+            Serial.println("Node already exists");
+            present = true;
+        }
+    }
+    if(!present)
+    {
+        nodeCount++;
+        nodes[nodeCount - 1].nodeId = nodeId;
+        nodes[nodeCount - 1].controllingTeam = TeamId::None;
+    }
+    if(present)
+    {
+        Serial.println("Node already exists Id: ");
+        Serial.print(nodeId);
+    }
+    
+}
+
+void ControlPoint::setNodeControllingTeam(int nodeId, TeamId teamId)
+{
+    for (size_t i = 0; i < nodeCount; i++)
+    {
+        if (nodes[i].nodeId == nodeId)
+        {
+            nodes[i].controllingTeam = teamId;
+            Serial.print("Node ");
+            Serial.print(nodeId);
+            Serial.print(" is controlled by ");
+            Serial.println((teamId == TeamId::Blufor) ? "Blue" : "Yellow");
+        }
+    }
+}
