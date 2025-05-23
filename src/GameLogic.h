@@ -16,7 +16,7 @@ public:
 private:
         Team teams[2];
         GameState gameState;
-        LoRaManager loRa;
+        LoRaHandler loRa;
 
 };
 

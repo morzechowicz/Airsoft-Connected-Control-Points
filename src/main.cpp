@@ -9,6 +9,9 @@
 #include <Config.h>
 #include <ControlPoint.h>
 #include <Clocker.h>
+#include <LoRaHandler.h>
+#include "LoRaMsg.h"
+
 
 GameState gameState;
 ButtonManager buttonManager;
@@ -18,7 +21,12 @@ Config config(15, 15, 15, 15);
 Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
-LoRaManager lora;
+// LoRaManager lora;
+LoRaMsgHandler msgHandler(config, controlPoint, gameState);
+SX1278 radio = new Module(18,26,14,44);
+LoRaCom loraCom(radio);
+LoRaHandler lrradio(loraCom,msgHandler);
+LoRaMsg loramsg(loraCom, config, controlPoint);
 
 // TO DO:
 //  displaying info on lcd and oled logic
@@ -135,20 +143,23 @@ void setup()
     controlPoint.addTeam(TeamId::Blufor);
     controlPoint.addTeam(TeamId::YellowFor);
     buttonManager.begin();
-    lora.begin();
+    lrradio.begin();
+
+    // lora.begin();
     Serial.println("Ready");
 }
 
 void loop()
 {
-    lora.recivingLoop();
+    lrradio.loop();
+    // lora.recivingLoop();
     switch (gameState)
     {
     case GameState::Config:
         config.handleButtonPresses(buttonManager, configState);
         if (buttonManager.startButton.isPressed())
         {
-            lora.sendNewConfig(config);
+            // lora.sendNewConfig(config);
             gameState = GameState::CountDown;
             secondCLock.start();
         }
