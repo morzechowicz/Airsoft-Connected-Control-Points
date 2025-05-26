@@ -18,7 +18,7 @@ void LoRaMsgHandler::handleMessage(const String &msg)
     {
     case 'C': // Configuration update
         config.fromString(recived);
-        gameState = GameState::CountDown;
+        gameState = GameState::CountDownSetup;
         break;
     case 'N': // Node controlled by a team
         nodeId = splitter.getItem(1).toInt();

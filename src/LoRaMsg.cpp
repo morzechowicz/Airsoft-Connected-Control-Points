@@ -20,7 +20,7 @@ String LoRaMsg::createNodeInfo() {
 
 String LoRaMsg::createScoreUpdate(int teamBluePoints, int teamYellowPoints)
 {
-    return "S/" + String(teamBluePoints) + ":" + String(teamYellowPoints) + "/";
+    return "S/" + String(teamBluePoints) + "/" + String(teamYellowPoints);
 }
 
 String LoRaMsg::createGameFinished(TeamId winner, int tesmBluePoints, int teamYellowPoints)

@@ -28,7 +28,7 @@ Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
 Clocker networkClock;
-LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg,winner);
+LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg, winner);
 SX1278 radio = new Module(18, 26, 23, 33);
 LoRaCom loraCom(radio);
 LoRaHandler lrradio(loraCom, msgHandler);
@@ -37,8 +37,6 @@ LoRaMsg loramsg(loraCom, config, controlPoint);
 // TO DO:
 //  displaying info on lcd and oled logic
 //  lora logic mainly keeping points in main node and getting team changes from other node
-
-
 
 bool isGameOver()
 {
@@ -62,11 +60,11 @@ static Clocker graceClock;
 static TeamId capturingTeam = TeamId::None;
 static bool gracePeriodActive = false;
 
-void capturedPointSendLoRaUpdate()
+void capturedPointSendLoRaUpdate(TeamId capTeam)
 {
-    if (controlPoint.getGameMaster())
+    if (!controlPoint.getGameMaster())
     {
-        msg = loramsg.createNodeControlled(controlPoint.getNodeId(), capturingTeam);
+        msg = loramsg.createNodeControlled(controlPoint.getNodeId(), capTeam);
         loraCom.sendMsg(msg);
         Serial.println("Sending node controlled by message");
     }
@@ -83,16 +81,16 @@ void CapturePoint()
             captureClock.reset();
             Serial.println("Team Blue started capturing!");
         }
-        if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::Blufor)
+        if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::Blufor && config.getCaptureTime() > 5)
         {
             controlPoint.setControllingTeam(TeamId::None, controlPoint.getNodeId());
-            capturedPointSendLoRaUpdate();
+            capturedPointSendLoRaUpdate(TeamId::None);
             Serial.println("Point neutralized!");
         }
         if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::Blufor)
         {
             controlPoint.setControllingTeam(TeamId::Blufor, controlPoint.getNodeId());
-            capturedPointSendLoRaUpdate();
+            capturedPointSendLoRaUpdate(TeamId::Blufor);
             Serial.println("Team Blue fully captured the point!");
         }
         gracePeriodActive = false;
@@ -103,7 +101,7 @@ void CapturePoint()
         }
         displayOLED.displayCapturing(capturingTeam, percentage);
     }
-    else if (buttonManager.yellowButton.getState() == LOW)
+    if (buttonManager.yellowButton.getState() == LOW)
     {
         if (capturingTeam != TeamId::YellowFor && controlPoint.getControllingTeam() != TeamId::YellowFor)
         {
@@ -112,16 +110,16 @@ void CapturePoint()
             captureClock.reset();
             Serial.println("Team Yellow started capturing!");
         }
-        if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::YellowFor)
+        if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::YellowFor && config.getCaptureTime() > 5)
         {
             controlPoint.setControllingTeam(TeamId::None, controlPoint.getNodeId());
-            capturedPointSendLoRaUpdate();
+            capturedPointSendLoRaUpdate(TeamId::None);
             Serial.println("Point neutralized!");
         }
         if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::YellowFor)
         {
             controlPoint.setControllingTeam(TeamId::YellowFor, controlPoint.getNodeId());
-            capturedPointSendLoRaUpdate();
+            capturedPointSendLoRaUpdate(TeamId::YellowFor);
             Serial.println("Team Yellow fully captured the point!");
         }
         gracePeriodActive = false;
@@ -222,10 +220,13 @@ void loop()
         {
             msg = loramsg.createConfig(config);
             loraCom.sendMsg(msg);
-            gameState = GameState::CountDown;
-            secondCLock.start();
+            gameState = GameState::CountDownSetup;
         }
         displayOLED.displaySettings(config, configState);
+        break;
+    case GameState::CountDownSetup:
+        secondCLock.start();
+        gameState = GameState::CountDown;
         break;
     case GameState::CountDown:
         if (secondCLock.getElapsedTime() > 1000) // for the time being this stays like this i cant be bothered to add another setting rihgt now also nobody cares
@@ -238,14 +239,16 @@ void loop()
         }
         if (config.getCountdown() <= 0)
         {
-            secondCLock.stop();
-            secondCLock.reset();
-            gameState = GameState::Ongoing;
-            pointClock.start();
-            gameClock.start();
+            gameState = GameState::StartGame;
         }
         displayOLED.displayCountdown(config.getCountdown());
         break;
+    case GameState::StartGame:
+        secondCLock.stop();
+        secondCLock.reset();
+        pointClock.start();
+        gameClock.start();
+        gameState = GameState::Ongoing;
     case GameState::Ongoing:
         if (controlPoint.getGameMaster())
         {
@@ -255,6 +258,8 @@ void loop()
                 Serial.println("Time elapsed: ");
                 Serial.println(gameClock.getElapsedTimeInMinutes());
                 controlPoint.increamentScore(1);
+                msg = loramsg.createScoreUpdate(controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor));
+                loraCom.sendMsg(msg);
                 if (isGameOver())
                 {
                     gameState = GameState::Finished;

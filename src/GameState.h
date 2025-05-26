@@ -3,7 +3,10 @@
 enum class GameState {
     Network,
     Config,
+    CountDownSetup,
     CountDown,
+    StartGame,
     Ongoing,
-    Finished
+    Finished,
+    WaitingForReset
 };
