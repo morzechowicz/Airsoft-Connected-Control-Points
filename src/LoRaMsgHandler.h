@@ -8,13 +8,14 @@
 
 class LoRaMsgHandler {
 public:
-    LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg);
+    LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg, TeamId &winner);
     void handleMessage(const String &msg);
 
 private:
     int nodeId;
     TeamId teamId;
     int receivedId;
+    TeamId winner;
     Config &config;
     String &lastLoraMsg;
     ControlPoint &controlPoint;

@@ -48,6 +48,7 @@ void Config::handleButtonPresses(ButtonManager& buttonManager, int& configState)
 
 void Config::fromString(String &data) {
     // Example: Parse "C/10/20/30/40" into countdown, duration, pointsTarget, captureTime
+    // refactor to use stringsplitter
     if (data[0] == 'C') {
         int firstSlash = data.indexOf('/');
         int secondSlash = data.indexOf('/', firstSlash + 1);

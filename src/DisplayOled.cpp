@@ -1,20 +1,20 @@
 #include <DisplayOled.h>
 
-DisplayOled::DisplayOled() {
-
-    }
+DisplayOled::DisplayOled()
+{
+}
 
 void DisplayOled::begin()
 {
-        Wire.begin(OLED_SDA, OLED_SCL);
-        display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+    Wire.begin(OLED_SDA, OLED_SCL);
+    display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
+    display.setTextColor(SSD1306_WHITE);
 }
 
-void DisplayOled::displaySettings(Config config,int configState)
+void DisplayOled::displaySettings(Config config, int configState)
 {
     display.clearDisplay();
     display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 0);
     display.println("Settings:");
     display.print("Countdown(sec):");
@@ -52,12 +52,12 @@ void DisplayOled::displayGame(ControlPoint controlPoint, int timeLeft)
     display.println("Controlled by:");
     switch (controlPoint.getControllingTeam())
     {
-        case TeamId::Blufor:
-            display.println("Blue");
-            break;
-        case TeamId::YellowFor:
-            display.println("Yellow");
-            break;
+    case TeamId::Blufor:
+        display.println("Blue");
+        break;
+    case TeamId::YellowFor:
+        display.println("Yellow");
+        break;
     default:
         display.println("None");
         break;
@@ -83,11 +83,11 @@ void DisplayOled::displayCapturing(TeamId capturingTeam, float progres)
     display.print("Captured:");
     display.println("");
     int numOfHashes = (progres * 21);
-    for(int i = 0; i < numOfHashes; i++)
+    for (int i = 0; i < numOfHashes; i++)
     {
         display.print("#");
     }
-    if(progres == 1)
+    if (progres == 1)
     {
         display.println("Captured!");
     }
@@ -100,7 +100,8 @@ void DisplayOled::displayFinished(TeamId winner, ControlPoint ControlPoint)
     display.setTextSize(1);
     display.setCursor(0, 0);
     display.println("Game Over!");
-    display.println(winner == TeamId::Blufor ? "Blue WON" : winner == TeamId::YellowFor ? "Yellow WON" : "Draw");
+    display.println(winner == TeamId::Blufor ? "Blue WON" : winner == TeamId::YellowFor ? "Yellow WON"
+                                                                                        : "Draw");
     display.println("Final Score:");
     display.print("Blue: ");
     display.print(ControlPoint.getTeamPoints(TeamId::Blufor));
@@ -109,7 +110,7 @@ void DisplayOled::displayFinished(TeamId winner, ControlPoint ControlPoint)
     display.display();
 }
 
-void DisplayOled::displayNetworkStatus(int nodesCount,bool leaderStatus,bool connecting,String lastLoraMsg)
+void DisplayOled::displayNetworkStatus(int nodesCount, bool leaderStatus, bool connecting, String &lastLoraMsg)
 {
     display.clearDisplay();
     display.setTextSize(1);
@@ -120,16 +121,29 @@ void DisplayOled::displayNetworkStatus(int nodesCount,bool leaderStatus,bool con
     display.println("");
     if (leaderStatus)
     {
-        display.println("Leader");
+        display.println("GameMaster");
     }
     else
     {
-        display.println("Not Leader");
+        display.println("Not GameMaster");
     }
     if(connecting)
     {
         display.println("information has been sent");
     }
     display.print("Last Lora Msg: ");
+    display.println(lastLoraMsg);
+    display.display();
+}
+
+void DisplayOled::displayInitLogo()
+{
+    //yes is looks bad, i figure out something better one day
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setCursor(0, 0);
+    display.println("SPAS");
+    display.println("ENGI");
+    display.println("DIV");
     display.display();
 }

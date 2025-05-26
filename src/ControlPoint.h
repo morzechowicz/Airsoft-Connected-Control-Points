@@ -14,7 +14,7 @@ private:
     Team *teams;
     size_t maxTeams;
     size_t teamCount;
-    bool leader = false;
+    bool GameMaster = false;
     struct Nodes
     {
         int nodeId;
@@ -31,7 +31,7 @@ public:
     Nodes nodes[20];
     size_t nodeCount = 0;
 
-    void setControllingTeam(TeamId teamId) { controllingTeamId = teamId; }
+    void setControllingTeam(TeamId teamId, int nodeId);
     TeamId getControllingTeam() const { return controllingTeamId; }
     bool isControlled() const { return controllingTeamId != TeamId::None; }
     void increamentScore(int points);
@@ -39,14 +39,15 @@ public:
     bool pointsTargetReached(int pointsTarget);
     TeamId whoWon();
     void addNode(int nodeId);
-    void setNodeControllingTeam(int nodeId,TeamId teamId);
     
 
     int getTeamPoints(TeamId teamId);
     int getNodeId() {return nodeId;}
-    bool getLeader() { return leader; }
+    void setTeamsScore(int teamBlueScore, int teamYellowScore);
+    bool getGameMaster() { return GameMaster; }
     void setNodeId(int id) { nodeId = id; }
-    void setLeader (bool isLeader) { leader = isLeader; }
+    void setGameMaster (bool isGameMaster) { GameMaster = isGameMaster; }
+    int getNodeCount() { return nodeCount; }
 };
 
 #endif

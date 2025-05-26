@@ -11,9 +11,11 @@ class LoRaMsg {
 public:
     LoRaMsg(LoRaCom &commManager, Config &config, ControlPoint &controlPoint);
 
-    String createConfigMessage(const Config &config);
-    String createNodeControlledMessage(int nodeId, TeamId teamId);
+    String createConfig(const Config &config);
+    String createNodeControlled(int nodeId, TeamId teamId);
     String createNodeInfo();
+    String createScoreUpdate(int teamBluePoints, int teamYellowPoints);
+    String createGameFinished(TeamId winner,int tesmBluePoints, int teamYellowPoints);
 
 private:
     LoRaCom &loracom;

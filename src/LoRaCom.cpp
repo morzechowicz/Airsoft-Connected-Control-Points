@@ -4,7 +4,8 @@ LoRaCom::LoRaCom(SX1278 &radio) : radio(radio) {}
 
 volatile bool LoRaCom::recFlag = false;
 volatile bool LoRaCom::transDoneFlag = false;
-void LoRaCom::begin() {
+void LoRaCom::begin()
+{
     int state = radio.begin(433.0F, 125.0F, 9U, 5U, 18U, 12, 8U, 0U);
 
     if (state == RADIOLIB_ERR_NONE)
@@ -17,8 +18,7 @@ void LoRaCom::begin() {
         Serial.println(state);
     }
 
-    radio.setPacketSentAction(setTransFlag);
-    radio.setPacketReceivedAction(setRecFlag);
+    radio.setDio0Action(setRecFlag,RISING); // METAL DIO0 RISING REVENGENCE 
     state = radio.startReceive();
     if (state == RADIOLIB_ERR_NONE)
     {
@@ -37,9 +37,10 @@ void LoRaCom::begin() {
 
 bool LoRaCom::sendMsg(const String &msg)
 {
-    if(transDoneFlag)
+    if(!recFlag)
     {
-        transDoneFlag = false;
+        Serial.println("ALL YOU HAD TO DO WAS FOLLOW THE DAMN TRAIN, CJ");
+        recFlag = true;
         String send = msg;
         int state = radio.startTransmit(send);
         if (state == RADIOLIB_ERR_NONE)
@@ -52,13 +53,13 @@ bool LoRaCom::sendMsg(const String &msg)
             Serial.println(state);
             return false;
         }
-
     }
+    return false;
 }
 
 String LoRaCom::reciveMsg()
 {
-    if(recFlag)
+    if (recFlag)
     {
         recFlag = false;
         String msg = "";
@@ -75,16 +76,21 @@ String LoRaCom::reciveMsg()
             return "";
         }
     }
+    return "";
 }
 bool LoRaCom::sendMsgAck(const String &msg)
 {
-
+    return false;
 }
 
-void LoRaCom::setRecFlag() {
+void LoRaCom::setRecFlag(void)
+{
     recFlag = true;
+    Serial.println("Recieve flag set");
 }
 
-void LoRaCom::setTransFlag() {
+void LoRaCom::setTransFlag(void)
+{
     transDoneFlag = true;
+    Serial.println("Transmit flag set");
 }

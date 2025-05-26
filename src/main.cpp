@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <Team.h>
 #include <Teams.h>
-#include <LoRaManager.h>
 #include <RadioLib.h>
 #include <ButtonManager.h>
 #include <GameState.h>
@@ -13,8 +12,12 @@
 #include "LoRaMsg.h"
 
 // somewhore to store msg for now
-String msg;
+String msg = "";
 String lastLoraMsg = "";
+
+TeamId winner = TeamId::None;
+int configState = 0;
+bool MainNode = false;
 
 GameState gameState;
 ButtonManager buttonManager;
@@ -25,9 +28,8 @@ Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
 Clocker networkClock;
-// LoRaManager lora;
-LoRaMsgHandler msgHandler(config, controlPoint, gameState,lastLoraMsg);
-SX1278 radio = new Module(18, 26, 14, 44);
+LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg,winner);
+SX1278 radio = new Module(18, 26, 14, 33);
 LoRaCom loraCom(radio);
 LoRaHandler lrradio(loraCom, msgHandler);
 LoRaMsg loramsg(loraCom, config, controlPoint);
@@ -36,9 +38,7 @@ LoRaMsg loramsg(loraCom, config, controlPoint);
 //  displaying info on lcd and oled logic
 //  lora logic mainly keeping points in main node and getting team changes from other node
 
-TeamId winner = TeamId::None;
-int configState = 0;
-bool MainNode = false;
+
 
 bool isGameOver()
 {
@@ -62,6 +62,16 @@ static Clocker graceClock;
 static TeamId capturingTeam = TeamId::None;
 static bool gracePeriodActive = false;
 
+void capturedPointSendLoRaUpdate()
+{
+    if (controlPoint.getGameMaster())
+    {
+        msg = loramsg.createNodeControlled(controlPoint.getNodeId(), capturingTeam);
+        loraCom.sendMsg(msg);
+        Serial.println("Sending node controlled by message");
+    }
+}
+
 void CapturePoint()
 {
     if (buttonManager.blueButton.getState() == LOW)
@@ -75,12 +85,14 @@ void CapturePoint()
         }
         if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::Blufor)
         {
-            controlPoint.setControllingTeam(TeamId::None);
+            controlPoint.setControllingTeam(TeamId::None, controlPoint.getNodeId());
+            capturedPointSendLoRaUpdate();
             Serial.println("Point neutralized!");
         }
         if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::Blufor)
         {
-            controlPoint.setControllingTeam(TeamId::Blufor);
+            controlPoint.setControllingTeam(TeamId::Blufor, controlPoint.getNodeId());
+            capturedPointSendLoRaUpdate();
             Serial.println("Team Blue fully captured the point!");
         }
         gracePeriodActive = false;
@@ -102,12 +114,14 @@ void CapturePoint()
         }
         if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::YellowFor)
         {
-            controlPoint.setControllingTeam(TeamId::None);
+            controlPoint.setControllingTeam(TeamId::None, controlPoint.getNodeId());
+            capturedPointSendLoRaUpdate();
             Serial.println("Point neutralized!");
         }
         if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::YellowFor)
         {
-            controlPoint.setControllingTeam(TeamId::YellowFor);
+            controlPoint.setControllingTeam(TeamId::YellowFor, controlPoint.getNodeId());
+            capturedPointSendLoRaUpdate();
             Serial.println("Team Yellow fully captured the point!");
         }
         gracePeriodActive = false;
@@ -143,22 +157,26 @@ void setup()
     Serial.begin(115200);
     Serial.println("Starting up...");
     displayOLED.begin();
-    gameState = GameState::Config;
+    gameState = GameState::Network;
     controlPoint.addTeam(TeamId::Blufor);
     controlPoint.addTeam(TeamId::YellowFor);
     buttonManager.begin();
     lrradio.begin();
 
     // add itself to the list
+    randomSeed(analogRead(35));
+    int randomValue = abs(random());
+    controlPoint.setNodeId(randomValue);
     controlPoint.addNode(controlPoint.getNodeId());
-    // lora.begin();
+    displayOLED.displayInitLogo();
+    delay(2000);
     Serial.println("Ready");
 }
 
 void loop()
 {
     lrradio.loop();
-    // lora.recivingLoop();
+    buttonManager.update();
     switch (gameState)
     {
     case GameState::Network:
@@ -169,32 +187,32 @@ void loop()
             networkClock.start();
             msg = loramsg.createNodeInfo();
             loraCom.sendMsg(msg);
+            Serial.println("Sending node info");
         }
         if (buttonManager.yellowButton.isPressed())
         {
-            if (controlPoint.getLeader())
+            if (controlPoint.getGameMaster())
             {
-                controlPoint.setLeader(false);
-                Serial.println("I am not the leader anymore");
+                controlPoint.setGameMaster(false);
+                Serial.println("I am not the GameMaster anymore");
             }
             else
             {
-                controlPoint.setLeader(true);
-                Serial.println("I am the leader now");
+                controlPoint.setGameMaster(true);
+                Serial.println("I am the GameMaster now");
             }
         }
         if (buttonManager.changeButton.isPressed())
         {
             gameState = GameState::Config;
         }
-
         if (networkClock.getElapsedTimeInSeconds() > 5)
         {
-            displayOLED.displayNetworkStatus(controlPoint.getNodeId(), controlPoint.getLeader(), true,lastLoraMsg);
+            displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg);
         }
         else
         {
-            displayOLED.displayNetworkStatus(controlPoint.getNodeId(), controlPoint.getLeader(), false,lastLoraMsg);
+            displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg);
             networkClock.stop();
         }
         break;
@@ -202,9 +220,8 @@ void loop()
         config.handleButtonPresses(buttonManager, configState);
         if (buttonManager.startButton.isPressed())
         {
-            msg = loramsg.createConfigMessage(config);
+            msg = loramsg.createConfig(config);
             loraCom.sendMsg(msg);
-            // lora.sendNewConfig(config);
             gameState = GameState::CountDown;
             secondCLock.start();
         }
@@ -230,40 +247,46 @@ void loop()
         displayOLED.displayCountdown(config.getCountdown());
         break;
     case GameState::Ongoing:
-        if (pointClock.getElapsedTime() >= 60000) // like the last one :/ will do later
+        if (controlPoint.getGameMaster())
         {
-            Serial.println("Time elapsed: ");
-            Serial.println(gameClock.getElapsedTimeInMinutes());
-            controlPoint.increamentScore(1);
-            if (isGameOver())
-            {
-                gameState = GameState::Finished;
-                gameClock.stop();
-                gameClock.reset();
 
-                winner = controlPoint.whoWon();
-                Serial.println("GAME OVER");
-                if (winner == TeamId::Blufor)
+            if (pointClock.getElapsedTime() >= 60000) // like the last one :/ will do later
+            {
+                Serial.println("Time elapsed: ");
+                Serial.println(gameClock.getElapsedTimeInMinutes());
+                controlPoint.increamentScore(1);
+                if (isGameOver())
                 {
-                    Serial.print("BLUFOR WON");
+                    gameState = GameState::Finished;
+                    gameClock.stop();
+                    gameClock.reset();
+                    msg = loramsg.createGameFinished(winner, controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor));
+                    loraCom.sendMsg(msg);
+
+                    winner = controlPoint.whoWon();
+                    Serial.println("GAME OVER");
+                    if (winner == TeamId::Blufor)
+                    {
+                        Serial.print("BLUFOR WON");
+                    }
+                    if (winner == TeamId::YellowFor)
+                    {
+                        Serial.print("YELLOWFOR WON");
+                    }
+                    if (winner == TeamId::Draw)
+                    {
+                        Serial.print("DRAW");
+                    }
+                    if (winner == TeamId::None)
+                    {
+                        Serial.print("a NONE in a WINNER if? how queer! Ive never seen such a thing ");
+                        Serial.println("I guess we make an none now");
+                        Serial.println("for real i have no idea what to put here");
+                    }
+                    pointClock.stop();
                 }
-                if (winner == TeamId::YellowFor)
-                {
-                    Serial.print("YELLOWFOR WON");
-                }
-                if (winner == TeamId::Draw)
-                {
-                    Serial.print("DRAW");
-                }
-                if (winner == TeamId::None)
-                {
-                    Serial.print("a NONE in a WINNER if? how queer! Ive never seen such a thing ");
-                    Serial.println("I guess we make an none now");
-                    Serial.println("for real i have no idea what to put here");
-                }
-                pointClock.stop();
+                pointClock.reset();
             }
-            pointClock.reset();
         }
         // Capture Logic
         CapturePoint();
@@ -285,150 +308,4 @@ void loop()
         gameState = GameState::Config;
         break;
     }
-    buttonManager.update();
 }
-// #include <Arduino.h>
-// #include <RadioLib.h>
-// #include <ButtonManager.h>
-
-// ButtonManager buttonManager;
-// SX1278 radio = new Module(18, 26, 14, 33);
-
-// volatile bool receivedFlag = false;
-// int transmissionState = RADIOLIB_ERR_NONE;
-
-// // flag to indicate that a packet was sent
-// volatile bool transmittedFlag = false;
-// void setFlagR(void)
-// {
-//     // we got a packet, set the flag
-//     receivedFlag = true;
-// }
-
-// void setFlagS(void)
-// {
-//     // we sent a packet, set the flag
-//     transmittedFlag = true;
-// }
-// void setup()
-// {
-//     Serial.begin(115200);
-//     Serial.println("Starting up...");
-//     buttonManager.begin();
-//     radio.begin();
-
-//     // initialize SX1278 with default settings
-//     Serial.print(F("[SX1278] Initializing ... "));
-//     int state = radio.begin();
-//     if (state == RADIOLIB_ERR_NONE)
-//     {
-//         Serial.println(F("success!"));
-//     }
-//     else
-//     {
-//         Serial.print(F("failed, code "));
-//         Serial.println(state);
-//         while (true)
-//         {
-//             delay(10);
-//         }
-//     }
-
-//     radio.setDio0Action(setFlagR,RISING);
-//     // start listening for LoRa packets
-//     Serial.print(F("[SX1278] Starting to listen ... "));
-//     state = radio.startReceive();
-//     if (state == RADIOLIB_ERR_NONE)
-//     {
-//         Serial.println(F("success!"));
-//     }
-//     else
-//     {
-//         Serial.print(F("failed, code "));
-//         Serial.println(state);
-//         while (true)
-//         {
-//             delay(10);
-//         }
-//     }
-//     Serial.println("Ready");
-// }
-// int count = 0;
-// void loop()
-// {
-//     buttonManager.update();
-//     if (buttonManager.changeButton.isPressed())
-//     {
-//         String str = "Hello World! #" + String(count++);
-//         transmissionState = radio.transmit(str);
-
-//         Serial.println("Change button pressed");
-
-//         if (transmissionState == RADIOLIB_ERR_NONE)
-//         {
-//             // packet was successfully sent
-//             Serial.println(F("transmission finished!"));
-
-//             // NOTE: when using interrupt-driven transmit method,
-//             //       it is not possible to automatically measure
-//             //       transmission data rate using getDataRate()
-//         }
-//         else
-//         {
-//             Serial.print(F("failed, code "));
-//             Serial.println(transmissionState);
-//         }
-//     }
-//     if (receivedFlag)
-//     {
-//         // reset flag
-//         receivedFlag = false;
-
-//         // you can read received data as an Arduino String
-//         String str;
-//         int state = radio.readData(str);
-
-//         // you can also read received data as byte array
-//         /*
-//           byte byteArr[8];
-//           int numBytes = radio.getPacketLength();
-//           int state = radio.readData(byteArr, numBytes);
-//         */
-
-//         if (state == RADIOLIB_ERR_NONE)
-//         {
-//             // packet was successfully received
-//             Serial.println(F("[SX1278] Received packet!"));
-
-//             // print data of the packet
-//             Serial.print(F("[SX1278] Data:\t\t"));
-//             Serial.println(str);
-
-//             // print RSSI (Received Signal Strength Indicator)
-//             Serial.print(F("[SX1278] RSSI:\t\t"));
-//             Serial.print(radio.getRSSI());
-//             Serial.println(F(" dBm"));
-
-//             // print SNR (Signal-to-Noise Ratio)
-//             Serial.print(F("[SX1278] SNR:\t\t"));
-//             Serial.print(radio.getSNR());
-//             Serial.println(F(" dB"));
-
-//             // print frequency error
-//             Serial.print(F("[SX1278] Frequency error:\t"));
-//             Serial.print(radio.getFrequencyError());
-//             Serial.println(F(" Hz"));
-//         }
-//         else if (state == RADIOLIB_ERR_CRC_MISMATCH)
-//         {
-//             // packet was received, but is malformed
-//             Serial.println(F("[SX1278] CRC error!"));
-//         }
-//         else
-//         {
-//             // some other error occurred
-//             Serial.print(F("[SX1278] Failed, code "));
-//             Serial.println(state);
-//         }
-//     }
-// }
