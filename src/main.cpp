@@ -29,7 +29,7 @@ Clocker secondCLock;
 Clocker gameClock;
 Clocker networkClock;
 LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg,winner);
-SX1278 radio = new Module(18, 26, 14, 33);
+SX1278 radio = new Module(18, 26, 23, 33);
 LoRaCom loraCom(radio);
 LoRaHandler lrradio(loraCom, msgHandler);
 LoRaMsg loramsg(loraCom, config, controlPoint);

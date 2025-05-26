@@ -7,6 +7,12 @@ class LoRaCom
 {
 public:
     LoRaCom(SX1278 &radio);
+    enum RadioMode
+    {
+        MODE_IDLE,
+        MODE_TRANSMIT,
+        MODE_RECEIVE
+    };
 
     void begin();
     bool sendMsg(const String &msg);
@@ -15,8 +21,10 @@ public:
 
 private:
     SX1278 &radio;
-    static volatile bool recFlag;
+    static volatile RadioMode currentMode;
+    static volatile bool operationRxTx;
     static volatile bool transDoneFlag;
+    static volatile bool resumeReciving;
 
     static void setRecFlag();
     static void setTransFlag();
