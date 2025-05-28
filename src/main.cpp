@@ -28,15 +28,13 @@ Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
 Clocker networkClock;
-LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg, winner);
 SX1278 radio = new Module(18, 26, 23, 33);
 LoRaCom loraCom(radio);
-LoRaHandler lrradio(loraCom, msgHandler);
 LoRaMsg loramsg(loraCom, config, controlPoint);
+LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg, winner,loramsg);
+LoRaHandler lrradio(loraCom, msgHandler);
 
-// TO DO:
-//  displaying info on lcd and oled logic
-//  lora logic mainly keeping points in main node and getting team changes from other node
+
 
 bool isGameOver()
 {
@@ -265,8 +263,11 @@ void loop()
                     gameState = GameState::Finished;
                     gameClock.stop();
                     gameClock.reset();
-                    msg = loramsg.createGameFinished(winner, controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor));
-                    loraCom.sendMsg(msg);
+                    if (controlPoint.getGameMaster())
+                    {
+                        msg = loramsg.createGameFinished(winner, controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor));
+                        loraCom.sendMsg(msg);
+                    }
 
                     winner = controlPoint.whoWon();
                     Serial.println("GAME OVER");

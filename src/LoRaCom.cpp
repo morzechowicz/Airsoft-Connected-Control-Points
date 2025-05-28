@@ -8,7 +8,6 @@ volatile bool LoRaCom::operationRxTx = false;
 volatile bool LoRaCom::transDoneFlag = false;
 volatile LoRaCom::RadioMode LoRaCom::currentMode = LoRaCom::MODE_IDLE;
 
-
 void LoRaCom::begin()
 {
     int state = radio.begin(433.0F, 125.0F, 9U, 5U, 18U, 12, 8U, 0U);
@@ -42,14 +41,17 @@ void LoRaCom::begin()
 
 bool LoRaCom::sendMsg(const String &msg)
 {
+    // right now if radio is busy it will just skip sending
+    // make it into loop or flag or what ever that waits for radio to be awailable
     if (currentMode == MODE_IDLE)
     {
+        String send = msg;
 
-        Serial.println("ALL YOU HAD TO DO WAS FOLLOW THE DAMN TRAIN, CJ");
+        Serial.println("sending msg");
+        Serial.println(send);
         operationRxTx = false;
         currentMode = MODE_TRANSMIT;
 
-        String send = msg;
         int state = radio.startTransmit(send);
         if (state == RADIOLIB_ERR_NONE)
         {
@@ -62,14 +64,27 @@ bool LoRaCom::sendMsg(const String &msg)
             currentMode = MODE_IDLE;
             return false;
         }
-
     }
     return false;
 }
 
+bool LoRaCom::sendMsgAck(const String &msg)
+{
+    // old one sucked time for new one
+    seqNum++;
+    String send = msg;
+    send += "/ACK/" + String(seqNum);
+    Serial.println("sending msg with ack");
+    Serial.println(send);
+
+    msgAckList.add(LoRaAckMessage(send, seqNum));
+
+    return true;
+}
+
 String LoRaCom::reciveMsg()
 {
-    if(resumeReciving)
+    if (resumeReciving)
     {
         Serial.println("Resuming reciving");
         resumeReciving = false;
@@ -87,6 +102,17 @@ String LoRaCom::reciveMsg()
             {
                 Serial.println(F("received data!"));
                 currentMode = MODE_IDLE;
+                splitter.split(msg);
+                if (splitter.getItem(splitter.getItemCount() - 1) == "ACK")
+                {
+                    msg = "RSP/" + String(splitter.getItem(splitter.getItemCount()));
+                    sendMsg(msg);
+                }
+                if(splitter.getItem(0) == "RSP")
+                {
+                    LoRaAckMessage resp = msgAckList.getBySeqNum(splitter.getItem(1).toInt());
+                    msgAckList.remove(resp);
+                }
                 return msg;
             }
             else
@@ -100,9 +126,31 @@ String LoRaCom::reciveMsg()
     }
     return "";
 }
-bool LoRaCom::sendMsgAck(const String &msg)
+
+void LoRaCom::sendMsgFromAckList()
 {
-    return false;
+    if (msgAckList.size() > 0)
+    {
+        LoRaAckMessage ackMesg = msgAckList.get(0);
+        if (!ackClock.isRunning())
+        {
+            ackClock.start();
+        }
+        if (ackClock.getElapsedTime() > 100)
+            if (currentMode == MODE_IDLE)
+            {
+                sendMsg(ackMesg.getMessage());
+                Serial.println("Sending msg from ack list");
+                ackClock.reset();
+            }
+        if (ackMesg.getRecived())
+        {
+            Serial.println("Message Acknowlage removing from stack");
+            msgAckList.remove(ackMesg);
+            ackClock.stop();
+            ackClock.reset();
+        }
+    }
 }
 
 void LoRaCom::setRecFlag(void)

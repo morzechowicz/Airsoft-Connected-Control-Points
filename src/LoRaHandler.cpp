@@ -12,4 +12,5 @@ void LoRaHandler::loop() {
     if (!msg.isEmpty()) {
         msgHandler.handleMessage(msg);
     }
+    commManager.sendMsgFromAckList();
 }

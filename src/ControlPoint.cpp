@@ -16,20 +16,18 @@ void ControlPoint::addTeam(TeamId teamid)
 void ControlPoint::increamentScore(int points)
 {
     // this will go through all teams array and add points if they controll point
-    for (int i = 0; i < nodeCount; i++)
+    // DOES NOT WORK check it later
+    for (int i = 0; i < teamCount; i++)
     {
-        if (nodes[i].controllingTeam != TeamId::None)
+        for (int j = 0; j < nodeCount; j++)
         {
-            for (int j = 0; j < teamCount; j++)
+            if (nodes[j].controllingTeam == teams[i].getTeamId())
             {
-                if (teams[j].getTeamId() == nodes[i].controllingTeam)
-                {
-                    teams[j].addPoints(points);
-                    Serial.print("Team ");
-                    Serial.print(static_cast<int>(teams[j].getTeamId()));
-                    Serial.print(" scored ");
-                    Serial.println(points);
-                }
+                teams[i].addPoints(points);
+                Serial.print("Team ");
+                Serial.print(static_cast<int>(teams[i].getTeamId()));
+                Serial.print(" scored ");
+                Serial.println(points);
             }
         }
     }
