@@ -1,142 +1,55 @@
-#include <LedManager.h>
+#include "LedManager.h"
 
-// i have an idea for this const just not yet
 LedManager::LedManager() {}
-LedManager::LedManager(int blueLedPin, int yellowLedPin, int blinkingInterval)
-    : blueLedPin(blueLedPin), yellowLedPin(yellowLedPin), blinkingInterval(blinkingInterval)
-{
-    pinMode(blueLedPin, OUTPUT);
-    pinMode(yellowLedPin, OUTPUT);
-}
 
-void LedManager::start()
-{
-    ledClock.start();
-    blueTime = blinkingInterval;
-    yellowTime = blinkingInterval * 2;
-}
-
-void LedManager::stop()
-{
-    ledClock.stop();
-    ledClock.reset();
-}
-
-void LedManager::blinkingBoth(bool alternate)
-{
-    if (!alternate)
-    {
-        if (ledClock.getElapsedTime() < blinkingInterval)
-        {
-            digitalWrite(blueLedPin, HIGH);
-            digitalWrite(yellowLedPin, HIGH);
-        }
-        else if (ledClock.getElapsedTime() > blinkingInterval && ledClock.getElapsedTime() < blinkingInterval * 2)
-        {
-            digitalWrite(blueLedPin, LOW);
-            digitalWrite(yellowLedPin, LOW);
-        }
-        else
-        {
-            ledClock.reset();
+void LedManager::addLed(Led led) {
+    for (int i = 0; i < 20; i++) {
+        if (leds[i].getBlinkInterval() == -1) { // Find an unused slot
+            leds[i] = led;
+            return;
         }
     }
-    else
-    {
+    Serial.println("LedManager: No space to add more LEDs!");
+}
 
-        if (ledClock.getElapsedTime() < blinkingInterval)
-        {
-            digitalWrite(blueLedPin, HIGH);
-            digitalWrite(yellowLedPin, LOW);
+void LedManager::removeLed(Led led) {
+    for (int i = 0; i < 20; i++) {
+        if (leds[i].getBlinkInterval() != -1 && leds[i].isOn() == led.isOn()) {
+            leds[i] = Led(-1); // Reset the slot to an unused state
+            return;
         }
-        else if (ledClock.getElapsedTime() > blinkingInterval && ledClock.getElapsedTime() < blinkingInterval * 2)
-        {
-            digitalWrite(blueLedPin, LOW);
-            digitalWrite(yellowLedPin, HIGH);
+    }
+    Serial.println("LedManager: LED not found!");
+}
+
+Led LedManager::getLedByPin(int pin) {
+    for (int i = 0; i < 20; i++) {
+        if (leds[i].getBlinkInterval() != -1 && leds[i].isOn() == pin) {
+            return leds[i];
         }
-        else
-        {
-            ledClock.reset();
-        }
+    }
+    Serial.println("LedManager: LED not found!");
+    return Led(-1); // Return an invalid LED if not found
+}
+
+void LedManager::ledOff(int pin) {
+    Led led = getLedByPin(pin);
+    if (led.isOn()) {
+        led.off();
     }
 }
 
-void LedManager::singleOn(int led)
-{
-    if (led == blueLedPin)
-    {
-        digitalWrite(blueLedPin, HIGH);
-        digitalWrite(yellowLedPin, LOW);
-    }
-    else if (led == yellowLedPin)
-    {
-        digitalWrite(blueLedPin, LOW);
-        digitalWrite(yellowLedPin, HIGH);
+void LedManager::ledOn(int pin) {
+    Led led = getLedByPin(pin);
+    if (!led.isOn()) {
+        led.on();
     }
 }
 
-void LedManager::bothOff()
-{
-    digitalWrite(blueLedPin, LOW);
-    digitalWrite(yellowLedPin, LOW);
-}
-
-void LedManager::singleBlink(int led)
-{
-    if (led == blueLedPin)
-    {
-        if (ledClock.getElapsedTime() < blinkingInterval)
-        {
-            digitalWrite(blueLedPin, HIGH);
-        }
-        else if (ledClock.getElapsedTime() > blinkingInterval && ledClock.getElapsedTime() < blinkingInterval * 2)
-        {
-            digitalWrite(blueLedPin, LOW);
-        }
-        else
-        {
-            ledClock.reset();
-        }
-    }
-    else if (led == yellowLedPin)
-    {
-        if (ledClock.getElapsedTime() < blinkingInterval)
-        {
-            digitalWrite(yellowLedPin, HIGH);
-        }
-        else if (ledClock.getElapsedTime() > blinkingInterval && ledClock.getElapsedTime() < blinkingInterval * 2)
-        {
-            digitalWrite(yellowLedPin, LOW);
-        }
-        else
-        {
-            ledClock.reset();
-        }
-    }
-}
-
-void LedManager::singleOn(int led)
-{
-    if (led == blueLedPin)
-    {
-        digitalWrite(blueLedPin, HIGH);
-        digitalWrite(yellowLedPin, LOW);
-    }
-    else if (led == yellowLedPin)
-    {
-        digitalWrite(blueLedPin, LOW);
-        digitalWrite(yellowLedPin, HIGH);
-    }
-}
-
-void LedManager::singleOff(int led)
-{
-    if (led == blueLedPin)
-    {
-        digitalWrite(blueLedPin, LOW);
-    }
-    else if (led == yellowLedPin)
-    {
-        digitalWrite(yellowLedPin, LOW);
+void LedManager::ledBlinking(int pin, int speed) {
+    Led led = getLedByPin(pin);
+    if (led.isOn()) {
+        led.setBlinkInterval(speed);
+        led.blinking();
     }
 }

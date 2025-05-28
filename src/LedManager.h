@@ -2,32 +2,25 @@
 #define LED_MANAGER_H
 
 #include <Clocker.h>
+#include <Led.h>
 
 class LedManager
 {
 public:
     LedManager();
-    LedManager(int blueLedPin, int yellowLedPin,int blinkingInterval);
-
-    //start clock before using any other method
-    void start();
-    //stop clock after 
-    void stop();
     
-    void blinkingBoth(bool alternate);
-    void singleOn(int led);
-    void bothOff();
-    void singleBlink(int led);
-    void singleOff(int led);
+    void addLed(Led led);
+    void removeLed(Led led);
+    Led getLedByPin(int pin);
+
+    void ledOff(int led);
+    void ledOn(int led);
+    void ledBlinking(int led,int speed);
+
+
 
 private:
-    Clocker ledClock;
-    //this is in ms
-    int blinkingInterval;
-    int blueLedPin;
-    int yellowLedPin;
-    int blueTime;
-    int yellowTime;
+    Led leds[20];
 
 };
 
