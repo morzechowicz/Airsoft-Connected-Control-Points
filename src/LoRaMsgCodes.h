@@ -7,5 +7,6 @@ enum class LoRaMsgCodes {
     MSG_FINISHED = 4,
     MSG_NODE_REPORT = 5,
     MSG_NODE_CONTROLLED_BY = 6,
-    PING = 7
+    PING = 7,
+    MSG_RSP = 8
 };

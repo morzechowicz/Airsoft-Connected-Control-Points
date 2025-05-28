@@ -11,3 +11,8 @@ LoRaAckMessage::LoRaAckMessage(const String &message, int seqNum) : msg(message)
 bool LoRaAckMessage::operator==(const LoRaAckMessage &other) const {
     return this->seqNum == other.seqNum;
 }
+
+void LoRaAckMessage::increamentRetry()
+{
+    retryCount++;
+}

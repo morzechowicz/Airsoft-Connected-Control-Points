@@ -10,6 +10,7 @@ public:
     LoRaAckMessage(const String &message, int seqNum);
 
     bool operator==(const LoRaAckMessage &other) const;
+    void increamentRetry();
 
     inline const String &getMessage() const { return msg; }
     inline int getSeqNum() const { return seqNum; }

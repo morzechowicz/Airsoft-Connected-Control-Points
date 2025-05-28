@@ -73,7 +73,7 @@ bool LoRaCom::sendMsgAck(const String &msg)
     // old one sucked time for new one
     seqNum++;
     String send = msg;
-    send += "/ACK/" + String(seqNum);
+    send += "/"+ String(static_cast<int>(LoRaMsgCodes::MSG_ACK))+"/" + String(seqNum);
     Serial.println("sending msg with ack");
     Serial.println(send);
 
@@ -103,12 +103,12 @@ String LoRaCom::reciveMsg()
                 Serial.println(F("received data!"));
                 currentMode = MODE_IDLE;
                 splitter.split(msg);
-                if (splitter.getItem(splitter.getItemCount() - 1) == "ACK")
+                if (splitter.getItem(splitter.getItemCount() - 1).toInt() == static_cast<int>(LoRaMsgCodes::MSG_ACK))
                 {
-                    msg = "RSP/" + String(splitter.getItem(splitter.getItemCount()));
+                    msg = String(static_cast<int>(LoRaMsgCodes::MSG_RSP)) + "/" + String(splitter.getItem(splitter.getItemCount()));
                     sendMsg(msg);
                 }
-                if(splitter.getItem(0) == "RSP")
+                if(splitter.getItem(0).toInt() == static_cast<int>(LoRaMsgCodes::MSG_RSP))
                 {
                     LoRaAckMessage resp = msgAckList.getBySeqNum(splitter.getItem(1).toInt());
                     msgAckList.remove(resp);
@@ -140,6 +140,12 @@ void LoRaCom::sendMsgFromAckList()
             if (currentMode == MODE_IDLE)
             {
                 sendMsg(ackMesg.getMessage());
+                ackMesg.increamentRetry();
+                if(ackMesg.getRetryCount() > 10)
+                {
+                    Serial.println("No response abording");
+                    msgAckList.remove(ackMesg);
+                }
                 Serial.println("Sending msg from ack list");
                 ackClock.reset();
             }
