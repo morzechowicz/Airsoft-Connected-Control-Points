@@ -182,7 +182,7 @@ void loop()
             networkClock.reset();
             networkClock.start();
             msg = loramsg.createNodeInfo();
-            loraCom.sendMsg(msg);
+            loraCom.sendMsgAck(msg);
             Serial.println("Sending node info");
         }
         if (buttonManager.yellowButton.isPressed())

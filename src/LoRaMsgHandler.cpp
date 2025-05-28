@@ -26,7 +26,7 @@ void LoRaMsgHandler::handleMessage(const String &msg)
         teamId = static_cast<TeamId>(splitter.getItem(2).toInt());
         controlPoint.setControllingTeam(teamId, nodeId);
         break;
-    case LoRaMsgCodes::PING : // Node ping
+    case LoRaMsgCodes::MSG_NODE_REPORT : // Node ping
         receivedId = splitter.getItem(1).toInt();
         controlPoint.addNode(receivedId);
         break;

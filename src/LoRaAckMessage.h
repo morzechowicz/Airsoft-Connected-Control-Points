@@ -17,7 +17,7 @@ public:
     inline int getRetryCount() const { return retryCount; }
     inline int getInterval() const { return interval; }
     inline int getLastRetry() const { return lastRetry; }
-    inline int getRecived() const { return recived; }
+    inline bool getRecived() const { return recived; }
 
     inline void setMessage(const String &message) { msg = message; }
     inline void setSeqNum(int num) { seqNum = num; }
