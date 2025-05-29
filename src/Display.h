@@ -11,8 +11,10 @@ public:
     virtual void displaySettings(Config config,int configState);
     virtual void displayCountdown(int countdown);
     virtual void displayGame(ControlPoint controlPoint, int timeLeft);
-    virtual void displayCapturing(TeamId capturingTeam, int progres) ;
+    virtual void displayCapturing(TeamId capturingTeam, float progres) ;
     virtual void displayFinished(TeamId winner,ControlPoint controlPoint);
+    virtual void displayNetworkStatus(int nodesCount, bool leaderStatus, bool connecting, String &lastLoraMsg);
+    virtual void displayInitLogo();
 };
 
 #endif

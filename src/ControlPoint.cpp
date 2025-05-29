@@ -15,51 +15,55 @@ void ControlPoint::addTeam(TeamId teamid)
 
 void ControlPoint::increamentScore(int points)
 {
-    TeamId controllingTeam = controllingTeamId;
-    if (controllingTeam != TeamId::None)
+    // this will go through all teams array and add points if they controll point
+    // DOES NOT WORK check it later
+    for (int i = 0; i < teamCount; i++)
     {
-        for (int i = 0; i < teamCount; ++i)
+        for (int j = 0; j < nodeCount; j++)
         {
-            if (teams[i].getTeamId() == controllingTeam)
+            if (nodes[j].controllingTeam == teams[i].getTeamId())
             {
-                teams[i].addPoints(points); // yes i know ill change it later
+                teams[i].addPoints(points);
                 Serial.print("Team ");
-                Serial.print((controllingTeam == TeamId::Blufor) ? "Blue" : "Yellow");
-                Serial.println(" scored a point!");
-                break;
+                Serial.print(static_cast<int>(teams[i].getTeamId()));
+                Serial.print(" scored ");
+                Serial.println(points);
             }
         }
     }
 }
 
-TeamId ControlPoint::whoWon() {
+TeamId ControlPoint::whoWon()
+{
     int currentHighiest = 0;
     TeamId currentWinner = TeamId::None;
 
-
-    for (int i = 0; i < teamCount; ++i) {
-        if (teams[i].getTeamPoints() > currentHighiest) {
+    for (int i = 0; i < teamCount; ++i)
+    {
+        if (teams[i].getTeamPoints() > currentHighiest)
+        {
             currentHighiest = teams[i].getTeamPoints();
             currentWinner = teams[i].getTeamId();
-
-        } else if (teams[i].getTeamPoints() == currentHighiest) {
-            currentWinner = TeamId::Draw; 
+        }
+        else if (teams[i].getTeamPoints() == currentHighiest)
+        {
+            currentWinner = TeamId::Draw;
         }
     }
 
-    return currentWinner; 
+    return currentWinner;
 }
 
 bool ControlPoint::pointsTargetReached(int pointsTarget)
 {
-  for (int i = 0; i < teamCount; ++i)
-  {
-    if (teams[i].getTeamPoints() >= pointsTarget)
+    for (int i = 0; i < teamCount; ++i)
     {
-      return true;
+        if (teams[i].getTeamPoints() >= pointsTarget)
+        {
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 int ControlPoint::getTeamPoints(TeamId teamId)
@@ -72,4 +76,67 @@ int ControlPoint::getTeamPoints(TeamId teamId)
         }
     }
     return 0;
+}
+
+void ControlPoint::setTeamsScore(int teamBlueScore, int teamYellowScore)
+{
+    {
+        teams[0].setTeamPoints(teamBlueScore);
+        teams[1].setTeamPoints(teamYellowScore);
+    }
+}
+
+void ControlPoint::addNode(int nodeId)
+{
+    bool present = false;
+    for (size_t i = 0; i < nodeCount; i++)
+    {
+        if (nodes[i].nodeId == nodeId)
+        {
+            present = true;
+        }
+    }
+    if (!present)
+    {
+        nodeCount++;
+        nodes[nodeCount - 1].nodeId = nodeId;
+        nodes[nodeCount - 1].controllingTeam = TeamId::None;
+        Serial.print("Node added Id: ");
+        Serial.print(nodeId);
+        Serial.print(" Node count: ");
+        Serial.println(nodeCount);
+    }
+    if (present)
+    {
+        Serial.println("Node already exists Id: ");
+        Serial.print(nodeId);
+    }
+}
+
+void ControlPoint::setControllingTeam(TeamId teamId, int nodeId)
+{
+    for (size_t i = 0; i < nodeCount; i++)
+    {
+        if (nodes[i].nodeId == nodeId)
+        {
+            nodes[i].controllingTeam = teamId;
+            Serial.print("Node ");
+            Serial.print(nodeId);
+            Serial.print(" is controlled by ");
+            switch (teamId)
+            {
+            case TeamId::Blufor:
+                Serial.println("Blue");
+                break;
+            case TeamId::YellowFor:
+                Serial.println("Yellow");
+                break;
+            case TeamId::None:
+                Serial.println("None");
+                break;
+            default:
+                break;
+            }
+        }
+    }
 }
