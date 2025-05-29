@@ -70,7 +70,6 @@ bool LoRaCom::sendMsg(const String &msg)
 
 bool LoRaCom::sendMsgAck(const String &msg)
 {
-    // old one sucked time for new one
     seqNum = seqNum + 1;
     String send = msg;
     send += "/"+ String(static_cast<int>(LoRaMsgCodes::MSG_ACK))+"/" + String(seqNum);

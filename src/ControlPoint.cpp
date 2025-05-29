@@ -119,7 +119,6 @@ void ControlPoint::setControllingTeam(TeamId teamId, int nodeId)
     {
         if (nodes[i].nodeId == nodeId)
         {
-            controllingTeamId = teamId;
             nodes[i].controllingTeam = teamId;
             Serial.print("Node ");
             Serial.print(nodeId);

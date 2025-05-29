@@ -70,9 +70,9 @@ void capturedPointSendLoRaUpdate(TeamId capTeam)
 
 void CapturePoint()
 {
-    if (buttonManager.blueButton.getState() == LOW)
+    if (buttonManager.blueButton.getState() == LOW && controlPoint.getControllingTeam() != TeamId::Blufor)
     {
-        if (capturingTeam != TeamId::Blufor && controlPoint.getControllingTeam() != TeamId::Blufor)
+        if (capturingTeam != TeamId::Blufor )
         {
             capturingTeam = TeamId::Blufor;
             captureClock.start();
@@ -99,9 +99,9 @@ void CapturePoint()
         }
         displayOLED.displayCapturing(capturingTeam, percentage);
     }
-    if (buttonManager.yellowButton.getState() == LOW)
+    if (buttonManager.yellowButton.getState() == LOW && controlPoint.getControllingTeam() != TeamId::YellowFor)
     {
-        if (capturingTeam != TeamId::YellowFor && controlPoint.getControllingTeam() != TeamId::YellowFor)
+        if (capturingTeam != TeamId::YellowFor )
         {
             capturingTeam = TeamId::YellowFor;
             captureClock.start();
@@ -217,7 +217,7 @@ void loop()
         if (buttonManager.startButton.isPressed())
         {
             msg = loramsg.createConfig(config);
-            loraCom.sendMsg(msg);
+            loraCom.sendMsgAck(msg);
             gameState = GameState::CountDownSetup;
         }
         displayOLED.displaySettings(config, configState);
@@ -257,7 +257,7 @@ void loop()
                 Serial.println(gameClock.getElapsedTimeInMinutes());
                 controlPoint.increamentScore(1);
                 msg = loramsg.createScoreUpdate(controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor));
-                loraCom.sendMsg(msg);
+                loraCom.sendMsgAck(msg);
                 if (isGameOver())
                 {
                     gameState = GameState::Finished;
@@ -266,7 +266,7 @@ void loop()
                     if (controlPoint.getGameMaster())
                     {
                         msg = loramsg.createGameFinished(winner, controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor));
-                        loraCom.sendMsg(msg);
+                        loraCom.sendMsgAck(msg);
                     }
 
                     winner = controlPoint.whoWon();
