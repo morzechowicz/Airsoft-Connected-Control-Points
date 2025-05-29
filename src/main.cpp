@@ -263,14 +263,14 @@ void loop()
                     gameState = GameState::Finished;
                     gameClock.stop();
                     gameClock.reset();
+                    
+                    winner = controlPoint.whoWon();
+                    Serial.println("GAME OVER");
                     if (controlPoint.getGameMaster())
                     {
                         msg = loramsg.createGameFinished(winner, controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor));
                         loraCom.sendMsgAck(msg);
                     }
-
-                    winner = controlPoint.whoWon();
-                    Serial.println("GAME OVER");
                     if (winner == TeamId::Blufor)
                     {
                         Serial.print("BLUFOR WON");
