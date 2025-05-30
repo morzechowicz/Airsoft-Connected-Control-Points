@@ -10,6 +10,7 @@
 #include <Clocker.h>
 #include <LoRaHandler.h>
 #include "LoRaMsg.h"
+#include <LedManager.h>
 
 // somewhore to store msg for now
 String msg = "";
@@ -23,7 +24,9 @@ GameState gameState;
 ButtonManager buttonManager;
 ControlPoint controlPoint(2);
 DisplayOled displayOLED;
-Config config(15, 15, 15, 15);
+Config config(5, 15, 15, 10);
+Led blueLed(13);
+Led yellowLed(12);
 Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
@@ -84,9 +87,11 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::None, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::None);
             Serial.println("Point neutralized!");
+            yellowLed.off();
         }
         if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::Blufor)
         {
+            blueLed.on();
             controlPoint.setControllingTeam(TeamId::Blufor, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::Blufor);
             Serial.println("Team Blue fully captured the point!");
@@ -112,10 +117,12 @@ void CapturePoint()
         {
             controlPoint.setControllingTeam(TeamId::None, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::None);
+            blueLed.off();
             Serial.println("Point neutralized!");
         }
         if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::YellowFor)
         {
+            yellowLed.on();
             controlPoint.setControllingTeam(TeamId::YellowFor, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::YellowFor);
             Serial.println("Team Yellow fully captured the point!");
@@ -181,9 +188,12 @@ void loop()
         {
             networkClock.reset();
             networkClock.start();
-            msg = loramsg.createNodeInfo();
-            loraCom.sendMsgAck(msg);
-            Serial.println("Sending node info");
+            if(controlPoint.getNodeCount() > 1)
+            {
+                msg = loramsg.createNodeInfo();
+                loraCom.sendMsgAck(msg);
+                Serial.println("Sending node info");
+            }
         }
         if (buttonManager.yellowButton.isPressed())
         {

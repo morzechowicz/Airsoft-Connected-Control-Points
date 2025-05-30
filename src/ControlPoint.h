@@ -9,7 +9,6 @@
 class ControlPoint
 {
 private:
-    TeamId controllingTeamId;
     int nodeId;
     Team *teams;
     size_t maxTeams;
@@ -23,7 +22,7 @@ private:
 
 
 public:
-    ControlPoint(size_t maxTeams) : controllingTeamId(TeamId::None), maxTeams(maxTeams)
+    ControlPoint(size_t maxTeams) : maxTeams(maxTeams)
     {
         Serial.println("ControlPoint initialized");
         teams = new Team[2];
@@ -32,8 +31,7 @@ public:
     size_t nodeCount = 0;
 
     void setControllingTeam(TeamId teamId, int nodeId);
-    TeamId getControllingTeam() const { return controllingTeamId; }
-    bool isControlled() const { return controllingTeamId != TeamId::None; }
+    TeamId getControllingTeam();
     void increamentScore(int points);
     void addTeam(TeamId teamid);
     bool pointsTargetReached(int pointsTarget);

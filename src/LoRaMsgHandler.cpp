@@ -14,7 +14,6 @@ void LoRaMsgHandler::handleMessage(const String &msg)
     splitter.split(recived);
     int teamBluePoints;
     int teamYellowPoints;
-    TeamId winner;
     switch (static_cast<LoRaMsgCodes>(splitter.getItem(0).toInt()))
     {
     case LoRaMsgCodes::MSG_CONFIG : // Configuration update
