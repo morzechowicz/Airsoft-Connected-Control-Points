@@ -177,7 +177,10 @@ void setup()
     controlPoint.setNodeId(randomValue);
     controlPoint.addNode(controlPoint.getNodeId());
     displayOLED.displayInitLogo();
-    delay(2000);
+    yellowLed.blinking();
+    blueLed.blinking();
+
+
     buzzer.beepXtimes(500,3,500);
     Serial.println("Ready");
 }
@@ -188,6 +191,8 @@ void loop()
     buttonManager.update();
     lcd.lcdLoop();
     buzzer.beepLoop();
+    blueLed.update();
+    yellowLed.update();
     switch (gameState)
     {
     case GameState::Network:
@@ -218,6 +223,7 @@ void loop()
         {
             gameState = GameState::Config;
             controlPoint.setGameMaster(true);
+
         }
         if (networkClock.getElapsedTimeInSeconds() > 5)
         {
@@ -245,6 +251,8 @@ void loop()
         break;
     case GameState::CountDownSetup:
         secondCLock.start();
+        yellowLed.off();
+        blueLed.off();
         gameState = GameState::CountDown;
         break;
     case GameState::CountDown:
@@ -344,6 +352,21 @@ void loop()
         pointClock.stop();
         buzzer.beepXtimes(1000,10,2000);
         gameState = GameState::WaitingForReset;
+        if(winner == TeamId::Blufor)
+        {
+            blueLed.blinking();
+            yellowLed.off();
+        }
+        if(winner == TeamId::YellowFor)
+        {
+            blueLed.off();
+            yellowLed.blinking();
+        }
+        if(winner == TeamId::Draw)
+        {
+            blueLed.blinking();
+            yellowLed.blinking();
+        }
         break;
     case GameState::WaitingForReset:
         // here we just display winner until idk button press or what ever
@@ -351,6 +374,8 @@ void loop()
         {
             gameState = GameState::Config;
         }
+
+        
         displayOLED.displayFinished(winner, controlPoint);
         lcd.displayFinished(winner, controlPoint);
         break;

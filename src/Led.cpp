@@ -34,6 +34,7 @@ bool Led::isOn() const {
 
 void Led::blinking() {
     blink = true;
+    state = true;
     blinkClock.reset(); // Reset the clock when blinking starts
     blinkClock.start();
 }
