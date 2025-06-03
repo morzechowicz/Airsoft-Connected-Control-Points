@@ -6,11 +6,13 @@
 #include <Clocker.h>
 #include <StringSplitter.h>
 #include <LoRaMsgCodes.h>
+#include <ControlPoint.h>
+#include <LoRaMsg.h>
 
 class LoRaCom
 {
 public:
-    LoRaCom(SX1278 &radio);
+    LoRaCom(SX1278 &radio,ControlPoint &cp,LoRaMsg &LRM);
     enum RadioMode
     {
         MODE_IDLE,
@@ -22,18 +24,21 @@ public:
     
     void begin();
     bool sendMsg(const String &msg);
-    bool sendMsgAck(const String &msg);
+    bool sendMsgAckTo(const String &msg, int targetId);
+    void sendMsgAckToAll(const String &msg);
     String reciveMsg();
     void sendMsgFromAckList();
     
     private:
     SX1278 &radio;
+    LoRaMsg &LRM;
     static volatile RadioMode currentMode;
     static volatile bool operationRxTx;
     static volatile bool transDoneFlag;
     static volatile bool resumeReciving;
     StringSplitter splitter;
     Clocker ackClock;
+    ControlPoint &cp;
 
     static void setRecFlag();
     static void setTransFlag();

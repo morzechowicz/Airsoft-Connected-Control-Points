@@ -2,11 +2,14 @@
 
 volatile bool LoRaCom::resumeReciving = false;
 
-LoRaCom::LoRaCom(SX1278 &radio) : radio(radio) {}
+LoRaCom::LoRaCom(SX1278 &radio, ControlPoint &cp,LoRaMsg &LRM)
+ : radio(radio), cp(cp), LRM(LRM) {}
 
 volatile bool LoRaCom::operationRxTx = false;
 volatile bool LoRaCom::transDoneFlag = false;
 volatile LoRaCom::RadioMode LoRaCom::currentMode = LoRaCom::MODE_IDLE;
+
+
 
 void LoRaCom::begin()
 {
@@ -68,16 +71,28 @@ bool LoRaCom::sendMsg(const String &msg)
     return false;
 }
 
-bool LoRaCom::sendMsgAck(const String &msg)
-{
-    seqNum = seqNum + 1;
-    String send = msg;
-    send += "/"+ String(static_cast<int>(LoRaMsgCodes::MSG_ACK))+"/" + String(seqNum);
 
-    LoRaAckMessage ackMsg(send, seqNum);
+bool LoRaCom::sendMsgAckTo(const String &msg,int targetId)
+{
+    String send = msg;
+    
+    LoRaAckMessage ackMsg(send, seqNum,targetId);
     msgAckList.add(ackMsg);
 
     return true;
+}
+
+void LoRaCom::sendMsgAckToAll(const String &msg)
+{
+    for (size_t i = 0; i < cp.nodeCount; i++)
+    {
+        if(cp.nodes[i].nodeId != cp.getNodeId())
+        {
+            String send = msg;
+            sendMsgAckTo(send,cp.nodes[i].nodeId);
+        }
+    }
+    
 }
 
 String LoRaCom::reciveMsg()
@@ -102,20 +117,30 @@ String LoRaCom::reciveMsg()
                 Serial.println(F("received data!"));
                 currentMode = MODE_IDLE;
                 splitter.split(msg);
+                LoRaMsgCodes code = static_cast<LoRaMsgCodes>(splitter.getItem(0).toInt());
+                int from = splitter.getItem(1).toInt();
+                int addresedTo = splitter.getItem(2).toInt();
+                int seqNumR = splitter.getItem(3).toInt();
+                if(addresedTo != cp.getNodeId() && addresedTo != 0)
+                {
+                    Serial.println("not addresed towards me ingoring");
+                    Serial.println(addresedTo);
+                    return "";
+                }
                 Serial.println(msg);
-                Serial.println(splitter.getItem(splitter.getItemCount() - 2).toInt());
-                if (splitter.getItem(splitter.getItemCount() - 2).toInt() == static_cast<int>(LoRaMsgCodes::MSG_ACK))
+
+                if (code != LoRaMsgCodes::MSG_RSP)
                 {
                     Serial.println("Ack this");
-                    response = String(static_cast<int>(LoRaMsgCodes::MSG_RSP)) + "/" + String(splitter.getItem(splitter.getItemCount()-1));
+                    response = LRM.AckMsgRepsonse(seqNumR,from);
                     sendMsg(response);
                 }
-                if(splitter.getItem(0).toInt() == static_cast<int>(LoRaMsgCodes::MSG_RSP))
+                if(code == LoRaMsgCodes::MSG_RSP)
                 {
                     Serial.println("ack reported");
                     Serial.println(msg);
-                    Serial.println(splitter.getItem(1).toInt());
-                    LoRaAckMessage* resp = msgAckList.getBySeqNum(splitter.getItem(1).toInt());
+                    Serial.println(seqNumR);
+                    LoRaAckMessage* resp = msgAckList.getBySeqNum(seqNumR);
                     if (resp != nullptr) {
                         msgAckList.remove(resp);
                     } else {
@@ -145,13 +170,13 @@ void LoRaCom::sendMsgFromAckList()
         {
             ackClock.start();
         }
-        if (ackClock.getElapsedTime() > 1000)
+        if (ackClock.getElapsedTime() > 500)
             if (currentMode == MODE_IDLE)
             {
                 sendMsg(ackMesg->getMessage());
                 ackMesg->increamentRetry();
                 
-                if(ackMesg->getRetryCount() > 10)
+                if(ackMesg->getRetryCount() > 5)
                 {
                     Serial.println("No response abording");
                     msgAckList.remove(ackMesg);

@@ -2,6 +2,7 @@
 #define CONFIG_H
 
 #include "ButtonManager.h" // Include ButtonManager
+#include <StringSplitter.h>
 
 class Config {
 public:
@@ -28,6 +29,7 @@ private:
     long duration;
     int pointsTarget;
     long captureTime;
+    StringSplitter splitter;
 };
 
 #endif

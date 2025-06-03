@@ -115,6 +115,8 @@ void ControlPoint::addNode(int nodeId)
 
 void ControlPoint::setControllingTeam(TeamId teamId, int remoteNodeId)
 {
+    Serial.println("changind team for node");
+    Serial.println(remoteNodeId);
     for (size_t i = 0; i < nodeCount; i++)
     {
         if (nodes[i].nodeId == remoteNodeId)

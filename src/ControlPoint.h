@@ -14,11 +14,8 @@ private:
     size_t maxTeams;
     size_t teamCount;
     bool GameMaster = false;
-    struct Nodes
-    {
-        int nodeId;
-        TeamId controllingTeam;
-    };
+    int MasterNode = 0;
+
 
 
 public:
@@ -27,6 +24,11 @@ public:
         Serial.println("ControlPoint initialized");
         teams = new Team[2];
     }
+    struct Nodes
+    {
+        int nodeId;
+        TeamId controllingTeam;
+    };
     Nodes nodes[20];
     size_t nodeCount = 0;
 
@@ -46,6 +48,8 @@ public:
     void setNodeId(int id) { nodeId = id; }
     void setGameMaster (bool isGameMaster) { GameMaster = isGameMaster; }
     int getNodeCount() { return nodeCount; }
+    void setGameMasterNode(int node) {MasterNode = node;}
+    int getGameMasterNode() { return MasterNode;}
 };
 
 #endif

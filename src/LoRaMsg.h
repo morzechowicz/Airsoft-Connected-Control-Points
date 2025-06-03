@@ -5,23 +5,21 @@
 #include <Config.h>
 #include <ControlPoint.h>
 #include <Team.h>
-#include <LoRaCom.h>
 #include <LoRaMsgCodes.h>
 
 class LoRaMsg {
 public:
-    
-    LoRaMsg(LoRaCom &commManager, Config &config, ControlPoint &controlPoint);
+    LoRaMsg( Config &config, ControlPoint &controlPoint);
 
-    String createConfig(const Config &config);
-    String createNodeControlled(int nodeId, TeamId teamId);
-    String createNodeInfo();
-    String createScoreUpdate(int teamBluePoints, int teamYellowPoints);
-    String createGameFinished(TeamId winner,int tesmBluePoints, int teamYellowPoints);
-    String AckMsgRepsonse(int seqNum);
+    String createConfig(const Config &config, int to, int seqNum);
+    String createNodeControlled(int nodeId, TeamId teamId, int to, int seqNum);
+    String createNodeInfo(int to, int seqNum);
+    String createScoreUpdate(int teamBluePoints, int teamYellowPoints, int to, int seqNum);
+    String createGameFinished(TeamId winner, int teamBluePoints, int teamYellowPoints, int to, int seqNum);
+    String AckMsgRepsonse(int seqNum, int to);
+    String AckMsgRepsonse(int seqNum, int nodeId, int to);
 
 private:
-    LoRaCom &loracom;
     Config &config;
     ControlPoint &controlPoint;
 };

@@ -17,10 +17,10 @@ void Config::handleButtonPresses(ButtonManager& buttonManager, int& configState)
                 duration += 15;
                 break;
             case 2:
-                pointsTarget += 15;
+                pointsTarget += 10;
                 break;
             case 3:
-                captureTime += 15;
+                captureTime += 1;
                 break;
             default:
                 break;
@@ -35,37 +35,43 @@ void Config::handleButtonPresses(ButtonManager& buttonManager, int& configState)
                 duration -= 15;
                 break;
             case 2:
-                pointsTarget -= 15;
+                pointsTarget -= 10;
                 break;
             case 3:
-                captureTime -= 15;
+                captureTime -= 1;
                 break;
             default:
                 break;
         }
+        //min
+        if(countdown < 5){countdown = 5;}
+        if(duration < 10){duration = 10;}
+        if(pointsTarget < 10){pointsTarget = 10;}
+        if(captureTime < 6){captureTime = 6;}
+        //max
+        if(countdown > 600){countdown = 600;}
+        if(duration > 500){duration = 500;}
+        if(pointsTarget > 999){pointsTarget = 999;}
+        if(captureTime > 30){captureTime = 30;}
     }
 }
 
 void Config::fromString(String &data) {
-    // Example: Parse "C/10/20/30/40" into countdown, duration, pointsTarget, captureTime
+    // Example: Parse "C/From/to/seq/10/20/30/40" into countdown, duration, pointsTarget, captureTime
     // refactor to use stringsplitter
-    if (data[0] == 'C') {
-        int firstSlash = data.indexOf('/');
-        int secondSlash = data.indexOf('/', firstSlash + 1);
-        int thirdSlash = data.indexOf('/', secondSlash + 1);
-        int fourthSlash = data.indexOf('/', thirdSlash + 1);
+    splitter.split(data);
 
-        countdown = data.substring(firstSlash + 1, secondSlash).toInt();
-        duration = data.substring(secondSlash + 1, thirdSlash).toInt();
-        pointsTarget = data.substring(thirdSlash + 1, fourthSlash).toInt();
-        captureTime = data.substring(fourthSlash + 1).toInt();
+    countdown = splitter.getItem(4).toInt();
+    duration = splitter.getItem(5).toInt();
+    pointsTarget = splitter.getItem(6).toInt();
+    captureTime = splitter.getItem(7).toInt();
 
-        Serial.println("Config updated:");
-        Serial.print("Countdown: "); Serial.println(countdown);
-        Serial.print("Duration: "); Serial.println(duration);
-        Serial.print("Points Target: "); Serial.println(pointsTarget);
-        Serial.print("Capture Time: "); Serial.println(captureTime);
-    }
+
+    Serial.println("Config updated:");
+    Serial.print("Countdown: "); Serial.println(countdown);
+    Serial.print("Duration: "); Serial.println(duration);
+    Serial.print("Points Target: "); Serial.println(pointsTarget);
+    Serial.print("Capture Time: "); Serial.println(captureTime);
 }
 
 void Config::setCountdown(int seconds) {
