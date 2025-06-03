@@ -12,6 +12,7 @@
 #include "LoRaMsg.h"
 #include <LedManager.h>
 #include <DisplayLCD.h>
+#include <Buzzer.h>
 
 // somewhore to store msg for now
 String msg = "";
@@ -27,6 +28,7 @@ GameState gameState;
 ButtonManager buttonManager;
 ControlPoint controlPoint(2);
 DisplayOled displayOLED;
+Buzzer buzzer(14);
 Config config(5, 5, 5, 5);
 Led blueLed(13);
 Led yellowLed(12);
@@ -95,6 +97,7 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::Blufor, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::Blufor);
             Serial.println("Team Blue fully captured the point!");
+            buzzer.beepXtimes(200,3,200);
         }
         gracePeriodActive = false;
         float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
@@ -125,6 +128,7 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::YellowFor, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::YellowFor);
             Serial.println("Team Yellow fully captured the point!");
+            buzzer.beepXtimes(200,3,200);
         }
         gracePeriodActive = false;
         float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
@@ -168,12 +172,13 @@ void setup()
     lrradio.begin();
 
     // add itself to the list
-    randomSeed(analogRead(35));
+    randomSeed(millis());
     int randomValue = abs(random());
     controlPoint.setNodeId(randomValue);
     controlPoint.addNode(controlPoint.getNodeId());
     displayOLED.displayInitLogo();
     delay(2000);
+    buzzer.beep(300);
     Serial.println("Ready");
 }
 
@@ -182,6 +187,7 @@ void loop()
     lrradio.loop();
     buttonManager.update();
     lcd.lcdLoop();
+    buzzer.beepLoop();
     switch (gameState)
     {
     case GameState::Network:
@@ -261,6 +267,7 @@ void loop()
         secondCLock.reset();
         pointClock.start();
         gameClock.start();
+        buzzer.beep(10000);
         gameState = GameState::Ongoing;
     case GameState::Ongoing:
         if (controlPoint.getControllingTeam() == TeamId::Blufor)
@@ -334,6 +341,7 @@ void loop()
             Serial.println("for real i have no idea what to put here");
         }
         pointClock.stop();
+        buzzer.beepXtimes(1000,10,5000);
         gameState = GameState::WaitingForReset;
         break;
     case GameState::WaitingForReset:

@@ -2,21 +2,47 @@
 
 Buzzer::Buzzer(int pin) : pin(pin), isOn(false) {
     pinMode(pin, OUTPUT);
-    digitalWrite(pin, LOW); // Ensure the buzzer is off initially
+    digitalWrite(pin, LOW); 
 }
 
 void Buzzer::beep(unsigned int duration) {
     if (!isOn) {
         isOn = true;
-        digitalWrite(pin, HIGH); // Turn the buzzer on
-        buzzClock.reset();       // Reset the clock
-        buzzClock.start();       // Start the clock
+        durration = duration;
+        digitalWrite(pin, HIGH);
+        buzzClock.reset();  
+        buzzClock.start();       
+    }
+}
+
+void Buzzer::beepXtimes(unsigned int pause,unsigned int reapet, unsigned int dur)
+{
+    if(!isOn)
+    {
+        reapets = reapet;
+        setDuration = dur;
+        inBetweenPause = pause;
+        beep(setDuration);   
+    }
+}
+
+// loop checks if buzzer should stop without blocking
+void Buzzer::beepLoop()
+{
+    if (buzzClock.getElapsedTime() >= durration) {
+        isOn = false;
+        digitalWrite(pin, LOW);  
+        buzzClock.stop();  
+        durration = 0;
     }
 
-    // Check if the duration has passed
-    if (buzzClock.getElapsedTime() >= duration) {
-        isOn = false;
-        digitalWrite(pin, LOW);  // Turn the buzzer off
-        buzzClock.stop();        // Stop the clock
+    // Check if there are remaining repetitions for the beep sequence
+    if (reapets > 0)
+    {
+        if((buzzClock.getElapsedTime() >= inBetweenPause) && !isOn)
+        {
+            beep(setDuration);
+            reapets--;
+        }
     }
 }
