@@ -9,31 +9,31 @@
 class ControlPoint
 {
 private:
-    TeamId controllingTeamId;
     int nodeId;
     Team *teams;
     size_t maxTeams;
     size_t teamCount;
     bool GameMaster = false;
+    int MasterNode = 0;
+
+
+
+public:
+    ControlPoint(size_t maxTeams) : maxTeams(maxTeams)
+    {
+        Serial.println("ControlPoint initialized");
+        teams = new Team[2];
+    }
     struct Nodes
     {
         int nodeId;
         TeamId controllingTeam;
     };
-
-
-public:
-    ControlPoint(size_t maxTeams) : controllingTeamId(TeamId::None), maxTeams(maxTeams)
-    {
-        Serial.println("ControlPoint initialized");
-        teams = new Team[2];
-    }
     Nodes nodes[20];
     size_t nodeCount = 0;
 
     void setControllingTeam(TeamId teamId, int nodeId);
-    TeamId getControllingTeam() const { return controllingTeamId; }
-    bool isControlled() const { return controllingTeamId != TeamId::None; }
+    TeamId getControllingTeam();
     void increamentScore(int points);
     void addTeam(TeamId teamid);
     bool pointsTargetReached(int pointsTarget);
@@ -48,6 +48,8 @@ public:
     void setNodeId(int id) { nodeId = id; }
     void setGameMaster (bool isGameMaster) { GameMaster = isGameMaster; }
     int getNodeCount() { return nodeCount; }
+    void setGameMasterNode(int node) {MasterNode = node;}
+    int getGameMasterNode() { return MasterNode;}
 };
 
 #endif

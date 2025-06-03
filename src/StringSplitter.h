@@ -13,7 +13,7 @@ class StringSplitter {
     void setDelimiter(char delimiter);
 
   private:
-    String _parts[6];  
+    String _parts[20]; 
     int _count;
     char _delimiter;
 };

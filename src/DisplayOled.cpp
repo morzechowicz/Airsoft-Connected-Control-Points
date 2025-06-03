@@ -94,7 +94,7 @@ void DisplayOled::displayCapturing(TeamId capturingTeam, float progres)
     display.display();
 }
 
-void DisplayOled::displayFinished(TeamId winner, ControlPoint ControlPoint)
+void DisplayOled::displayFinished(TeamId winner, ControlPoint controlPoint)
 {
     display.clearDisplay();
     display.setTextSize(1);
@@ -104,9 +104,9 @@ void DisplayOled::displayFinished(TeamId winner, ControlPoint ControlPoint)
                                                                                         : "Draw");
     display.println("Final Score:");
     display.print("Blue: ");
-    display.print(ControlPoint.getTeamPoints(TeamId::Blufor));
+    display.print(controlPoint.getTeamPoints(TeamId::Blufor));
     display.print(" | Yellow: ");
-    display.print(ControlPoint.getTeamPoints(TeamId::YellowFor));
+    display.print(controlPoint.getTeamPoints(TeamId::YellowFor));
     display.display();
 }
 

@@ -7,7 +7,7 @@ class LoRaAckMessage
 {
 public:
     LoRaAckMessage();
-    LoRaAckMessage(const String &message, int seqNum);
+    LoRaAckMessage(const String &message, int seqNum,int recipient);
 
     bool operator==(const LoRaAckMessage &other) const;
     void increamentRetry();
@@ -18,9 +18,11 @@ public:
     inline int getInterval() const { return interval; }
     inline int getLastRetry() const { return lastRetry; }
     inline bool getRecived() const { return recived; }
+    inline bool getRecipient() const { return recipient; }
 
     inline void setMessage(const String &message) { msg = message; }
     inline void setSeqNum(int num) { seqNum = num; }
+    inline void setRecipient(int recipient) { recipient = recipient; }
     inline void setRetryCount(int count) { retryCount = count; }
     inline void setInterval(int val) { interval = val; }
     inline void setLastRetry(int val) { lastRetry = val; }
@@ -30,6 +32,7 @@ private:
     int seqNum;
     int retryCount;
     int interval;
+    int recipient;
     int lastRetry;
     bool recived;
 };

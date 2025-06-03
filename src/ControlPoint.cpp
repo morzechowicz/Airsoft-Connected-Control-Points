@@ -113,15 +113,18 @@ void ControlPoint::addNode(int nodeId)
     }
 }
 
-void ControlPoint::setControllingTeam(TeamId teamId, int nodeId)
+void ControlPoint::setControllingTeam(TeamId teamId, int remoteNodeId)
 {
+    Serial.println("changind team for node");
+    Serial.println(remoteNodeId);
     for (size_t i = 0; i < nodeCount; i++)
     {
-        if (nodes[i].nodeId == nodeId)
+        if (nodes[i].nodeId == remoteNodeId)
         {
             nodes[i].controllingTeam = teamId;
+            if(remoteNodeId == nodeId)
             Serial.print("Node ");
-            Serial.print(nodeId);
+            Serial.print(remoteNodeId);
             Serial.print(" is controlled by ");
             switch (teamId)
             {
@@ -139,4 +142,16 @@ void ControlPoint::setControllingTeam(TeamId teamId, int nodeId)
             }
         }
     }
+}
+
+TeamId ControlPoint::getControllingTeam()
+{
+    for (size_t i = 0; i < nodeCount; i++)
+    {
+        if (nodes[i].nodeId == nodeId)
+        {
+            return nodes[i].controllingTeam;
+        }
+    }
+    return TeamId::None;
 }
