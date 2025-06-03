@@ -172,13 +172,13 @@ void setup()
     lrradio.begin();
 
     // add itself to the list
-    randomSeed(millis());
+    randomSeed(analogRead(36));
     int randomValue = abs(random());
     controlPoint.setNodeId(randomValue);
     controlPoint.addNode(controlPoint.getNodeId());
     displayOLED.displayInitLogo();
     delay(2000);
-    buzzer.beep(300);
+    buzzer.beepXtimes(500,3,500);
     Serial.println("Ready");
 }
 
@@ -217,6 +217,7 @@ void loop()
         if (buttonManager.changeButton.isPressed())
         {
             gameState = GameState::Config;
+            controlPoint.setGameMaster(true);
         }
         if (networkClock.getElapsedTimeInSeconds() > 5)
         {
@@ -341,7 +342,7 @@ void loop()
             Serial.println("for real i have no idea what to put here");
         }
         pointClock.stop();
-        buzzer.beepXtimes(1000,10,5000);
+        buzzer.beepXtimes(1000,10,2000);
         gameState = GameState::WaitingForReset;
         break;
     case GameState::WaitingForReset:

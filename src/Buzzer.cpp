@@ -21,7 +21,7 @@ void Buzzer::beepXtimes(unsigned int pause,unsigned int reapet, unsigned int dur
     {
         reapets = reapet;
         setDuration = dur;
-        inBetweenPause = pause;
+        inBetweenPause = pause+dur;
         beep(setDuration);   
     }
 }
@@ -29,13 +29,12 @@ void Buzzer::beepXtimes(unsigned int pause,unsigned int reapet, unsigned int dur
 // loop checks if buzzer should stop without blocking
 void Buzzer::beepLoop()
 {
-    if (buzzClock.getElapsedTime() >= durration) {
+    if (buzzClock.getElapsedTime() >= durration && isOn) {
         isOn = false;
+        Serial.println("beep of 1");
         digitalWrite(pin, LOW);  
-        buzzClock.stop();  
-        durration = 0;
     }
-
+    
     // Check if there are remaining repetitions for the beep sequence
     if (reapets > 0)
     {
@@ -44,5 +43,11 @@ void Buzzer::beepLoop()
             beep(setDuration);
             reapets--;
         }
+    }else if(reapets > 0 && isOn){
+        isOn = false;
+        Serial.println("beep of 2");
+        digitalWrite(pin, LOW);  
+        durration = 0;
+        buzzClock.stop();  
     }
 }
