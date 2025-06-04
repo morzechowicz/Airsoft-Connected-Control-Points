@@ -113,6 +113,12 @@ void ControlPoint::addNode(int nodeId)
     }
 }
 
+void ControlPoint::resetGame()
+{
+    GameMaster = false;
+    MasterNode = 0;
+}
+
 void ControlPoint::setControllingTeam(TeamId teamId, int remoteNodeId)
 {
     Serial.println("changind team for node");
