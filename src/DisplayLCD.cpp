@@ -15,7 +15,7 @@ void DisplayLCD::begin()
 
 void DisplayLCD::lcdLoop()
 {
-    if (lcdCk.getElapsedTime() > 500)
+    if (lcdCk.getElapsedTime() > 100)
     {
         display.clear();
         lcdCk.reset();

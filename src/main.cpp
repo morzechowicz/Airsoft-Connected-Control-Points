@@ -13,6 +13,8 @@
 #include <LedManager.h>
 #include <DisplayLCD.h>
 #include <Buzzer.h>
+#include <keyboard.h>
+
 
 // do i even use this 2?
 String msg = "";
