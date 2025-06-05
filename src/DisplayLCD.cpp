@@ -122,7 +122,8 @@ void DisplayLCD::displayNetworkStatus(int nodesCount, bool leaderStatus, bool co
 
 void DisplayLCD::displayInitLogo()
 {
-    display.setCursor(0, 0);
+    display.clear();
+    display.setCursor(4, 0);
     display.print("SPAS");
     display.setCursor(0, 1);
     display.print("GAME SYSTEM");

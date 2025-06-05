@@ -182,6 +182,9 @@ void setup()
     controlPoint.setNodeId(randomValue);
     controlPoint.addNode(controlPoint.getNodeId());
     displayOLED.displayInitLogo();
+    lcd.displayInitLogo();
+    delay(3000);
+
     yellowLed.blinking();
     blueLed.blinking();
 
