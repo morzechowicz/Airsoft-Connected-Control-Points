@@ -2,21 +2,52 @@
 
 Buzzer::Buzzer(int pin) : pin(pin), isOn(false) {
     pinMode(pin, OUTPUT);
-    digitalWrite(pin, LOW); // Ensure the buzzer is off initially
+    digitalWrite(pin, LOW); 
 }
 
 void Buzzer::beep(unsigned int duration) {
     if (!isOn) {
         isOn = true;
-        digitalWrite(pin, HIGH); // Turn the buzzer on
-        buzzClock.reset();       // Reset the clock
-        buzzClock.start();       // Start the clock
+        durration = duration;
+        digitalWrite(pin, HIGH);
+        buzzClock.reset();  
+        buzzClock.start();       
     }
+}
 
-    // Check if the duration has passed
-    if (buzzClock.getElapsedTime() >= duration) {
+void Buzzer::beepXtimes(unsigned int pause,unsigned int reapet, unsigned int dur)
+{
+    if(!isOn)
+    {
+        reapets = reapet;
+        setDuration = dur;
+        inBetweenPause = pause+dur;
+        beep(setDuration);   
+    }
+}
+
+// loop checks if buzzer should stop without blocking
+void Buzzer::beepLoop()
+{
+    if (buzzClock.getElapsedTime() >= durration && isOn) {
         isOn = false;
-        digitalWrite(pin, LOW);  // Turn the buzzer off
-        buzzClock.stop();        // Stop the clock
+        Serial.println("beep of 1");
+        digitalWrite(pin, LOW);  
+    }
+    
+    // Check if there are remaining repetitions for the beep sequence
+    if (reapets > 0)
+    {
+        if((buzzClock.getElapsedTime() >= inBetweenPause) && !isOn)
+        {
+            beep(setDuration);
+            reapets--;
+        }
+    }else if(reapets > 0 && isOn){
+        isOn = false;
+        Serial.println("beep of 2");
+        digitalWrite(pin, LOW);  
+        durration = 0;
+        buzzClock.stop();  
     }
 }

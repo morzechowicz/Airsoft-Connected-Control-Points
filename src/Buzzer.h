@@ -7,12 +7,17 @@
 class Buzzer {
 public:
     Buzzer(int pin);
-    void beep(unsigned int duration = 100);
+    void beep(unsigned int dur = 100);
+    void beepXtimes(unsigned int pause, unsigned int reapet, unsigned int dur);
 
-    bool isBeeping() {return isOn;};
+    void beepLoop();
 private:
     int pin;
     bool isOn;
+    int durration;
+    int setDuration;
+    int inBetweenPause;
+    int reapets;
     Clocker buzzClock;
 
 };

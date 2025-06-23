@@ -12,28 +12,42 @@
 #include "LoRaMsg.h"
 #include <LedManager.h>
 #include <DisplayLCD.h>
+#include <Buzzer.h>
+#include <keyboard.h>
+#include <BleServer.h>
+#include <BleCallback.h>
 
-// somewhore to store msg for now
+
+// do i even use this 2?
 String msg = "";
 String lastLoraMsg = "";
-
+// cofiguration and game stuf
 TeamId winner = TeamId::None;
 int configState = 0;
 bool MainNode = false;
-
-DisplayLCD lcd;
-
+static TeamId capturingTeam = TeamId::None;
+static bool gracePeriodActive = false;
 GameState gameState;
+Config config(5, 5, 5, 5);
+// hardware
+DisplayLCD lcd;
 ButtonManager buttonManager;
 ControlPoint controlPoint(2);
 DisplayOled displayOLED;
-Config config(5, 5, 5, 5);
+Buzzer buzzer(14);
 Led blueLed(13);
 Led yellowLed(12);
+BLEServer *pServer;
+BLECharacteristic *pCharacteristic;
+// all the clocks i need
 Clocker pointClock;
 Clocker secondCLock;
 Clocker gameClock;
 Clocker networkClock;
+static Clocker captureClock;
+static Clocker graceClock;
+static Clocker beepClock;
+// radio and stuff
 SX1278 radio = new Module(18, 26, 23, 33);
 LoRaMsg loramsg(config, controlPoint);
 LoRaCom loraCom(radio, controlPoint, loramsg);
@@ -56,11 +70,6 @@ bool isGameOver()
     }
     return false;
 }
-
-static Clocker captureClock;
-static Clocker graceClock;
-static TeamId capturingTeam = TeamId::None;
-static bool gracePeriodActive = false;
 
 void capturedPointSendLoRaUpdate(TeamId capTeam)
 {
@@ -95,6 +104,7 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::Blufor, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::Blufor);
             Serial.println("Team Blue fully captured the point!");
+            buzzer.beepXtimes(200, 3, 200);
         }
         gracePeriodActive = false;
         float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
@@ -125,6 +135,7 @@ void CapturePoint()
             controlPoint.setControllingTeam(TeamId::YellowFor, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::YellowFor);
             Serial.println("Team Yellow fully captured the point!");
+            buzzer.beepXtimes(200, 3, 200);
         }
         gracePeriodActive = false;
         float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
@@ -168,13 +179,54 @@ void setup()
     lrradio.begin();
 
     // add itself to the list
-    randomSeed(analogRead(35));
+    randomSeed(analogRead(36));
     int randomValue = abs(random());
+#ifdef NODE_ID
+    randomValue = NODE_ID;
+#else
+    randomValue = abs(random());
+#endif
     controlPoint.setNodeId(randomValue);
     controlPoint.addNode(controlPoint.getNodeId());
     displayOLED.displayInitLogo();
-    delay(2000);
+    lcd.displayInitLogo();
+    delay(3000);
+
+    yellowLed.blinking();
+    blueLed.blinking();
+
+    buzzer.beepXtimes(500, 3, 500);
     Serial.println("Ready");
+
+        Serial.println("Starting NimBLE...");
+
+    // Initialize BLE
+    String deviceName = "LoRaCP_" + String(controlPoint.getNodeId());
+    NimBLEDevice::init(deviceName.c_str());
+    pServer = NimBLEDevice::createServer();
+    pServer->setCallbacks(new BleServer());
+
+    // Create BLE Service
+    BLEService *pService = pServer->createService(SERVICE_UUID);
+
+    // Create BLE Characteristic (read/write)
+    pCharacteristic = pService->createCharacteristic(
+        CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE
+    );
+    pCharacteristic->setValue("Hello from ESP32 (NimBLE)");
+    pCharacteristic->setCallbacks(new BleCallback(config,gameState,controlPoint));
+    
+    // Start the service
+    pService->start();
+    
+    
+    // Start advertising
+    NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+    pAdvertising->addServiceUUID(SERVICE_UUID);
+    pAdvertising->setName(deviceName.c_str());
+    pAdvertising->start();
+    Serial.println("BLE Ready! Waiting for connections...");
 }
 
 void loop()
@@ -182,6 +234,9 @@ void loop()
     lrradio.loop();
     buttonManager.update();
     lcd.lcdLoop();
+    buzzer.beepLoop();
+    blueLed.update();
+    yellowLed.update();
     switch (gameState)
     {
     case GameState::Network:
@@ -211,6 +266,7 @@ void loop()
         if (buttonManager.changeButton.isPressed())
         {
             gameState = GameState::Config;
+            controlPoint.setGameMaster(true);
         }
         if (networkClock.getElapsedTimeInSeconds() > 5)
         {
@@ -238,6 +294,8 @@ void loop()
         break;
     case GameState::CountDownSetup:
         secondCLock.start();
+        yellowLed.off();
+        blueLed.off();
         gameState = GameState::CountDown;
         break;
     case GameState::CountDown:
@@ -261,8 +319,15 @@ void loop()
         secondCLock.reset();
         pointClock.start();
         gameClock.start();
+        beepClock.start();
+        buzzer.beep(10000);
         gameState = GameState::Ongoing;
     case GameState::Ongoing:
+        if(beepClock.getElapsedTimeInSeconds() > 5)
+        {
+            buzzer.beep(50);
+            beepClock.reset();
+        }
         if (controlPoint.getControllingTeam() == TeamId::Blufor)
         {
             blueLed.on();
@@ -334,14 +399,52 @@ void loop()
             Serial.println("for real i have no idea what to put here");
         }
         pointClock.stop();
+        buzzer.beepXtimes(1000, 10, 2000);
         gameState = GameState::WaitingForReset;
+        if (winner == TeamId::Blufor)
+        {
+            blueLed.blinking();
+            yellowLed.off();
+        }
+        if (winner == TeamId::YellowFor)
+        {
+            blueLed.off();
+            yellowLed.blinking();
+        }
+        if (winner == TeamId::Draw)
+        {
+            blueLed.blinking();
+            yellowLed.blinking();
+        }
         break;
     case GameState::WaitingForReset:
         // here we just display winner until idk button press or what ever
         if (buttonManager.changeButton.isPressed())
         {
-            gameState = GameState::Config;
+            gameState = GameState::Network;
+            buzzer.beep(100);
+            controlPoint.resetGame();
+            winner = TeamId::None;
+            controlPoint.setTeamsScore(0, 0);
+            configState = 0;
+            gameClock.stop();
+            gameClock.reset();
+            pointClock.stop();
+            pointClock.reset();
+            secondCLock.stop();
+            secondCLock.reset();
+            networkClock.stop();
+            networkClock.reset();
+            beepClock.stop();
+            beepClock.reset();
+            capturingTeam = TeamId::None;
+            gracePeriodActive = false;
+            captureClock.stop();
+            captureClock.reset();
+            graceClock.stop();
+            graceClock.reset();
         }
+
         displayOLED.displayFinished(winner, controlPoint);
         lcd.displayFinished(winner, controlPoint);
         break;
