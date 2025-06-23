@@ -15,7 +15,7 @@ void DisplayLCD::begin()
 
 void DisplayLCD::lcdLoop()
 {
-    if (lcdCk.getElapsedTime() > 100)
+    if (lcdCk.getElapsedTime() > 200)
     {
         display.clear();
         lcdCk.reset();
@@ -63,7 +63,15 @@ void DisplayLCD::displayGame(ControlPoint controlPoint, int timeLeft)
     display.setCursor(0, 0);
     display.print("T:");
     display.print(timeLeft);
-    display.print(" min");
+    display.print(" min ");
+    if(controlPoint.getControllingTeam() == TeamId::Blufor)
+    {
+        display.print("BLUE");
+    }
+    if(controlPoint.getControllingTeam() == TeamId::YellowFor)
+    {
+        display.print("YELLOW");
+    }
     display.setCursor(0, 1);
     display.print("B:");
     display.print(controlPoint.getTeamPoints(TeamId::Blufor));

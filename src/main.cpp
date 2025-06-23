@@ -14,6 +14,8 @@
 #include <DisplayLCD.h>
 #include <Buzzer.h>
 #include <keyboard.h>
+#include <BleServer.h>
+#include <BleCallback.h>
 
 
 // do i even use this 2?
@@ -35,6 +37,8 @@ DisplayOled displayOLED;
 Buzzer buzzer(14);
 Led blueLed(13);
 Led yellowLed(12);
+BLEServer *pServer;
+BLECharacteristic *pCharacteristic;
 // all the clocks i need
 Clocker pointClock;
 Clocker secondCLock;
@@ -42,6 +46,7 @@ Clocker gameClock;
 Clocker networkClock;
 static Clocker captureClock;
 static Clocker graceClock;
+static Clocker beepClock;
 // radio and stuff
 SX1278 radio = new Module(18, 26, 23, 33);
 LoRaMsg loramsg(config, controlPoint);
@@ -192,6 +197,36 @@ void setup()
 
     buzzer.beepXtimes(500, 3, 500);
     Serial.println("Ready");
+
+        Serial.println("Starting NimBLE...");
+
+    // Initialize BLE
+    String deviceName = "LoRaCP_" + String(controlPoint.getNodeId());
+    NimBLEDevice::init(deviceName.c_str());
+    pServer = NimBLEDevice::createServer();
+    pServer->setCallbacks(new BleServer());
+
+    // Create BLE Service
+    BLEService *pService = pServer->createService(SERVICE_UUID);
+
+    // Create BLE Characteristic (read/write)
+    pCharacteristic = pService->createCharacteristic(
+        CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE
+    );
+    pCharacteristic->setValue("Hello from ESP32 (NimBLE)");
+    pCharacteristic->setCallbacks(new BleCallback(config,gameState,controlPoint));
+    
+    // Start the service
+    pService->start();
+    
+    
+    // Start advertising
+    NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+    pAdvertising->addServiceUUID(SERVICE_UUID);
+    pAdvertising->setName(deviceName.c_str());
+    pAdvertising->start();
+    Serial.println("BLE Ready! Waiting for connections...");
 }
 
 void loop()
@@ -284,9 +319,15 @@ void loop()
         secondCLock.reset();
         pointClock.start();
         gameClock.start();
+        beepClock.start();
         buzzer.beep(10000);
         gameState = GameState::Ongoing;
     case GameState::Ongoing:
+        if(beepClock.getElapsedTimeInSeconds() > 5)
+        {
+            buzzer.beep(50);
+            beepClock.reset();
+        }
         if (controlPoint.getControllingTeam() == TeamId::Blufor)
         {
             blueLed.on();
@@ -381,7 +422,7 @@ void loop()
         if (buttonManager.changeButton.isPressed())
         {
             gameState = GameState::Network;
-
+            buzzer.beep(100);
             controlPoint.resetGame();
             winner = TeamId::None;
             controlPoint.setTeamsScore(0, 0);
@@ -394,6 +435,8 @@ void loop()
             secondCLock.reset();
             networkClock.stop();
             networkClock.reset();
+            beepClock.stop();
+            beepClock.reset();
             capturingTeam = TeamId::None;
             gracePeriodActive = false;
             captureClock.stop();

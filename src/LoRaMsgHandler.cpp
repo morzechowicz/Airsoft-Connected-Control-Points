@@ -18,9 +18,12 @@ void LoRaMsgHandler::handleMessage(const String &msg)
     {
     case LoRaMsgCodes::MSG_CONFIG : // Configuration update
         config.fromString(recived);
-        controlPoint.setGameMaster(false);
-        controlPoint.setGameMasterNode(splitter.getItem(1).toInt());
-        gameState = GameState::CountDownSetup;
+        if(!controlPoint.getGameMaster())
+        {
+            controlPoint.setGameMaster(false);
+            controlPoint.setGameMasterNode(splitter.getItem(1).toInt());
+            gameState = GameState::CountDownSetup;
+        }
         break;
     case LoRaMsgCodes::MSG_NODE_CONTROLLED_BY : // Node controlled by a team
         nodeId = splitter.getItem(4).toInt();
