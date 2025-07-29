@@ -26,11 +26,18 @@ This project implements a simple "control point" game mode, similar to *Conquest
 
 ## How to configure
 
+### old:
 1. **Power on** all control points you want to use and place them in your chosen locations (not necessarily in that order).
 2. **Configure settings** (TO DO: Add configuration instructions).
 3. After confirming the configuration, the game timer will start.
 4. When the timer reaches zero or a team wins, the final scores will be shown on all devices.
 
+### new:
+There is a new configuration app that works over BLE.
 ---
+
+## Planned:
+
+1. Memory for the main node. No game will be lost due to sudden power loss or unfair players.
 
 *More detailed configuration instructions coming soon!*

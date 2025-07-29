@@ -112,7 +112,7 @@ void DisplayLCD::displayFinished(TeamId winner, ControlPoint controlPoint)
     display.print(controlPoint.getTeamPoints(TeamId::YellowFor));
 }
 
-void DisplayLCD::displayNetworkStatus(int nodesCount, bool leaderStatus, bool connecting, String &lastLoraMsg)
+void DisplayLCD::displayNetworkStatus(int nodesCount, bool leaderStatus, bool connecting, String &lastLoraMsg,int cpID)
 {
     display.setCursor(0, 0);
     display.print("Nodes: ");
@@ -126,6 +126,9 @@ void DisplayLCD::displayNetworkStatus(int nodesCount, bool leaderStatus, bool co
     {
         display.print(" ");
     }
+    display.setCursor(0,1);
+    display.print("ID: ");
+    display.print(cpID);
 }
 
 void DisplayLCD::displayInitLogo()

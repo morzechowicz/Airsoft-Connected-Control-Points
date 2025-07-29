@@ -8,5 +8,6 @@ enum class LoRaMsgCodes {
     MSG_NODE_REPORT = 5,
     MSG_NODE_CONTROLLED_BY = 6,
     PING = 7,
-    MSG_RSP = 8
+    MSG_RSP = 8,
+    MSG_RESTORE = 9
 };

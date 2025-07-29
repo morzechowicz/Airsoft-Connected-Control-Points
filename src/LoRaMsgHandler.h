@@ -7,10 +7,12 @@
 #include <StringSplitter.h>
 #include <LoRaMsgCodes.h>
 #include <LoRaMsg.h>
+#include <Clocker.h>
+#include <LoRaCom.h>
 
 class LoRaMsgHandler {
 public:
-    LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg, TeamId &winner, LoRaMsg &LoRaMsg);
+    LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg, TeamId &winner, LoRaMsg &LoRaMsg,Clocker &gameClock,LoRaCom &loraCom);
     void handleMessage(const String &msg);
 
 private:
@@ -23,6 +25,8 @@ private:
     String &lastLoraMsg;
     ControlPoint &controlPoint;
     GameState &gameState;
+    Clocker &gameClock;
+    LoRaCom &loraCom;
     StringSplitter splitter;
 };
 

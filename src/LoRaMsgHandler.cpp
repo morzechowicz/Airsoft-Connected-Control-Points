@@ -1,7 +1,7 @@
 #include "LoRaMsgHandler.h"
 
-LoRaMsgHandler::LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg, TeamId &winner, LoRaMsg &loramsg)
-    : config(config), controlPoint(controlPoint), gameState(gameState), lastLoraMsg(lastLoraMsg), winner(winner),loramsg(loramsg)
+LoRaMsgHandler::LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg, TeamId &winner, LoRaMsg &loramsg,Clocker &gameClock,LoRaCom &loraCom)
+    : config(config), controlPoint(controlPoint), gameState(gameState), lastLoraMsg(lastLoraMsg), winner(winner),loramsg(loramsg), gameClock(gameClock), loraCom(loraCom)
 {
     splitter = StringSplitter('/');
 }
@@ -32,7 +32,12 @@ void LoRaMsgHandler::handleMessage(const String &msg)
         break;
     case LoRaMsgCodes::MSG_NODE_REPORT : // Node ping
         receivedId = splitter.getItem(1).toInt();
-        controlPoint.addNode(receivedId);
+        if(controlPoint.addNode(receivedId))
+        {
+            //send current config and other needed data to restore point
+            String configMsg = loramsg.createRestoreMsg(config,gameClock.getElapsedTimeInMinutes(),receivedId,loraCom.seqNum++);
+            loraCom.sendMsgAckTo(configMsg,receivedId);
+        }
         break;
     case LoRaMsgCodes::MSG_SCORE : // Score update
         teamBluePoints = splitter.getItem(4).toInt();
@@ -47,6 +52,12 @@ void LoRaMsgHandler::handleMessage(const String &msg)
         gameState = GameState::Finished;
         Serial.print("Game finished. Winner: ");
         Serial.println(static_cast<int>(winner));
+        break;
+    case LoRaMsgCodes::MSG_RESTORE : // restore after power lose
+        config.fromString(recived);
+        gameClock.setTimeFromMinutes(splitter.getItem(8).toInt());
+        gameState = GameState::Ongoing;
+        controlPoint.setGameMaster(false);
         break;
     default:
         Serial.println("Unknown message type");

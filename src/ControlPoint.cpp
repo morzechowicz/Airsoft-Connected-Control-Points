@@ -86,7 +86,7 @@ void ControlPoint::setTeamsScore(int teamBlueScore, int teamYellowScore)
     }
 }
 
-void ControlPoint::addNode(int nodeId)
+bool ControlPoint::addNode(int nodeId)
 {
     bool present = false;
     for (size_t i = 0; i < nodeCount; i++)
@@ -111,6 +111,8 @@ void ControlPoint::addNode(int nodeId)
         Serial.println("Node already exists Id: ");
         Serial.print(nodeId);
     }
+    //if node is pressent return true
+    return present;
 }
 
 void ControlPoint::resetGame()

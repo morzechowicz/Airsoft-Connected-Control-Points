@@ -14,6 +14,7 @@ public:
     String createConfig(const Config &config, int to, int seqNum);
     String createNodeControlled(int nodeId, TeamId teamId, int to, int seqNum);
     String createNodeInfo(int to, int seqNum);
+    String createRestoreMsg(Config &config, int time, int to, int seqNum);
     String createScoreUpdate(int teamBluePoints, int teamYellowPoints, int to, int seqNum);
     String createGameFinished(TeamId winner, int teamBluePoints, int teamYellowPoints, int to, int seqNum);
     String AckMsgRepsonse(int seqNum, int to);

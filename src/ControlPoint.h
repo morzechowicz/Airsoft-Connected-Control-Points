@@ -38,7 +38,7 @@ public:
     void addTeam(TeamId teamid);
     bool pointsTargetReached(int pointsTarget);
     TeamId whoWon();
-    void addNode(int nodeId);
+    bool addNode(int nodeId);
     void resetGame();
     
 

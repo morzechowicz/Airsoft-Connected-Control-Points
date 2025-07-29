@@ -17,6 +17,7 @@ public:
     void start();
     void stop();
     void reset();
+    void setTimeFromMinutes(int minutes);
     uint64_t getElapsedTime();
     bool isRunning() {return running;};
     int getElapsedTimeInMinutes();

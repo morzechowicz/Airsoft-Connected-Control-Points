@@ -24,7 +24,7 @@ public:
     void displayGame(ControlPoint controlPoint, int timeLeft) override;
     void displayCapturing(TeamId capturingTeam, float progres) override;
     void displayFinished(TeamId winner, ControlPoint controlPoint) override;
-    void displayNetworkStatus(int nodesCount, bool leaderStatus, bool connecting, String &lastLoraMsg) override;
+    void displayNetworkStatus(int nodesCount, bool leaderStatus, bool connecting, String &lastLoraMsg,int cpID) override;
     void displayInitLogo() override;
 
 private:

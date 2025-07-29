@@ -25,6 +25,11 @@ void Clocker::reset()
     startTime = millis();
 }
 
+void Clocker::setTimeFromMinutes(int minutes)
+{
+    elapsedTime = minutes * 60000;
+}
+
 uint64_t Clocker::getElapsedTime()
 {
     if(running)

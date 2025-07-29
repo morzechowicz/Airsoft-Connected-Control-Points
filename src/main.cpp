@@ -16,8 +16,10 @@
 #include <keyboard.h>
 #include <BleServer.h>
 #include <BleCallback.h>
+#include <Preferences.h>
 
-
+// Backup memory
+Preferences pref;
 // do i even use this 2?
 String msg = "";
 String lastLoraMsg = "";
@@ -47,11 +49,12 @@ Clocker networkClock;
 static Clocker captureClock;
 static Clocker graceClock;
 static Clocker beepClock;
+static Clocker restoreCLock;
 // radio and stuff
 SX1278 radio = new Module(18, 26, 23, 33);
 LoRaMsg loramsg(config, controlPoint);
 LoRaCom loraCom(radio, controlPoint, loramsg);
-LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg, winner, loramsg);
+LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg, winner, loramsg,gameClock,loraCom);
 LoRaHandler lrradio(loraCom, msgHandler);
 
 bool isGameOver()
@@ -227,6 +230,79 @@ void setup()
     pAdvertising->setName(deviceName.c_str());
     pAdvertising->start();
     Serial.println("BLE Ready! Waiting for connections...");
+    // game backup check
+    pref.begin("game", true); // read-only
+
+    int prevCurrentTime =  pref.getInt("CurrentTime", 0);
+    int prevBluScore = pref.getInt("bluScore", 100);
+    int prevYellowScore = pref.getInt("yellowScore", 100);
+    int maxPoints = pref.getInt("PointsTarget", 0);
+    
+    pref.end();
+
+    bool newGame = true;
+    if(maxPoints >= prevBluScore || maxPoints >= prevYellowScore || prevCurrentTime >= 0)
+    {
+        newGame = false;
+        Serial.println("No game data to recover");
+    }else{
+        restoreCLock.reset();
+        restoreCLock.start();
+    }
+}
+void SaveGameDataScore(int blue,int yellow)
+{
+    Serial.println("saving score to memory");
+    // why there is no if? i just skip this step on startup if there is saved data
+    pref.begin("game", false);
+
+    pref.putInt("bluScore", blue);
+    pref.putInt("yellowScore", yellow);
+    pref.putInt("CurrentTime", gameClock.getElapsedTimeInMinutes());
+
+    pref.end();
+}
+void SaveGameDataConfig()
+{
+    Serial.println("saving config to memmory");
+    // why there is no if? i just skip this step on startup if there is saved data
+    pref.begin("game", false);
+
+    pref.putInt("bluScore", 0);
+    pref.putInt("yellowScore", 0);
+    pref.putInt("Durration", config.getDurration());
+    pref.putInt("Countdown", config.getCountdown());
+    pref.putInt("CaptureTime", config.getCaptureTime());
+    pref.putInt("PointsTarget", config.getPointsTarget());
+    // Save nodeCount
+    pref.putUInt("nodeCount", controlPoint.nodeCount);
+
+    // Save nodes array as bytes
+    pref.putBytes("nodes", controlPoint.nodes, sizeof(ControlPoint::Nodes) * controlPoint.nodeCount);
+
+    pref.end();
+}
+
+void loadConfigFromPrefs() {
+    Serial.println("loading from memory");
+    pref.begin("game", true); 
+
+    controlPoint.setTeamsScore(pref.getInt("blufor", 1),pref.getInt("yellowfor", 1));
+    config.setDurration(pref.getInt("Durration", 5));
+    config.setCountdown(pref.getInt("Countdown", 5));
+    config.setCaptureTime(pref.getInt("CaptureTime", 5));
+    config.setPointsTarget(pref.getInt("PointsTarget", 5));
+    gameClock.setTimeFromMinutes(pref.getInt("CurrentTime", 0));
+
+
+    // Load nodeCount
+    controlPoint.nodeCount = pref.getUInt("nodeCount", 0);
+
+    // Load nodes array from bytes
+    pref.getBytes("nodes", controlPoint.nodes, sizeof(ControlPoint::Nodes) * controlPoint.nodeCount);
+
+
+    pref.end();
 }
 
 void loop()
@@ -270,17 +346,21 @@ void loop()
         }
         if (networkClock.getElapsedTimeInSeconds() > 5)
         {
-            displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg);
-            lcd.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg);
+            displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg,controlPoint.getNodeId());
+            lcd.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg,controlPoint.getNodeId());
         }
         else
         {
-            displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg);
-            lcd.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg);
+            displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg,controlPoint.getNodeId());
+            lcd.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg,controlPoint.getNodeId());
             networkClock.stop();
         }
         break;
     case GameState::Config:
+        if(restoreCLock.getElapsedTimeInMinutes() >= 5)
+        {
+            loadConfigFromPrefs();
+        }
         config.handleButtonPresses(buttonManager, configState);
         if (buttonManager.startButton.isPressed())
         {
@@ -296,6 +376,12 @@ void loop()
         secondCLock.start();
         yellowLed.off();
         blueLed.off();
+        if(controlPoint.getGameMaster())
+        {
+            loraCom.seqNum = loraCom.seqNum + 1;
+            msg = loramsg.createConfig(config, 0, loraCom.seqNum);
+            loraCom.sendMsgAckToAll(msg);
+        }
         gameState = GameState::CountDown;
         break;
     case GameState::CountDown:
@@ -315,14 +401,21 @@ void loop()
         lcd.displayCountdown(config.getCountdown());
         break;
     case GameState::StartGame:
+        SaveGameDataConfig();
+        restoreCLock.reset();
+        restoreCLock.start();
         secondCLock.stop();
         secondCLock.reset();
         pointClock.start();
         gameClock.start();
         beepClock.start();
-        buzzer.beep(10000);
+        buzzer.beepXtimes(500,10,1000);
         gameState = GameState::Ongoing;
     case GameState::Ongoing:
+        if(restoreCLock.getElapsedTimeInMinutes() >= 10)
+        {
+            SaveGameDataScore(controlPoint.getTeamPoints(TeamId::Blufor),controlPoint.getTeamPoints(TeamId::YellowFor));
+        }
         if(beepClock.getElapsedTimeInSeconds() > 5)
         {
             buzzer.beep(50);
@@ -399,7 +492,7 @@ void loop()
             Serial.println("for real i have no idea what to put here");
         }
         pointClock.stop();
-        buzzer.beepXtimes(1000, 10, 2000);
+        buzzer.beepXtimes(1000, 10, 1000);
         gameState = GameState::WaitingForReset;
         if (winner == TeamId::Blufor)
         {
@@ -427,6 +520,8 @@ void loop()
             winner = TeamId::None;
             controlPoint.setTeamsScore(0, 0);
             configState = 0;
+            restoreCLock.stop();
+            restoreCLock.reset();
             gameClock.stop();
             gameClock.reset();
             pointClock.stop();

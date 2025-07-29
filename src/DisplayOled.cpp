@@ -110,7 +110,7 @@ void DisplayOled::displayFinished(TeamId winner, ControlPoint controlPoint)
     display.display();
 }
 
-void DisplayOled::displayNetworkStatus(int nodesCount, bool leaderStatus, bool connecting, String &lastLoraMsg)
+void DisplayOled::displayNetworkStatus(int nodesCount, bool leaderStatus, bool connecting, String &lastLoraMsg,int cpID)
 {
     display.clearDisplay();
     display.setTextSize(1);
@@ -133,6 +133,7 @@ void DisplayOled::displayNetworkStatus(int nodesCount, bool leaderStatus, bool c
     }
     display.print("Last Lora Msg: ");
     display.println(lastLoraMsg);
+    display.println(cpID);
     display.display();
 }
 

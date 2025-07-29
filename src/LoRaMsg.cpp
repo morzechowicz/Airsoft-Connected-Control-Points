@@ -1,6 +1,5 @@
 #include <LoRaMsg.h>
 
-
 LoRaMsg::LoRaMsg(Config &config, ControlPoint &controlPoint)
     : config(config), controlPoint(controlPoint) {}
 
@@ -11,17 +10,16 @@ LoRaMsg::LoRaMsg(Config &config, ControlPoint &controlPoint)
 // seqNum/
 // everything else/
 
-
 String LoRaMsg::createConfig(const Config &config, int to, int seqNum)
 {
     return String(static_cast<int>(LoRaMsgCodes::MSG_CONFIG)) +
-    "/" + String(controlPoint.getNodeId()) +
-    "/" + String(to) +
-    "/" + String(seqNum) +
-    "/" + String(config.getCountdown()) +
-    "/" + String(config.getDurration()) +
-    "/" + String(config.getPointsTarget()) +
-    "/" + String(config.getCaptureTime());
+           "/" + String(controlPoint.getNodeId()) +
+           "/" + String(to) +
+           "/" + String(seqNum) +
+           "/" + String(config.getCountdown()) +
+           "/" + String(config.getDurration()) +
+           "/" + String(config.getPointsTarget()) +
+           "/" + String(config.getCaptureTime());
 }
 
 String LoRaMsg::createNodeControlled(int nodeId, TeamId teamId, int to, int seqNum)
@@ -42,25 +40,38 @@ String LoRaMsg::createNodeInfo(int to, int seqNum)
            "/" + String(seqNum);
 }
 
+String LoRaMsg::createRestoreMsg(Config &config,int time , int to, int seqNum)
+{
+    return String(static_cast<int>(LoRaMsgCodes::MSG_CONFIG)) +
+           "/" + String(controlPoint.getNodeId()) +
+           "/" + String(to) +
+           "/" + String(seqNum) +
+           "/" + String(config.getCountdown()) +
+           "/" + String(config.getDurration()) +
+           "/" + String(config.getPointsTarget()) +
+           "/" + String(config.getCaptureTime()) +
+           "/" + String(time);
+}
+
 String LoRaMsg::createScoreUpdate(int teamBluePoints, int teamYellowPoints, int to, int seqNum)
 {
     return String(static_cast<int>(LoRaMsgCodes::MSG_SCORE)) +
-    "/" + String(controlPoint.getNodeId()) +
-    "/" + String(to) +
-    "/" + String(seqNum) +
-    "/" + String(teamBluePoints) +
-    "/" + String(teamYellowPoints);
+           "/" + String(controlPoint.getNodeId()) +
+           "/" + String(to) +
+           "/" + String(seqNum) +
+           "/" + String(teamBluePoints) +
+           "/" + String(teamYellowPoints);
 }
 
 String LoRaMsg::createGameFinished(TeamId winner, int teamBluePoints, int teamYellowPoints, int to, int seqNum)
 {
     return String(static_cast<int>(LoRaMsgCodes::MSG_FINISHED)) +
-    "/" + String(controlPoint.getNodeId()) +
-    "/" + String(to) +
-    "/" + String(seqNum) +
-    "/" + String(static_cast<int>(winner)) +
-    "/" + String(teamBluePoints) +
-    "/" + String(teamYellowPoints);
+           "/" + String(controlPoint.getNodeId()) +
+           "/" + String(to) +
+           "/" + String(seqNum) +
+           "/" + String(static_cast<int>(winner)) +
+           "/" + String(teamBluePoints) +
+           "/" + String(teamYellowPoints);
 }
 
 String LoRaMsg::AckMsgRepsonse(int seqNum, int to)
