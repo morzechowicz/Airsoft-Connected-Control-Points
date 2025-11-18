@@ -2,14 +2,12 @@
 
 volatile bool LoRaCom::resumeReciving = false;
 
-LoRaCom::LoRaCom(SX1278 &radio, ControlPoint &cp,LoRaMsg &LRM)
- : radio(radio), cp(cp), LRM(LRM) {}
+LoRaCom::LoRaCom(SX1278 &radio, ControlPoint &cp, LoRaMsg &LRM)
+    : radio(radio), cp(cp), LRM(LRM) {}
 
 volatile bool LoRaCom::operationRxTx = false;
 volatile bool LoRaCom::transDoneFlag = false;
 volatile LoRaCom::RadioMode LoRaCom::currentMode = LoRaCom::MODE_IDLE;
-
-
 
 void LoRaCom::begin()
 {
@@ -50,7 +48,7 @@ bool LoRaCom::sendMsg(const String &msg)
     {
         String send = msg;
 
-        Serial.println("sending msg");
+        //Serial.println("sending msg");
         Serial.println(send);
         operationRxTx = false;
         currentMode = MODE_TRANSMIT;
@@ -58,11 +56,11 @@ bool LoRaCom::sendMsg(const String &msg)
         int state = radio.startTransmit(send);
         if (state == RADIOLIB_ERR_NONE)
         {
-            Serial.println(F("transmiting!"));
+           // Serial.println(F("transmiting!"));
         }
         else
         {
-            Serial.print(F("failed, code transmission "));
+            //Serial.print(F("failed, code transmission "));
             Serial.println(state);
             currentMode = MODE_IDLE;
             return false;
@@ -71,12 +69,11 @@ bool LoRaCom::sendMsg(const String &msg)
     return false;
 }
 
-
-bool LoRaCom::sendMsgAckTo(const String &msg,int targetId)
+bool LoRaCom::sendMsgAckTo(const String &msg, int targetId)
 {
     String send = msg;
-    
-    LoRaAckMessage ackMsg(send, seqNum,targetId);
+
+    LoRaAckMessage ackMsg(send, seqNum, targetId);
     msgAckList.add(ackMsg);
 
     return true;
@@ -86,20 +83,19 @@ void LoRaCom::sendMsgAckToAll(const String &msg)
 {
     for (size_t i = 0; i < cp.nodeCount; i++)
     {
-        if(cp.nodes[i].nodeId != cp.getNodeId())
+        if (cp.nodes[i].nodeId != cp.getNodeId())
         {
             String send = msg;
-            sendMsgAckTo(send,cp.nodes[i].nodeId);
+            sendMsgAckTo(send, cp.nodes[i].nodeId);
         }
     }
-    
 }
 
 String LoRaCom::reciveMsg()
 {
     if (resumeReciving)
     {
-        Serial.println("Resuming reciving");
+       // Serial.println("Resuming reciving");
         resumeReciving = false;
         radio.startReceive();
     }
@@ -121,9 +117,9 @@ String LoRaCom::reciveMsg()
                 int from = splitter.getItem(1).toInt();
                 int addresedTo = splitter.getItem(2).toInt();
                 int seqNumR = splitter.getItem(3).toInt();
-                if(addresedTo != cp.getNodeId() && addresedTo != 0)
+                if (addresedTo != cp.getNodeId() && addresedTo != 0)
                 {
-                    Serial.println("not addresed towards me ingoring");
+                   //Serial.println("not addresed towards me ingoring");
                     Serial.println(addresedTo);
                     return "";
                 }
@@ -131,27 +127,30 @@ String LoRaCom::reciveMsg()
 
                 if (code != LoRaMsgCodes::MSG_RSP)
                 {
-                    Serial.println("Ack this");
-                    response = LRM.AckMsgRepsonse(seqNumR,from);
+                    //Serial.println("Ack this");
+                    response = LRM.AckMsgRepsonse(seqNumR, from);
                     sendMsg(response);
                 }
-                if(code == LoRaMsgCodes::MSG_RSP)
+                if (code == LoRaMsgCodes::MSG_RSP)
                 {
-                    Serial.println("ack reported");
+                    //Serial.println("ack reported");
                     Serial.println(msg);
                     Serial.println(seqNumR);
-                    LoRaAckMessage* resp = msgAckList.getBySeqNum(seqNumR);
-                    if (resp != nullptr) {
+                    LoRaAckMessage *resp = msgAckList.getBySeqNum(seqNumR);
+                    if (resp != nullptr)
+                    {
                         msgAckList.remove(resp);
-                    } else {
-                        Serial.println("Warning: Ack message not found in list.");
+                    }
+                    else
+                    {
+                        //Serial.println("Warning: Ack message not found in list.");
                     }
                 }
                 return msg;
             }
             else
             {
-                Serial.print(F("failed, code reception "));
+                //Serial.print(F("failed, code reception "));
                 Serial.println(state);
                 currentMode = MODE_IDLE;
                 return "";
@@ -163,34 +162,47 @@ String LoRaCom::reciveMsg()
 
 void LoRaCom::sendMsgFromAckList()
 {
-    if (msgAckList.size() > 0)
+    unsigned long now = millis();
+
+    // Only run this function every 10-50ms
+    if (now - lastCheck < 10)
     {
-        LoRaAckMessage* ackMesg = msgAckList.get(0);
-        if (!ackClock.isRunning())
+        return; // Skip this call
+    }
+    lastCheck = now;
+
+    if (msgAckList.size() == 0)
+    {
+        return;
+    }
+    LoRaAckMessage *ackMesg = msgAckList.get(0);
+    if (!ackClock.isRunning())
+    {
+        ackClock.start();
+    }
+    if (ackClock.getElapsedTime() > ackInterval)
+    {
+        ackInterval = random(1000, 2000);
+        if (currentMode == MODE_IDLE)
         {
-            ackClock.start();
-        }
-        if (ackClock.getElapsedTime() > 500)
-            if (currentMode == MODE_IDLE)
+            sendMsg(ackMesg->getMessage());
+            ackMesg->increamentRetry();
+
+            if (ackMesg->getRetryCount() > 5)
             {
-                sendMsg(ackMesg->getMessage());
-                ackMesg->increamentRetry();
-                
-                if(ackMesg->getRetryCount() > 5)
-                {
-                    Serial.println("No response abording");
-                    msgAckList.remove(ackMesg);
-                }
-                Serial.println("Sending msg from ack list");
-                ackClock.reset();
+                //Serial.println("No response abording");
+                msgAckList.remove(ackMesg);
             }
-        if (ackMesg->getRecived())
-        {
-            Serial.println("Message Acknowlage removing from stack");
-            msgAckList.remove(ackMesg);
-            ackClock.stop();
+            //Serial.println("Sending msg from ack list");
             ackClock.reset();
         }
+    }
+    if (ackMesg->getRecived())
+    {
+        //Serial.println("Message Acknowlage removing from stack");
+        msgAckList.remove(ackMesg);
+        ackClock.stop();
+        ackClock.reset();
     }
 }
 
@@ -198,24 +210,24 @@ void LoRaCom::setRecFlag(void)
 {
     if (currentMode == MODE_TRANSMIT)
     {
-        Serial.println("Recieve flag set in transmit mode");
-        Serial.println("Transmitting done, now reciving");
+        //Serial.println("Recieve flag set in transmit mode");
+        //Serial.println("Transmitting done, now reciving");
         resumeReciving = true;
         currentMode = MODE_IDLE;
     }
     else if (currentMode == MODE_IDLE)
     {
         operationRxTx = true;
-        Serial.println("Recieve flag set");
+        //Serial.println("Recieve flag set");
     }
     else if (currentMode == MODE_RECEIVE)
     {
-        Serial.println("Recieve flag set in receive mode");
+        //Serial.println("Recieve flag set in receive mode");
     }
 }
 
 void LoRaCom::setTransFlag(void)
 {
     transDoneFlag = true;
-    Serial.println("Transmit flag set");
+    //Serial.println("Transmit flag set");
 }

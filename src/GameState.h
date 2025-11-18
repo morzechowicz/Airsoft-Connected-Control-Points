@@ -8,5 +8,6 @@ enum class GameState {
     StartGame,
     Ongoing,
     Finished,
-    WaitingForReset
+    WaitingForReset,
+    Restore
 };

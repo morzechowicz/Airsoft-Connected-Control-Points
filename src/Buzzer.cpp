@@ -51,3 +51,11 @@ void Buzzer::beepLoop()
         buzzClock.stop();  
     }
 }
+
+void Buzzer::stopBeeping()
+{
+    isOn = false;
+    reapets = 0;
+    durration = 0;
+    buzzClock.stop();
+}

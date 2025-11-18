@@ -39,7 +39,8 @@ public:
     StringSplitter splitter;
     Clocker ackClock;
     ControlPoint &cp;
-
+    unsigned long lastCheck = 0;
+    long ackInterval = random(1000, 2000);
     static void setRecFlag();
     static void setTransFlag();
 };

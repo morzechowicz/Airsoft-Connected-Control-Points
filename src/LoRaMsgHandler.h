@@ -9,10 +9,12 @@
 #include <LoRaMsg.h>
 #include <Clocker.h>
 #include <LoRaCom.h>
+#include "StatusLog.h"
 
-class LoRaMsgHandler {
+class LoRaMsgHandler
+{
 public:
-    LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg, TeamId &winner, LoRaMsg &LoRaMsg,Clocker &gameClock,LoRaCom &loraCom);
+    LoRaMsgHandler(Config &config, ControlPoint &controlPoint, GameState &gameState, String &lastLoraMsg, TeamId &winner, LoRaMsg &LoRaMsg, Clocker &gameClock, LoRaCom &loraCom, StatusLog &statusLog);
     void handleMessage(const String &msg);
 
 private:
@@ -28,6 +30,7 @@ private:
     Clocker &gameClock;
     LoRaCom &loraCom;
     StringSplitter splitter;
+    StatusLog &statusLog;
 };
 
 #endif

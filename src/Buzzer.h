@@ -11,6 +11,7 @@ public:
     void beepXtimes(unsigned int pause, unsigned int reapet, unsigned int dur);
 
     void beepLoop();
+    void stopBeeping();
 private:
     int pin;
     bool isOn;

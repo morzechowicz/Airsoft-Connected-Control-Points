@@ -1,0 +1,83 @@
+Team Blue started capturing!
+beep of 1
+Team Blue started capturing!
+beep of 1
+changind team for node
+1
+Node 1 is controlled by Blue
+Sending node controlled by message
+Team Blue fully captured the point!
+sending msg
+6/1/2/4/1/0
+transmiting!
+Retry number
+1
+Sending msg from ack list
+beep of 1
+Guru Meditation Error: Core  1 panic'ed (Interrupt wdt timeout on CPU1). 
+
+Core  1 register dump:
+PC      : 0x4009817a  PS      : 0x00060735  A0      : 0x80096e12  A1      : 0x3ffbf3fc  
+A2      : 0x3ffbd93c  A3      : 0x3ffbd7cc  A4      : 0x00000004  A5      : 0x00060723
+A6      : 0x00060723  A7      : 0x00000001  A8      : 0x3ffbd7cc  A9      : 0x00000018  
+A10     : 0x3ffbd7cc  A11     : 0x00000018  A12     : 0x3ffc7a54  A13     : 0x00060723
+A14     : 0x007bf5a8  A15     : 0x003fffff  SAR     : 0x00000006  EXCCAUSE: 0x00000006  
+EXCVADDR: 0x00000000  LBEG    : 0x40092ae1  LEND    : 0x40092af1  LCOUNT  : 0xfffffff8
+Core  1 was running in ISR context:
+EPC1    : 0x400fed47  EPC2    : 0x00000000  EPC3    : 0x00000000  EPC4    : 0x00000000
+
+
+Backtrace: 0x40098177:0x3ffbf3fc |<-CORRUPTED
+
+
+Core  0 register dump:
+PC      : 0x40098315  PS      : 0x00060035  A0      : 0x80096a3b  A1      : 0x3ffbeccc
+A2      : 0x3ffbf5a8  A3      : 0xb33fffff  A4      : 0x0000abab  A5      : 0x00060023
+A6      : 0x00060021  A7      : 0x0000cdcd  A8      : 0x0000abab  A9      : 0xffffffff
+A10     : 0x00000000  A11     : 0x00000000  A12     : 0x3ffc7858  A13     : 0x00000007
+A14     : 0x007bf5a8  A15     : 0x003fffff  SAR     : 0x0000001d  EXCCAUSE: 0x00000006  
+EXCVADDR: 0x00000000  LBEG    : 0x00000000  LEND    : 0x00000000  LCOUNT  : 0x00000000
+
+
+Backtrace: 0x40098312:0x3ffbeccc |<-CORRUPTED
+
+
+
+
+ELF file SHA256: 6f3d43ef1d35eaa2
+
+Rebooting...
+
+Guru Meditation Error: Core  1 panic'ed (Interrupt wdt timeout on CPU1). 
+
+Core  1 register dump:
+PC      : 0x40098176  PS      : 0x00060735  A0      : 0x80096e12  A1      : 0x3ffbf3fc  
+A2      : 0x3ffbd8ac  A3      : 0x3ffbd73c  A4      : 0x00000004  A5      : 0x00060723
+A6      : 0x00060723  A7      : 0x00000001  A8      : 0x3ffbd73c  A9      : 0x00000018  
+A10     : 0x3ffbd73c  A11     : 0x00000018  A12     : 0x3ffc7a54  A13     : 0x00060723
+A14     : 0x007bf5a8  A15     : 0x003fffff  SAR     : 0x00000006  EXCCAUSE: 0x00000006  
+EXCVADDR: 0x00000000  LBEG    : 0x40092ae1  LEND    : 0x40092af1  LCOUNT  : 0xfffffff8
+Core  1 was running in ISR context:
+EPC1    : 0x400fef0b  EPC2    : 0x00000000  EPC3    : 0x00000000  EPC4    : 0x00000000
+
+
+Backtrace: 0x40098173:0x3ffbf3fc |<-CORRUPTED
+
+
+Core  0 register dump:
+PC      : 0x4009830b  PS      : 0x00060035  A0      : 0x80096a3b  A1      : 0x3ffbeccc  
+A2      : 0x3ffbf5a8  A3      : 0xb33fffff  A4      : 0x0000abab  A5      : 0x00060023
+A6      : 0x00060021  A7      : 0x0000cdcd  A8      : 0x0000abab  A9      : 0xffffffff
+A10     : 0x3ffc7860  A11     : 0x00000000  A12     : 0x3ffc785c  A13     : 0x3ffbecbc
+A14     : 0x007bf5a8  A15     : 0x003fffff  SAR     : 0x0000001d  EXCCAUSE: 0x00000006  
+EXCVADDR: 0x00000000  LBEG    : 0x00000000  LEND    : 0x00000000  LCOUNT  : 0x00000000
+
+
+Backtrace: 0x40098308:0x3ffbeccc |<-CORRUPTED
+
+
+
+
+ELF file SHA256: dd49859fde5504e7
+
+Rebooting...

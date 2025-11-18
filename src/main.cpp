@@ -17,6 +17,8 @@
 #include <BleServer.h>
 #include <BleCallback.h>
 #include <Preferences.h>
+#include <StatusLog.h>
+
 
 // Backup memory
 Preferences pref;
@@ -50,12 +52,100 @@ static Clocker captureClock;
 static Clocker graceClock;
 static Clocker beepClock;
 static Clocker restoreCLock;
+//status log
+StatusLog statusLog(gameClock);
 // radio and stuff
 SX1278 radio = new Module(18, 26, 23, 33);
 LoRaMsg loramsg(config, controlPoint);
 LoRaCom loraCom(radio, controlPoint, loramsg);
-LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg, winner, loramsg,gameClock,loraCom);
+LoRaMsgHandler msgHandler(config, controlPoint, gameState, lastLoraMsg, winner, loramsg, gameClock, loraCom,statusLog);
 LoRaHandler lrradio(loraCom, msgHandler);
+// logging stuff
+
+void setup()
+{
+    Serial.begin(115200);
+    Serial.println("Starting up...");
+    displayOLED.begin();
+    lcd.begin();
+    gameState = GameState::Network;
+    controlPoint.addTeam(TeamId::Blufor);
+    controlPoint.addTeam(TeamId::YellowFor);
+    buttonManager.begin();
+    lrradio.begin();
+
+    // add itself to the list
+    randomSeed(analogRead(36));
+    int randomValue = abs(random());
+#ifdef NODE_ID
+    randomValue = NODE_ID;
+#else
+    randomValue = abs(random());
+#endif
+    controlPoint.setNodeId(randomValue);
+    controlPoint.addNode(controlPoint.getNodeId());
+    displayOLED.displayInitLogo();
+    lcd.displayInitLogo();
+    delay(3000);
+
+    yellowLed.blinking();
+    blueLed.blinking();
+
+    buzzer.beepXtimes(200, 3, 200);
+    Serial.println("Ready");
+
+    Serial.println("Starting NimBLE...");
+
+    // Initialize BLE
+    String deviceName = "LoRaCP_" + String(controlPoint.getNodeId());
+    NimBLEDevice::init(deviceName.c_str());
+    pServer = NimBLEDevice::createServer();
+    pServer->setCallbacks(new BleServer());
+
+    // Create BLE Service
+    BLEService *pService = pServer->createService(SERVICE_UUID);
+
+    // Create BLE Characteristic (read/write)
+    pCharacteristic = pService->createCharacteristic(
+        CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
+    pCharacteristic->setValue("Hello from ESP32 (NimBLE)");
+    pCharacteristic->setCallbacks(new BleCallback(config, gameState, controlPoint, statusLog, loraCom, loramsg));
+
+    // Start the service
+    pService->start();
+
+    // Start advertising
+    NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+    pAdvertising->addServiceUUID(SERVICE_UUID);
+    pAdvertising->setName(deviceName.c_str());
+    pAdvertising->start();
+    Serial.println("BLE Ready! Waiting for connections...");
+    //this is stupid change later
+    // game backup check
+    pref.begin("game", true); // read-only
+
+    int prevCurrentTime = pref.getInt("CurrentTime", 0);
+    int prevBluScore = pref.getInt("bluScore", 100);
+    int prevYellowScore = pref.getInt("yellowScore", 100);
+    int maxPoints = pref.getInt("PointsTarget", 0);
+
+    pref.end();
+
+    bool newGame = true;
+    if (maxPoints >= prevBluScore || maxPoints >= prevYellowScore || prevCurrentTime >= 0)
+    {
+        newGame = false;
+        Serial.println("No game data to recover");
+    }
+    else
+    {
+        restoreCLock.reset();
+        restoreCLock.start();
+    }
+
+    statusLog.addLogEntry(EVENT_SYSTEM_STARTUP);
+}
 
 bool isGameOver()
 {
@@ -95,12 +185,14 @@ void CapturePoint()
             captureClock.start();
             captureClock.reset();
             Serial.println("Team Blue started capturing!");
+            statusLog.addLogEntry(EVENT_POINT_BLUE_BUTTON);
         }
         if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::Blufor && config.getCaptureTime() > 5)
         {
             controlPoint.setControllingTeam(TeamId::None, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::None);
             Serial.println("Point neutralized!");
+            statusLog.addLogEntry(EVENT_POINT_NEUTRALIZED);
         }
         if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::Blufor)
         {
@@ -108,6 +200,7 @@ void CapturePoint()
             capturedPointSendLoRaUpdate(TeamId::Blufor);
             Serial.println("Team Blue fully captured the point!");
             buzzer.beepXtimes(200, 3, 200);
+            statusLog.addLogEntry(EVENT_POINT_CAPTURED_BY_BLUE);
         }
         gracePeriodActive = false;
         float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
@@ -126,12 +219,14 @@ void CapturePoint()
             captureClock.start();
             captureClock.reset();
             Serial.println("Team Yellow started capturing!");
+            statusLog.addLogEntry(EVENT_POINT_YELLOW_BUTTON);
         }
         if ((captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() / 2) && controlPoint.getControllingTeam() != TeamId::None && controlPoint.getControllingTeam() != TeamId::YellowFor && config.getCaptureTime() > 5)
         {
             controlPoint.setControllingTeam(TeamId::None, controlPoint.getNodeId());
             capturedPointSendLoRaUpdate(TeamId::None);
             Serial.println("Point neutralized!");
+            statusLog.addLogEntry(EVENT_POINT_NEUTRALIZED);
         }
         if (captureClock.getElapsedTimeInSeconds() >= config.getCaptureTime() && controlPoint.getControllingTeam() != TeamId::YellowFor)
         {
@@ -139,6 +234,7 @@ void CapturePoint()
             capturedPointSendLoRaUpdate(TeamId::YellowFor);
             Serial.println("Team Yellow fully captured the point!");
             buzzer.beepXtimes(200, 3, 200);
+            statusLog.addLogEntry(EVENT_POINT_CAPTURED_BY_YELLOW);
         }
         gracePeriodActive = false;
         float percentage = static_cast<float>(captureClock.getElapsedTimeInSeconds()) / static_cast<float>(config.getCaptureTime());
@@ -169,88 +265,7 @@ void CapturePoint()
     }
 }
 
-void setup()
-{
-    Serial.begin(115200);
-    Serial.println("Starting up...");
-    displayOLED.begin();
-    lcd.begin();
-    gameState = GameState::Network;
-    controlPoint.addTeam(TeamId::Blufor);
-    controlPoint.addTeam(TeamId::YellowFor);
-    buttonManager.begin();
-    lrradio.begin();
-
-    // add itself to the list
-    randomSeed(analogRead(36));
-    int randomValue = abs(random());
-#ifdef NODE_ID
-    randomValue = NODE_ID;
-#else
-    randomValue = abs(random());
-#endif
-    controlPoint.setNodeId(randomValue);
-    controlPoint.addNode(controlPoint.getNodeId());
-    displayOLED.displayInitLogo();
-    lcd.displayInitLogo();
-    delay(3000);
-
-    yellowLed.blinking();
-    blueLed.blinking();
-
-    buzzer.beepXtimes(500, 3, 500);
-    Serial.println("Ready");
-
-        Serial.println("Starting NimBLE...");
-
-    // Initialize BLE
-    String deviceName = "LoRaCP_" + String(controlPoint.getNodeId());
-    NimBLEDevice::init(deviceName.c_str());
-    pServer = NimBLEDevice::createServer();
-    pServer->setCallbacks(new BleServer());
-
-    // Create BLE Service
-    BLEService *pService = pServer->createService(SERVICE_UUID);
-
-    // Create BLE Characteristic (read/write)
-    pCharacteristic = pService->createCharacteristic(
-        CHARACTERISTIC_UUID,
-        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE
-    );
-    pCharacteristic->setValue("Hello from ESP32 (NimBLE)");
-    pCharacteristic->setCallbacks(new BleCallback(config,gameState,controlPoint));
-    
-    // Start the service
-    pService->start();
-    
-    
-    // Start advertising
-    NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
-    pAdvertising->addServiceUUID(SERVICE_UUID);
-    pAdvertising->setName(deviceName.c_str());
-    pAdvertising->start();
-    Serial.println("BLE Ready! Waiting for connections...");
-    // game backup check
-    pref.begin("game", true); // read-only
-
-    int prevCurrentTime =  pref.getInt("CurrentTime", 0);
-    int prevBluScore = pref.getInt("bluScore", 100);
-    int prevYellowScore = pref.getInt("yellowScore", 100);
-    int maxPoints = pref.getInt("PointsTarget", 0);
-    
-    pref.end();
-
-    bool newGame = true;
-    if(maxPoints >= prevBluScore || maxPoints >= prevYellowScore || prevCurrentTime >= 0)
-    {
-        newGame = false;
-        Serial.println("No game data to recover");
-    }else{
-        restoreCLock.reset();
-        restoreCLock.start();
-    }
-}
-void SaveGameDataScore(int blue,int yellow)
+void SaveGameDataScore(int blue, int yellow)
 {
     Serial.println("saving score to memory");
     // why there is no if? i just skip this step on startup if there is saved data
@@ -262,6 +277,7 @@ void SaveGameDataScore(int blue,int yellow)
 
     pref.end();
 }
+
 void SaveGameDataConfig()
 {
     Serial.println("saving config to memmory");
@@ -283,17 +299,17 @@ void SaveGameDataConfig()
     pref.end();
 }
 
-void loadConfigFromPrefs() {
+void loadConfigFromPrefs()
+{
     Serial.println("loading from memory");
-    pref.begin("game", true); 
+    pref.begin("game", true);
 
-    controlPoint.setTeamsScore(pref.getInt("blufor", 1),pref.getInt("yellowfor", 1));
+    controlPoint.setTeamsScore(pref.getInt("blufor", 1), pref.getInt("yellowfor", 1));
     config.setDurration(pref.getInt("Durration", 5));
     config.setCountdown(pref.getInt("Countdown", 5));
     config.setCaptureTime(pref.getInt("CaptureTime", 5));
     config.setPointsTarget(pref.getInt("PointsTarget", 5));
     gameClock.setTimeFromMinutes(pref.getInt("CurrentTime", 0));
-
 
     // Load nodeCount
     controlPoint.nodeCount = pref.getUInt("nodeCount", 0);
@@ -301,8 +317,254 @@ void loadConfigFromPrefs() {
     // Load nodes array from bytes
     pref.getBytes("nodes", controlPoint.nodes, sizeof(ControlPoint::Nodes) * controlPoint.nodeCount);
 
+    // change game status to 'startgame' 'ongoing' would skip some important bits.
+    gameState = GameState::StartGame;
 
     pref.end();
+}
+
+void handleNetworkState()
+{
+    if (buttonManager.blueButton.isPressed())
+    {
+        networkClock.reset();
+        networkClock.start();
+        loraCom.seqNum = loraCom.seqNum + 1;
+        msg = loramsg.createNodeInfo(0, loraCom.seqNum);
+        loraCom.sendMsgAckTo(msg, 0);
+        Serial.println("Sending node info");
+        statusLog.addLogEntry(EVENT_SYSTEM_SEND_NODE_INFO);
+    }
+    if (buttonManager.yellowButton.isPressed())
+    {
+        networkClock.reset();
+        networkClock.start();
+        loraCom.seqNum = loraCom.seqNum + 1;
+        msg = loramsg.createNodeInfo(0, loraCom.seqNum);
+        loraCom.sendMsgAckTo(msg, 0);
+        Serial.println("Sending node info");
+        statusLog.addLogEntry(EVENT_SYSTEM_SEND_NODE_INFO);
+    }
+    if (buttonManager.changeButton.isPressed())
+    {
+        gameState = GameState::Config;
+        controlPoint.setGameMaster(true);
+    }
+    if (networkClock.getElapsedTimeInSeconds() > 5)
+    {
+        displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg, controlPoint.getNodeId());
+        lcd.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg, controlPoint.getNodeId());
+    }
+    else
+    {
+        displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg, controlPoint.getNodeId());
+        lcd.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg, controlPoint.getNodeId());
+        networkClock.stop();
+    }
+}
+
+void handleConfigState()
+{
+    config.handleButtonPresses(buttonManager, configState);
+    if (buttonManager.startButton.isPressed())
+    {
+        loraCom.seqNum = loraCom.seqNum + 1;
+        msg = loramsg.createConfig(config, 0, loraCom.seqNum);
+        loraCom.sendMsgAckToAll(msg);
+        gameState = GameState::CountDownSetup;
+    }
+    displayOLED.displaySettings(config, configState);
+    lcd.displaySettings(config, configState);
+}
+
+void handleRestoreState()
+{
+    loadConfigFromPrefs();
+}
+
+void handleCountDownSetupState()
+{
+    secondCLock.start();
+    yellowLed.off();
+    blueLed.off();
+    if (controlPoint.getGameMaster())
+    {
+        loraCom.seqNum = loraCom.seqNum + 1;
+        msg = loramsg.createConfig(config, 0, loraCom.seqNum);
+        loraCom.sendMsgAckToAll(msg);
+        statusLog.addLogEntry(EVENT_SYSTEM_SEND_CONFIG);
+    }
+    buzzer.beep(2000);
+    gameState = GameState::CountDown;
+}
+
+void handleCountDownState()
+{
+    if (secondCLock.getElapsedTime() > 1000)
+    {
+        config.setCountdown(config.getCountdown() - 1);
+        Serial.println("Countdown: ");
+        Serial.println(config.getCountdown());
+        secondCLock.reset();
+    }
+    if (config.getCountdown() <= 0)
+    {
+        gameState = GameState::StartGame;
+    }
+    displayOLED.displayCountdown(config.getCountdown());
+    lcd.displayCountdown(config.getCountdown());
+}
+
+void handleStartGameState()
+{
+    //SaveGameDataConfig();
+    restoreCLock.reset();
+    restoreCLock.start();
+    secondCLock.stop();
+    secondCLock.reset();
+    pointClock.start();
+    gameClock.start();
+    beepClock.start();
+    buzzer.beepXtimes(200, 6, 500);
+    gameState = GameState::Ongoing;
+    statusLog.addLogEntry(EVENT_GAME_START);
+}
+
+void handleOngoingState()
+{
+    if (restoreCLock.getElapsedTimeInMinutes() >= 2)
+    {
+        //SaveGameDataScore(controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor));
+        restoreCLock.reset(); 
+    }
+    if (beepClock.getElapsedTimeInSeconds() > 5)
+    {
+        buzzer.beep(50);
+        beepClock.reset();
+    }
+
+    // LED control
+    if (controlPoint.getControllingTeam() == TeamId::Blufor)
+    {
+        blueLed.on();
+        yellowLed.off();
+    }
+    else if (controlPoint.getControllingTeam() == TeamId::YellowFor)
+    {
+        blueLed.off();
+        yellowLed.on();
+    }
+    else
+    {
+        yellowLed.off();
+        blueLed.off();
+    }
+
+    if (controlPoint.getGameMaster() && pointClock.getElapsedTime() >= 60000)
+    {
+        Serial.println("Time elapsed: ");
+        Serial.println(gameClock.getElapsedTimeInMinutes());
+        controlPoint.increamentScore(1);
+        loraCom.seqNum = loraCom.seqNum + 1;
+        msg = loramsg.createScoreUpdate(controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor), 0, loraCom.seqNum);
+        loraCom.sendMsgAckToAll(msg);
+        if (isGameOver())
+        {
+            gameState = GameState::Finished;
+            gameClock.stop();
+            gameClock.reset();
+        }
+        pointClock.reset();
+    }
+
+    CapturePoint();
+    if (buttonManager.yellowButton.getState() == HIGH && buttonManager.blueButton.getState() == HIGH)
+    {
+        displayOLED.displayGame(controlPoint, config.getDurration() - gameClock.getElapsedTimeInMinutes());
+        lcd.displayGame(controlPoint, config.getDurration() - gameClock.getElapsedTimeInMinutes());
+    }
+}
+
+void handleFinishedState()
+{
+    winner = controlPoint.whoWon();
+    Serial.println("GAME OVER");
+    if (controlPoint.getGameMaster())
+    {
+        loraCom.seqNum = loraCom.seqNum + 1;
+        msg = loramsg.createGameFinished(winner, controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor), 0, loraCom.seqNum);
+        loraCom.sendMsgAckToAll(msg);
+    }
+
+    if (winner == TeamId::Blufor)
+    {
+        Serial.print("BLUFOR WON");
+        blueLed.blinking();
+        yellowLed.off();
+    }
+    else if (winner == TeamId::YellowFor)
+    {
+        Serial.print("YELLOWFOR WON");
+        blueLed.off();
+        yellowLed.blinking();
+    }
+    else if (winner == TeamId::Draw)
+    {
+        Serial.print("DRAW");
+        blueLed.blinking();
+        yellowLed.blinking();
+    }
+    else
+    {
+        Serial.print("NONE in WINNER");
+    }
+
+    pointClock.stop();
+    buzzer.beepXtimes(1000, 10, 1000);
+    gameState = GameState::WaitingForReset;
+    statusLog.addLogEntry(EVENT_GAME_END);
+}
+
+void handleWaitingForResetState()
+{
+    if (buttonManager.yellowButton.isPressed())
+    {
+        buzzer.stopBeeping();
+    }
+    if (buttonManager.blueButton.isPressed())
+    {
+        buzzer.stopBeeping();
+        gameState = GameState::Network;
+        buzzer.beep(100);
+        // Reset all game parameters
+        controlPoint.resetGame();
+        winner = TeamId::None;
+        controlPoint.setTeamsScore(0, 0);
+        configState = 0;
+        controlPoint.setControllingTeam(TeamId::None,NODE_ID);
+        restoreCLock.stop();
+        restoreCLock.reset();
+        gameClock.stop();
+        gameClock.reset();
+        pointClock.stop();
+        pointClock.reset();
+        secondCLock.stop();
+        secondCLock.reset();
+        networkClock.stop();
+        networkClock.reset();
+        beepClock.stop();
+        beepClock.reset();
+        capturingTeam = TeamId::None;
+        gracePeriodActive = false;
+        captureClock.stop();
+        captureClock.reset();
+        graceClock.stop();
+        graceClock.reset();
+        statusLog.clearLog();
+    }
+
+    displayOLED.displayFinished(winner, controlPoint);
+    lcd.displayFinished(winner, controlPoint);
 }
 
 void loop()
@@ -316,236 +578,35 @@ void loop()
     switch (gameState)
     {
     case GameState::Network:
-        // here we just display network until idk button press or what ever
-        if (buttonManager.blueButton.isPressed())
-        {
-            networkClock.reset();
-            networkClock.start();
-            loraCom.seqNum = loraCom.seqNum + 1;
-            msg = loramsg.createNodeInfo(0, loraCom.seqNum);
-            loraCom.sendMsgAckTo(msg, 0);
-            Serial.println("Sending node info");
-        }
-        if (buttonManager.yellowButton.isPressed())
-        {
-            if (controlPoint.getGameMaster())
-            {
-                controlPoint.setGameMaster(false);
-                Serial.println("I am not the GameMaster anymore");
-            }
-            else
-            {
-                controlPoint.setGameMaster(true);
-                Serial.println("I am the GameMaster now");
-            }
-        }
-        if (buttonManager.changeButton.isPressed())
-        {
-            gameState = GameState::Config;
-            controlPoint.setGameMaster(true);
-        }
-        if (networkClock.getElapsedTimeInSeconds() > 5)
-        {
-            displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg,controlPoint.getNodeId());
-            lcd.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg,controlPoint.getNodeId());
-        }
-        else
-        {
-            displayOLED.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg,controlPoint.getNodeId());
-            lcd.displayNetworkStatus(controlPoint.getNodeCount(), controlPoint.getGameMaster(), false, lastLoraMsg,controlPoint.getNodeId());
-            networkClock.stop();
-        }
+        handleNetworkState();
         break;
     case GameState::Config:
-        if(restoreCLock.getElapsedTimeInMinutes() >= 5)
-        {
-            loadConfigFromPrefs();
-        }
-        config.handleButtonPresses(buttonManager, configState);
-        if (buttonManager.startButton.isPressed())
-        {
-            loraCom.seqNum = loraCom.seqNum + 1;
-            msg = loramsg.createConfig(config, 0, loraCom.seqNum);
-            loraCom.sendMsgAckToAll(msg);
-            gameState = GameState::CountDownSetup;
-        }
-        displayOLED.displaySettings(config, configState);
-        lcd.displaySettings(config, configState);
+        handleConfigState();
+        break;
+    case GameState::Restore:
+        handleRestoreState();
         break;
     case GameState::CountDownSetup:
-        secondCLock.start();
-        yellowLed.off();
-        blueLed.off();
-        if(controlPoint.getGameMaster())
-        {
-            loraCom.seqNum = loraCom.seqNum + 1;
-            msg = loramsg.createConfig(config, 0, loraCom.seqNum);
-            loraCom.sendMsgAckToAll(msg);
-        }
-        gameState = GameState::CountDown;
+        handleCountDownSetupState();
         break;
     case GameState::CountDown:
-        if (secondCLock.getElapsedTime() > 1000) // for the time being this stays like this i cant be bothered to add another setting rihgt now also nobody cares
-        {
-            config.setCountdown(config.getCountdown() - 1);
-            Serial.println("Countdown: ");
-            Serial.println(config.getCountdown());
-            // secondCLock.getElapsedTime(); // add this to countdown display later TODO
-            secondCLock.reset();
-        }
-        if (config.getCountdown() <= 0)
-        {
-            gameState = GameState::StartGame;
-        }
-        displayOLED.displayCountdown(config.getCountdown());
-        lcd.displayCountdown(config.getCountdown());
+        handleCountDownState();
         break;
     case GameState::StartGame:
-        SaveGameDataConfig();
-        restoreCLock.reset();
-        restoreCLock.start();
-        secondCLock.stop();
-        secondCLock.reset();
-        pointClock.start();
-        gameClock.start();
-        beepClock.start();
-        buzzer.beepXtimes(500,10,1000);
-        gameState = GameState::Ongoing;
+        handleStartGameState();
+        break;
     case GameState::Ongoing:
-        if(restoreCLock.getElapsedTimeInMinutes() >= 10)
-        {
-            SaveGameDataScore(controlPoint.getTeamPoints(TeamId::Blufor),controlPoint.getTeamPoints(TeamId::YellowFor));
-        }
-        if(beepClock.getElapsedTimeInSeconds() > 5)
-        {
-            buzzer.beep(50);
-            beepClock.reset();
-        }
-        if (controlPoint.getControllingTeam() == TeamId::Blufor)
-        {
-            blueLed.on();
-            yellowLed.off();
-        }
-        if (controlPoint.getControllingTeam() == TeamId::YellowFor)
-        {
-            blueLed.off();
-            yellowLed.on();
-        }
-        if (controlPoint.getControllingTeam() == TeamId::None)
-        {
-            yellowLed.off();
-            blueLed.off();
-        }
-        if (controlPoint.getGameMaster())
-        {
-
-            if (pointClock.getElapsedTime() >= 60000) // like the last one :/ will do later
-            {
-                Serial.println("Time elapsed: ");
-                Serial.println(gameClock.getElapsedTimeInMinutes());
-                controlPoint.increamentScore(1);
-                loraCom.seqNum = loraCom.seqNum + 1;
-                msg = loramsg.createScoreUpdate(controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor), 0, loraCom.seqNum);
-                loraCom.sendMsgAckToAll(msg);
-                if (isGameOver())
-                {
-                    gameState = GameState::Finished;
-                    gameClock.stop();
-                    gameClock.reset();
-                }
-                pointClock.reset();
-            }
-        }
-        // Capture Logic
-        CapturePoint();
-        if (buttonManager.yellowButton.getState() == HIGH && buttonManager.blueButton.getState() == HIGH)
-        {
-            displayOLED.displayGame(controlPoint, config.getDurration() - gameClock.getElapsedTimeInMinutes());
-            lcd.displayGame(controlPoint, config.getDurration() - gameClock.getElapsedTimeInMinutes());
-        }
+        handleOngoingState();
         break;
     case GameState::Finished:
-        winner = controlPoint.whoWon();
-        Serial.println("GAME OVER");
-        if (controlPoint.getGameMaster())
-        {
-            loraCom.seqNum = loraCom.seqNum + 1;
-            msg = loramsg.createGameFinished(winner, controlPoint.getTeamPoints(TeamId::Blufor), controlPoint.getTeamPoints(TeamId::YellowFor), 0, loraCom.seqNum);
-            loraCom.sendMsgAckToAll(msg);
-        }
-        if (winner == TeamId::Blufor)
-        {
-            Serial.print("BLUFOR WON");
-        }
-        if (winner == TeamId::YellowFor)
-        {
-            Serial.print("YELLOWFOR WON");
-        }
-        if (winner == TeamId::Draw)
-        {
-            Serial.print("DRAW");
-        }
-        if (winner == TeamId::None)
-        {
-            Serial.print("a NONE in a WINNER if? how queer! Ive never seen such a thing ");
-            Serial.println("I guess we make an none now");
-            Serial.println("for real i have no idea what to put here");
-        }
-        pointClock.stop();
-        buzzer.beepXtimes(1000, 10, 1000);
-        gameState = GameState::WaitingForReset;
-        if (winner == TeamId::Blufor)
-        {
-            blueLed.blinking();
-            yellowLed.off();
-        }
-        if (winner == TeamId::YellowFor)
-        {
-            blueLed.off();
-            yellowLed.blinking();
-        }
-        if (winner == TeamId::Draw)
-        {
-            blueLed.blinking();
-            yellowLed.blinking();
-        }
+        handleFinishedState();
         break;
     case GameState::WaitingForReset:
-        // here we just display winner until idk button press or what ever
-        if (buttonManager.changeButton.isPressed())
-        {
-            gameState = GameState::Network;
-            buzzer.beep(100);
-            controlPoint.resetGame();
-            winner = TeamId::None;
-            controlPoint.setTeamsScore(0, 0);
-            configState = 0;
-            restoreCLock.stop();
-            restoreCLock.reset();
-            gameClock.stop();
-            gameClock.reset();
-            pointClock.stop();
-            pointClock.reset();
-            secondCLock.stop();
-            secondCLock.reset();
-            networkClock.stop();
-            networkClock.reset();
-            beepClock.stop();
-            beepClock.reset();
-            capturingTeam = TeamId::None;
-            gracePeriodActive = false;
-            captureClock.stop();
-            captureClock.reset();
-            graceClock.stop();
-            graceClock.reset();
-        }
-
-        displayOLED.displayFinished(winner, controlPoint);
-        lcd.displayFinished(winner, controlPoint);
+        handleWaitingForResetState();
         break;
     default:
-        // maybe just set state to config? not like there are any other ways default could happen
         gameState = GameState::Config;
         break;
     }
+    yield();
 }

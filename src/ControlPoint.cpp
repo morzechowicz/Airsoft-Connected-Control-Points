@@ -85,7 +85,7 @@ void ControlPoint::setTeamsScore(int teamBlueScore, int teamYellowScore)
         teams[1].setTeamPoints(teamYellowScore);
     }
 }
-
+// return true if node already exist inside table
 bool ControlPoint::addNode(int nodeId)
 {
     bool present = false;

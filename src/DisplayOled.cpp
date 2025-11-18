@@ -144,7 +144,7 @@ void DisplayOled::displayInitLogo()
     display.setTextSize(2);
     display.setCursor(0, 0);
     display.println("SPAS");
-    display.println("ENGI");
-    display.println("DIV");
+    display.println("GAME");
+    display.println("SYSTEM");
     display.display();
 }
