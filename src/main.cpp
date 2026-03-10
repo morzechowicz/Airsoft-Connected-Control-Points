@@ -167,6 +167,7 @@ void confKothCallback(Event e)
     kothConfig.captureTime = e.data4;
     Event newNode;
     newNode.data1 = LORA_ADDRESS;
+    //add itself to the table
     newNodeCallback(newNode);
     isMaster = true;
     int countdown = e.data1;
@@ -184,8 +185,25 @@ void confKothCallback(Event e)
 
     if (!kothConfig.singleNodeMode)
     {
+        int nodeNumber = 0;
         String configBroadcast = Protocol::buildKothConfigUpdated(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
-        network.broadcast(configBroadcast);
+        while(nodeNumber < kothConfig.nodeCount)
+        {
+            uint8_t &nodeId = kothConfig.nodeIds[nodeNumber];
+            if(nodeId == LORA_ADDRESS)
+            {
+                nodeNumber++;
+                continue;
+            }
+            if(kothConfig.hasNode(nodeId))
+            {
+                Serial.print("sending config to node");
+                Serial.println(nodeId);
+                network.sendTo(nodeId,configBroadcast);
+            }
+            nodeNumber++;
+        }
+        // network.broadcast(configBroadcast);
     }
 
     startCountdownTask(countdown);
