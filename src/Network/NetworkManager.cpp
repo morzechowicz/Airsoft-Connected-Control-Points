@@ -78,15 +78,10 @@ void NetworkManager::networkDiscoverCallback(Event e)
     if (s_instance)
     {
         s_instance->setAsClient(e.data1);
-        #ifdef INFORMATION_NODE
-        //do nothig only do thing if you are a playing node.
-        //information node only listens
-        #else
         String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
         Serial.print("respondindg with: ");
         Serial.println(response);
         s_instance->sendToMaster(response);
-        #endif
     }
 }
 

@@ -243,7 +243,7 @@ void setup()
 {
     Serial.begin(115200);
     vTaskDelay(200); // Wait for Serial to initialize
-    #ifdef INFORMATION_NODE
+    #ifdef BIG_SCREEN
     hardware.lcd.begin(0x27, 16, 4);
     #else
     hardware.lcd.begin(0x27, 16, 2);
