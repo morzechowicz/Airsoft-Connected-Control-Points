@@ -35,7 +35,7 @@ void KOTHClient::start()
     Serial.println(myNodeId);
     Serial.print("captureTimeMs");
     Serial.println(captureTimeMs);
-    captureTimeMs = captureTimeMs*1000;
+    captureTimeMs = captureTimeMs * 1000;
     currentController = Team::NONE;
     gameActive = true;
     locatingBeepSpacingUpdate = millis() + 5000;
@@ -50,14 +50,19 @@ void KOTHClient::start()
     {
         Serial.println(currentController == Team::YELLOW ? "YELLOW" : "BLUE");
     }
+    //Subscribe to pause/resume
+    eventBus->subscribe(PAUSE, [this](Event e)
+                        { pauseGame(e); });
+    eventBus->subscribe(RESUME, [this](Event e)
+                        { resumeGame(e); });
+
     // Subscribe to game events
     eventBus->subscribe(GAME_OVER, [this](Event e)
                         {
         handleGameOver(lastKnownScore.getWinner());
         gameActive = false;
         updateDisplay();
-        return;
-    });
+        return; });
     // Subscribe to button events
     eventBus->subscribe(BUTTON_PRESSED, [this](Event e)
                         { this->onButtonPressed(e); });
@@ -120,6 +125,10 @@ void KOTHClient::update()
 
 void KOTHClient::onButtonPressed(Event e)
 {
+    if(gamePaused)
+    {
+        return;
+    }
     // Determine which team button was pressed
     Team buttonTeam = Team::NONE;
 
@@ -302,6 +311,12 @@ void KOTHClient::updateDisplay()
         hardware->lcd.kothDisplayScore(lastKnownScore.yellowPoints, lastKnownScore.bluePoints);
         hardware->lcd.kothDisplayController(currentController);
     }
+
+    if(gamePaused)
+    {
+        hardware->lcd.displayPause();
+    }
+
     if (!gameActive)
     {
         hardware->lcd.kothDisplayEnd(lastKnownScore.getWinner(),
@@ -331,4 +346,18 @@ void KOTHClient::updateLEDs()
         hardware->ledYellowButton.off();
         hardware->ledBlueButton.off();
     }
+}
+
+void KOTHClient::pauseGame(Event e)
+{
+    gamePaused = true;
+    hardware->buzzer.beep(2000, 2, 1000);
+    updateDisplay();
+}
+
+void KOTHClient::resumeGame(Event e)
+{
+    gamePaused = false;
+    hardware->buzzer.beepOnce(4000);
+    updateDisplay();
 }

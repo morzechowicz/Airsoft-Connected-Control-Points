@@ -35,6 +35,7 @@ private:
     
     bool deleteThis = false;
     bool gameActive;
+    bool gamePaused = false;
     bool capturing;
     unsigned long captureStartTime;
     uint16_t captureTimeMs;
@@ -64,6 +65,8 @@ private:
     // Display helpers
     void updateDisplay();
     void updateLEDs();
+    void pauseGame(Event e);
+    void resumeGame(Event e);
 };
 
 #endif

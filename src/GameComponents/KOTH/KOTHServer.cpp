@@ -288,10 +288,6 @@ void KOTHServer::endGame(Team winner)
 
 void KOTHServer::pauseGame(Event e)
 {
-    if (gameRunning)
-    {
-        hardwareManager->buzzer.beep(2000, 2, 1000);
-    }
     gameRunning = false;
     if (e.data1)
     {
@@ -303,10 +299,6 @@ void KOTHServer::pauseGame(Event e)
 
 void KOTHServer::resumeGame(Event e)
 {
-    if (!gameRunning)
-    {
-        hardwareManager->buzzer.beepOnce(4000);
-    }
     gameRunning = true;
     if (e.data1)
     {
