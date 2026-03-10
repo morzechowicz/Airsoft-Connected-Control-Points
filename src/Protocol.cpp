@@ -17,6 +17,24 @@ String Protocol::buildGameOver(uint8_t winner)
     return buffer;
 }
 
+String Protocol::buildPause()
+{
+    String buffer;
+    buffer = String(GAME) + ";";
+    buffer += String(PAUSE) + ";";
+    buffer += String(0);
+    return buffer;
+}
+
+String Protocol::buildResume()
+{
+    String buffer;
+    buffer = String(GAME) + ";";
+    buffer += String(RESUME) + ";";
+    buffer += String(0);
+    return buffer;
+}
+
 String Protocol::buildDiscoverRequest()
 {
     String buffer;

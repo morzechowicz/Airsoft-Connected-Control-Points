@@ -41,8 +41,9 @@ private:
     void broadcastScoreUpdate();
     void checkWinConditions();
     void endGame(Team winner);
-    void pauseGame();
-    
+    void pauseGame(Event e);
+    void resumeGame(Event e);
+
     // Helper functions
     NodeState* findNode(uint8_t nodeId);
     uint8_t countNodesControlledBy(Team team);

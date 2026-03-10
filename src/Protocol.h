@@ -20,6 +20,8 @@ public:
     //universal message types
     static String buildGameStart();
     static String buildGameOver(uint8_t winner);
+    static String buildPause();
+    static String buildResume();
     static String buildDiscoverRequest();
     static String buildDiscoverResponse(uint8_t nodeID);
     static String buildPowerResetMsg();

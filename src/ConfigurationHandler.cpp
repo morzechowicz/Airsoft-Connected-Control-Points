@@ -34,21 +34,9 @@ bool ConfigurationHandler::handleCommand(const Message &command)
         Serial.println("Received BLE_END_RESTART message");
         return true;
     }
-    if (command.type == POWER_RESET)
-    {
-        handlePowerReset();
-        Serial.println("Received BLE_POWER_RESET message");
-        return true;
-    }
     if (command.type == REQUEST_LOG)
     {
         Serial.println("Received BLE_REQUEST_LOG message");
-        return true;
-    }
-    if (command.type == PAUSE)
-    {
-        Serial.println("Received BLE_PAUSE message");
-        eventBus.publish(PAUSE);
         return true;
     }
     if (command.type == UNKNOWN)
@@ -58,10 +46,7 @@ bool ConfigurationHandler::handleCommand(const Message &command)
     return false;
 }
 
-void ConfigurationHandler::handlePowerReset()
-{
-    eventBus.publish(POWER_RESET);
-}
+
 
 void ConfigurationHandler::handleSystemMessage(const String &cmd, const String params[], int paramCount)
 {
@@ -119,9 +104,18 @@ void ConfigurationHandler::handleGameMessage(const String &cmd, const String par
         eventBus.publish(GAME_OVER, (int)winner);
         break;
     }
-    case GAME_PAUSE:
+    case PAUSE:
     {
-        eventBus.publish(GAME_PAUSE);
+        Serial.print("PAUSE:");
+        eventBus.publish(PAUSE, Protocol::parseIntParam(params[1], 0));
+        Serial.println(":DONE");
+        break;
+    }
+    case RESUME:
+    {
+        Serial.print("RESUME:");
+        eventBus.publish(RESUME, Protocol::parseIntParam(params[1], 0));
+        Serial.println(":DONE");
         break;
     }
     case KOTH_POINT_CAPTURED:
