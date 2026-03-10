@@ -1,0 +1,54 @@
+#include "EventBus.h"
+
+EventBus::EventBus() : queueHead(0), queueTail(0) {
+}
+
+void EventBus::subscribe(EventType eventName, EventCallback callback) {
+    if (eventName >= 0 && eventName < EVENT_MAX) {
+        listeners[eventName].push_back(callback);
+    }
+}
+
+void EventBus::unsubscribe(EventType eventName) {
+    if (eventName >= 0 && eventName < EVENT_MAX) {
+        listeners[eventName].clear();
+        Serial.print("Unsubscribed all listeners from event: ");
+        Serial.println(eventName);
+    }
+}
+
+// ============================================
+// ONE PUBLISH FUNCTION WITH DEFAULT PARAMETERS
+// ============================================
+void EventBus::publish(EventType eventName, int data1, int data2, int data3, int data4, int data5) {
+    int nextTail = (queueTail + 1) % QUEUE_SIZE;
+    
+    if (nextTail == queueHead) {
+        // Queue full
+        Serial.println("WARNING: Event queue full!");
+        return;
+    }
+    
+    // Create event with all data
+    eventQueue[queueTail].type = eventName;
+    eventQueue[queueTail].data1 = data1;
+    eventQueue[queueTail].data2 = data2;
+    eventQueue[queueTail].data3 = data3;
+    eventQueue[queueTail].data4 = data4;
+    eventQueue[queueTail].data5 = data5;
+    
+    queueTail = nextTail;
+}
+
+void EventBus::processEvents() {
+    while (queueHead != queueTail) {
+        Event currentEvent = eventQueue[queueHead];
+        queueHead = (queueHead + 1) % QUEUE_SIZE;
+        
+        for (auto& cb : listeners[currentEvent.type]) {
+            if (cb) {
+                cb(currentEvent);
+            }
+        }
+    }
+}
