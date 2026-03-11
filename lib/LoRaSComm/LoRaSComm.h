@@ -66,7 +66,9 @@ struct PendingAck {
     uint8_t data[LORASCOMM_MAX_PAYLOAD_SIZE];
     size_t dataLen;
     bool active;
-    
+
+    EventGroupHandle_t eventGroup;  // nullptr for fire-and-forget
+    EventBits_t eventBit;           // bit to set on ACK
     PendingAck() : destAddr(0), sequence(0), retryCount(0), 
                    sentTime(0), dataLen(0), active(false) {
         memset(data, 0, LORASCOMM_MAX_PAYLOAD_SIZE);
@@ -79,7 +81,9 @@ struct TxQueueItem {
     uint8_t data[LORASCOMM_MAX_PAYLOAD_SIZE];
     size_t dataLen;
     LoRaSCommPacketType packetType;
-    
+    EventGroupHandle_t eventGroup;  // nullptr for fire-and-forget
+    EventBits_t eventBit;           // bit to set on ACK
+
     TxQueueItem() : destAddr(0), dataLen(0), packetType(PACKET_DATA_UNRELIABLE) {
         memset(data, 0, LORASCOMM_MAX_PAYLOAD_SIZE);
     }
@@ -103,7 +107,7 @@ public:
     
     // Send methods (non-blocking, add to queue)
     bool sendUnreliable(uint8_t dest, const uint8_t* data, size_t len);
-    bool sendReliable(uint8_t dest, const uint8_t* data, size_t len);
+    bool sendReliable(uint8_t dest, const uint8_t* data, size_t len, EventGroupHandle_t eventGroup, EventBits_t eventBit);
     bool testSendAck(uint8_t dest);
     
     // Receive (non-blocking, reads from queue)

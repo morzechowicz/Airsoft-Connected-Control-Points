@@ -167,7 +167,7 @@ void confKothCallback(Event e)
     kothConfig.captureTime = e.data4;
     Event newNode;
     newNode.data1 = LORA_ADDRESS;
-    //add itself to the table
+    // add itself to the table
     newNodeCallback(newNode);
     isMaster = true;
     int countdown = e.data1;
@@ -185,25 +185,20 @@ void confKothCallback(Event e)
 
     if (!kothConfig.singleNodeMode)
     {
-        int nodeNumber = 0;
-        String configBroadcast = Protocol::buildKothConfigUpdated(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
-        while(nodeNumber < kothConfig.nodeCount)
+        std::vector<uint8_t> nodes;
+        for (int i = 0; i < kothConfig.nodeCount; i++)
         {
-            uint8_t &nodeId = kothConfig.nodeIds[nodeNumber];
-            if(nodeId == LORA_ADDRESS)
-            {
-                nodeNumber++;
-                continue;
-            }
-            if(kothConfig.hasNode(nodeId))
-            {
-                Serial.print("sending config to node");
-                Serial.println(nodeId);
-                network.sendTo(nodeId,configBroadcast);
-            }
-            nodeNumber++;
+            if (kothConfig.nodeIds[i] != LORA_ADDRESS)
+                nodes.push_back(kothConfig.nodeIds[i]);
         }
-        // network.broadcast(configBroadcast);
+
+        String configBroadcast = Protocol::buildKothConfigUpdated(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
+        bool allGotIt = network.sendToAll(nodes, configBroadcast);
+
+        if (!allGotIt)
+        {
+            Serial.println("Not all nodes received the config update!");
+        }
     }
 
     startCountdownTask(countdown);
@@ -246,7 +241,7 @@ void configureFlagCallback(Event e)
 
 void powerResetCallback(Event e)
 {
-    if(e.data1)
+    if (e.data1)
     {
         Serial.println("Sending Restart order");
         String msg = Protocol::buildPowerResetMsg();
@@ -261,12 +256,12 @@ void setup()
 {
     Serial.begin(115200);
     vTaskDelay(200); // Wait for Serial to initialize
-    #ifdef BIG_SCREEN
+#ifdef BIG_SCREEN
     hardware.lcd.begin(0x27, 16, 4);
-    #else
+#else
     hardware.lcd.begin(0x27, 16, 2);
-    #endif
-        
+#endif
+
     hardware.lcd.displayText("      SPAS", 0);
     hardware.lcd.displayText("INITIALAZING", 1);
     vTaskDelay(200);

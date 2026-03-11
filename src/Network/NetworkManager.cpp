@@ -61,8 +61,58 @@ void NetworkManager::sendTo(uint8_t address, const String &message)
         char msg[120];
         snprintf(msg, sizeof(msg), "%s", message.c_str());
 
-        SComm.sendReliable(address, (uint8_t *)msg, strlen(msg));
+        SComm.sendReliable(address, (uint8_t *)msg, strlen(msg),nullptr,0);
     }
+}
+
+// NetworkManager.cpp
+bool NetworkManager::sendToAll(const std::vector<uint8_t>& addresses, const String& message)
+{
+    if (!networkReady) return false;
+
+    EventGroupHandle_t ackEvents = xEventGroupCreate();
+    EventBits_t expectedBits = 0;
+
+    char msg[120];
+    snprintf(msg, sizeof(msg), "%s", message.c_str());
+
+    // Fire all sends without waiting
+    for (int i = 0; i < addresses.size(); i++) {
+        if (addresses[i] == myAddress) continue;
+
+        EventBits_t bit = (1 << i);
+        expectedBits |= bit;
+
+        SComm.sendReliable(
+            addresses[i],
+            (uint8_t*)msg, strlen(msg),
+            ackEvents, bit           // <-- new params
+        );
+    }
+
+    // Block until all ACKed or timeout
+    EventBits_t result = xEventGroupWaitBits(
+        ackEvents,
+        expectedBits,
+        pdTRUE,              // clear bits on exit
+        pdTRUE,              // wait for ALL bits
+        pdMS_TO_TICKS(5000)
+    );
+
+    vEventGroupDelete(ackEvents);
+
+    if ((result & expectedBits) == expectedBits) {
+        Serial.println("[NETWORK] All nodes confirmed");
+        return true;
+    }
+
+    // Log exactly who failed
+    for (int i = 0; i < addresses.size(); i++) {
+        if (!(result & (1 << i))) {
+            Serial.printf("[NETWORK] Node 0x%02X did not ACK\n", addresses[i]);
+        }
+    }
+    return false;
 }
 
 void NetworkManager::handleReceived(const ReceivedPacket &packet)
