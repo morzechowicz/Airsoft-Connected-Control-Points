@@ -35,7 +35,8 @@ public:
     void sendToMaster(const String& message);
     void broadcast(const String& message);
     void sendTo(uint8_t address, const String& message);
-
+    bool sendToAll(const std::vector<uint8_t>& addresses, const String& message);
+   
     static void handleReceived(const ReceivedPacket& packet);  
     void networkDiscoverCallback(Event e);
 private:
