@@ -185,20 +185,8 @@ void confKothCallback(Event e)
 
     if (!kothConfig.singleNodeMode)
     {
-        std::vector<uint8_t> nodes;
-        for (int i = 0; i < kothConfig.nodeCount; i++)
-        {
-            if (kothConfig.nodeIds[i] != LORA_ADDRESS)
-                nodes.push_back(kothConfig.nodeIds[i]);
-        }
-
         String configBroadcast = Protocol::buildKothConfigUpdated(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
-        bool allGotIt = network.sendToAll(nodes, configBroadcast);
-
-        if (!allGotIt)
-        {
-            Serial.println("Not all nodes received the config update!");
-        }
+        network.broadcast(configBroadcast);
     }
 
     startCountdownTask(countdown);

@@ -262,11 +262,6 @@ float KOTHClient::getCaptureProgress() const
     return (progress > 1.0f) ? 1.0f : progress;
 }
 
-void KOTHClient::startScreen()
-{
-    updateDisplay();
-}
-
 void KOTHClient::onNetworkMessage(Event e)
 {
     // Parse message (assuming e.data is pointer to message string)

@@ -24,8 +24,6 @@ public:
     float getCaptureProgress() const;
     bool getDeleteThis() {return deleteThis;};
 
-    //update display at asymetric start
-    void startScreen();
 private:
     EventBus* eventBus;
     HardwareManager* hardware;

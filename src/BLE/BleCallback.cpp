@@ -9,10 +9,6 @@ void BleCallback::onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo 
     std::string value = pCharacteristic->getValue();
     Message msg;
     msg = Protocol::parse(value.c_str(), value.length());
-    Serial.println("msg content");
-    Serial.println(msg.type);
-    Serial.println(msg.paramCount);
-    Serial.println("msg content");
     bool result = handler.handleCommand(msg);
     if (!result)
     {
