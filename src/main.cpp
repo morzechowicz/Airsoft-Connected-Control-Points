@@ -233,6 +233,7 @@ void powerResetCallback(Event e)
     {
         Serial.println("Sending Restart order");
         String msg = Protocol::buildPowerResetMsg();
+        Serial.println(msg);
         network.broadcast(msg);
     }
     Serial.println("Restarting this device");

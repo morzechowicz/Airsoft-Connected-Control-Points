@@ -132,6 +132,11 @@ void ConfigurationHandler::handleGameMessage(const String &cmd, const String par
         eventBus.publish(KOTH_SCORE_UPDATE, teamYPoints, teamBPoints);
         break;
     }
+    case GAME_OVER_INTERUPT:
+    {
+        eventBus.publish(GAME_OVER_INTERUPT,(uint16_t)Protocol::parseIntParam(params[1], 0));
+        break;
+    }
     default:
         break;
     }

@@ -59,7 +59,7 @@ String Protocol::buildPowerResetMsg()
     buffer = String(SYS) + ";";
     buffer += String(POWER_RESET) + ";";
     buffer += String(0) + ";";
-    return String();
+    return buffer;
 }
 
 String Protocol::buildKothConfigUpdated(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime)
