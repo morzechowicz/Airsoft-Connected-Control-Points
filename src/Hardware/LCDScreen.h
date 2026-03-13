@@ -23,12 +23,15 @@ public:
     void kothDisplayCapturing(Team capturingTeam, float progress);
     void kothDisplayController(Team controller);
     void kothDisplayEnd(Team winner,int yellowScore, int blueScore, bool isDraw);
-
+    
     //flag specifiv
     void flagDisplayController(FlagTeam controller);
     void flagDisplayScore(uint16_t score);
     void flagDisplayCapturin(FlagTeam capturingTeam,float progress);
     void flagDisplayEnd(FlagTeam winner);
+
+    //universal
+    void displayPause();
 
     void displayText(const char* text,int line);
     void clearScreen();

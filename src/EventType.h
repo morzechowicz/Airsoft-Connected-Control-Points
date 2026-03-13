@@ -15,6 +15,7 @@ enum EventType
     POWER_RESET,
     REQUEST_LOG,
     PAUSE,
+    RESUME,
 
     // Network
     NETWORK_CONNECTED,

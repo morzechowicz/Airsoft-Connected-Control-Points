@@ -26,7 +26,6 @@ private:
     bool lastSuccess;
     
     // Individual command handlers
-    void handlePowerReset();
     void handleSystemMessage(const String& cmd, const String params[], int paramCount);
     void handleConfigurationMessage(const String& cmd, const String params[], int paramCount);
     void handleGameMessage(const String& cmd, const String params[], int paramCount);

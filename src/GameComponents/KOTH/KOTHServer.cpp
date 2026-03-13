@@ -36,10 +36,11 @@ KOTHServer::~KOTHServer()
 {
     eventBus->unsubscribe(KOTH_POINT_CAPTURED);
     eventBus->unsubscribe(PAUSE);
+    eventBus->unsubscribe(RESUME);
     eventBus->unsubscribe(GAME_STARTED);
     eventBus->unsubscribe(GAME_OVER_INTERUPT);
     eventBus->unsubscribe(GAME);
-    
+
     stopModeTask();
 }
 
@@ -65,10 +66,12 @@ void KOTHServer::enterMode()
     eventBus->subscribe(KOTH_POINT_CAPTURED, [this](Event e)
                         { onCaptureRequest(e); });
     eventBus->subscribe(PAUSE, [this](Event e)
-                        { pauseGame(); });
+                        { pauseGame(e); });
+    eventBus->subscribe(RESUME, [this](Event e)
+                        { resumeGame(e); });
 
     eventBus->publish(GAME_STARTED, 0);
-    eventBus->subscribe(GAME_OVER_INTERUPT,[this](Event e)
+    eventBus->subscribe(GAME_OVER_INTERUPT, [this](Event e)
                         { gameOverInterup(); });
 
     // Broadcast game start
@@ -283,15 +286,25 @@ void KOTHServer::endGame(Team winner)
     gameRunning = false;
 }
 
-void KOTHServer::pauseGame()
+void KOTHServer::pauseGame(Event e)
 {
-    gameRunning = !gameRunning;
-    
-    if (gameRunning)
+    gameRunning = false;
+    if (e.data1)
     {
-        hardwareManager->buzzer.beepOnce(4000);
-    }else{
-        hardwareManager->buzzer.beep(2000,2,1000);
+        Serial.println("Sending Pause msg");
+        String msg = Protocol::buildPause();
+        networkManager->broadcast(msg);
+    }
+}
+
+void KOTHServer::resumeGame(Event e)
+{
+    gameRunning = true;
+    if (e.data1)
+    {
+        Serial.println("Sending Resume msg");
+        String msg = Protocol::buildResume();
+        networkManager->broadcast(msg);
     }
 }
 
@@ -320,6 +333,7 @@ uint8_t KOTHServer::countNodesControlledBy(Team team)
     return count;
 }
 
-void KOTHServer::gameOverInterup(){
+void KOTHServer::gameOverInterup()
+{
     scoringInterval = config.gameDurationMinutes;
 }

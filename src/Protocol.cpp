@@ -17,6 +17,24 @@ String Protocol::buildGameOver(uint8_t winner)
     return buffer;
 }
 
+String Protocol::buildPause()
+{
+    String buffer;
+    buffer = String(GAME) + ";";
+    buffer += String(PAUSE) + ";";
+    buffer += String(0);
+    return buffer;
+}
+
+String Protocol::buildResume()
+{
+    String buffer;
+    buffer = String(GAME) + ";";
+    buffer += String(RESUME) + ";";
+    buffer += String(0);
+    return buffer;
+}
+
 String Protocol::buildDiscoverRequest()
 {
     String buffer;
@@ -41,7 +59,7 @@ String Protocol::buildPowerResetMsg()
     buffer = String(SYS) + ";";
     buffer += String(POWER_RESET) + ";";
     buffer += String(0) + ";";
-    return String();
+    return buffer;
 }
 
 String Protocol::buildKothConfigUpdated(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime)

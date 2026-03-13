@@ -51,6 +51,15 @@ void LCDScreen::kothDisplayController(Team controller)
     }
 }
 
+void LCDScreen::displayPause()
+{
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("  GAME  PAUSED  ");
+    lcd.setCursor(0, 1);
+    lcd.print("  GAME  PAUSED  ");
+}
+
 void LCDScreen::kothDisplayEnd(Team winner, int yellowScore, int blueScore, bool isDraw)
 {
     lcd.clear();
