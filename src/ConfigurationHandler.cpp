@@ -56,6 +56,11 @@ void ConfigurationHandler::handleSystemMessage(const String &cmd, const String p
         Serial.print(params[1]);
         Serial.println("");
         uint8_t masterAddress = params[1].toInt();
+        // If this is an information node, we do not want to respond to discovery messages
+        if(informationNode){
+            Serial.println("Not sending response because this is an information node");
+            return;
+        }
         eventBus.publish(NETWORK_DISCOVER, masterAddress);
     }
     if (cmd.toInt() == NETWROK_REPORT)

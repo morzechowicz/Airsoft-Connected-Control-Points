@@ -148,7 +148,12 @@ void GameManager::countdownTask(int time)
 
 void GameManager::onGameStarted(Event e)
 {
-
+    if(informationNode){
+        Serial.println("Starting as INFORMATION NODE");
+        InformationModeComp infoComp(eventBus, hardwareManager, networkManager);
+        infoComp.start();
+        return;
+    }
     switch (selectedConfig)
     {
     case KOTH_CONFIG:

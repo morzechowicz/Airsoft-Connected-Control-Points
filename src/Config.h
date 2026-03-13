@@ -51,3 +51,8 @@ extern uint8_t myNodeId;
 #endif
 
 #endif // CONFIG_H
+#define LOCALIZER_BEEP 3000UL;
+#define SCORING_INTERVAL_MS 60000UL;
+
+
+bool informationNode = true; // This node is used to display information about the game and is not a player

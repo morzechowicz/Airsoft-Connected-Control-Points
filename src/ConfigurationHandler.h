@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "EventBus.h"
 #include "Protocol.h"
+#include "Config.h"
 
 class ConfigurationHandler
 {

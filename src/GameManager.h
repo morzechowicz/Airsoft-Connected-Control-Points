@@ -6,6 +6,7 @@
 #include "GameComponents/KOTH/KOTHClient.h"
 #include "GameComponents/FLAG/FLAGServer.h"
 #include "GameComponents/FLAG/FLAGClient.h"
+#include "GameComponents/InformationModeComp.h"
 #include "Config.h"
 #include "EventBus.h"
 #include "Hardware/HardwareManager.h"
