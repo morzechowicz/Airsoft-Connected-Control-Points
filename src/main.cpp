@@ -17,18 +17,9 @@ GameManager gameManager(&eventBus, &hardware, &network);
 BLEServer *pServer;
 BLECharacteristic *pCharacteristic;
 
-void powerResetCallback(Event e)
-{
-    if (e.data1)
-    {
-        Serial.println("Sending Restart order");
-        String msg = Protocol::buildPowerResetMsg();
-        Serial.println(msg);
-        network.broadcast(msg);
-    }
-    Serial.println("Restarting this device");
-    vTaskDelay(2000);
-    ESP.restart();
+void powerResetCallback(Event e) {
+    if (e.data1) network.broadcastReset();  // tell the network first
+    hardware.reboot();                       // then go down yourself
 }
 
 void setup()
