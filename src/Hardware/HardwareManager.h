@@ -25,6 +25,7 @@ public:
 
     HardwareManager(EventBus *eventBus);
     void update();
+    void reboot();
 };
 
 #endif // HARDWAREMANAGER_H
