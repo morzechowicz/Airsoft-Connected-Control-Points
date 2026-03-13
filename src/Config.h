@@ -1,3 +1,7 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+#include <Arduino.h>
+
 //hardware configuration
 #define BUTTON_BLUE_PIN 4
 #define BUTTON_YELLOW_PIN 0
@@ -35,5 +39,15 @@
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
 //others
-#define LOCALIZER_BEEP 3000UL;
-#define SCORING_INTERVAL_MS 60000UL;
+#define LOCALIZER_BEEP 3000UL
+#define SCORING_INTERVAL_MS 60000UL
+
+
+#ifdef LORA_ADDRESS
+extern uint8_t myNodeId;  
+#else
+#define LORA_ADDRESS 0x09
+#pragma message "Compiling for unknown"
+#endif
+
+#endif // CONFIG_H

@@ -21,3 +21,8 @@ void HardwareManager::update()
     buttonEnter.update();
 
 }
+
+void HardwareManager::reboot() {
+    vTaskDelay(2000);
+    ESP.restart();
+}

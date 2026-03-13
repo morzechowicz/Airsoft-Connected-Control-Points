@@ -39,6 +39,7 @@ public:
    
     static void handleReceived(const ReceivedPacket& packet);  
     void networkDiscoverCallback(Event e);
+    void broadcastReset();
 private:
     void onPacketReceived(const ReceivedPacket& packet);
 

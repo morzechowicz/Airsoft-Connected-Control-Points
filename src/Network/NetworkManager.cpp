@@ -135,6 +135,11 @@ void NetworkManager::networkDiscoverCallback(Event e)
     }
 }
 
+void NetworkManager::broadcastReset() {
+    String msg = Protocol::buildPowerResetMsg();
+    broadcast(msg);
+}
+
 void NetworkManager::onPacketReceived(const ReceivedPacket &packet)
 {
     Message msg;
