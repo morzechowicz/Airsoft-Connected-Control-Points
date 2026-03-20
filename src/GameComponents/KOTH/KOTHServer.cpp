@@ -201,7 +201,7 @@ void KOTHServer::updateScore()
     {
         broadcastScoreUpdate();
     }
-    eventBus->publish(KOTH_SCORE_UPDATE, score.yellowPoints, score.bluePoints);
+    eventBus->publish(KOTH_SCORE_UPDATE, scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes);
 }
 
 void KOTHServer::broadcastScoreUpdate()
