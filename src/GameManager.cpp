@@ -1,6 +1,6 @@
 #include "GameManager.h"
 
-GameManager* GameManager::instance = nullptr;
+GameManager *GameManager::instance = nullptr;
 
 void GameManager::onConfigureFlag(Event e)
 {
@@ -96,13 +96,18 @@ void GameManager::startCountdownTask(int countdown)
             vTaskDelay(pdMS_TO_TICKS(100)); // Give scheduler time to clean up
         }
     }
-    struct TaskParams { GameManager* mgr; int countdown; };
+    struct TaskParams
+    {
+        GameManager *mgr;
+        int countdown;
+    };
 
-    auto* params = new TaskParams{ this, countdown };
+    auto *params = new TaskParams{this, countdown};
     // Create new task
     xTaskCreate(
-        [](void* param) {
-            auto* p = static_cast<TaskParams*>(param);
+        [](void *param)
+        {
+            auto *p = static_cast<TaskParams *>(param);
             p->mgr->countdownTask(p->countdown);
             delete p;
             vTaskDelete(NULL);
@@ -148,7 +153,8 @@ void GameManager::countdownTask(int time)
 
 void GameManager::onGameStarted(Event e)
 {
-    if(informationNode){
+    if (informationNode)
+    {
         Serial.println("Starting as INFORMATION NODE");
         InformationModeComp infoComp(eventBus, hardwareManager, networkManager);
         infoComp.start();
@@ -193,22 +199,37 @@ void GameManager::onDiscover(Event e)
     networkManager->broadcast(msg);
 }
 
-
-void GameManager::update() {
-    if (kothClient) {
+void GameManager::update()
+{
+    if (kothClient)
+    {
         kothClient->update();
-        if (kothClient->getDeleteThis()) {
-            delete kothClient;        
+        if (kothClient->getDeleteThis())
+        {
+            delete kothClient;
             kothClient = nullptr;
             hardwareManager->ledBlueButton.off();
             hardwareManager->ledYellowButton.off();
         }
     }
-    if (flagClient) {
+    if (flagClient)
+    {
         flagClient->update();
-        if (flagClient->getDeleteThis()) {
+        if (flagClient->getDeleteThis())
+        {
             delete flagClient;
             flagClient = nullptr;
+            hardwareManager->ledBlueButton.off();
+            hardwareManager->ledYellowButton.off();
+        }
+    }
+    if (informationNode)
+    {
+        informationNode->update();
+        if (informationNode->getDeleteThis())
+        {
+            delete informationNode;
+            informationNode = nullptr;
             hardwareManager->ledBlueButton.off();
             hardwareManager->ledYellowButton.off();
         }

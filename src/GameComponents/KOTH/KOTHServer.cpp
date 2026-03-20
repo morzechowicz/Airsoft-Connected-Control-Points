@@ -206,7 +206,7 @@ void KOTHServer::updateScore()
 
 void KOTHServer::broadcastScoreUpdate()
 {
-    String msg = Protocol::buildScoreUpdateMessage(score.yellowPoints, score.bluePoints);
+    String msg = Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes);
 
     if (networkManager)
     {

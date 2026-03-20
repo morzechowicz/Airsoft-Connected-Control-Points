@@ -132,9 +132,20 @@ void ConfigurationHandler::handleGameMessage(const String &cmd, const String par
     }
     case KOTH_SCORE_UPDATE:
     {
-        uint16_t teamYPoints = (uint16_t)Protocol::parseIntParam(params[1], 0);
-        uint16_t teamBPoints = (uint16_t)Protocol::parseIntParam(params[2], 0);
-        eventBus.publish(KOTH_SCORE_UPDATE, teamYPoints, teamBPoints);
+        int time = Protocol::parseIntParam(params[1], 0);
+        int teamYPoints = Protocol::parseIntParam(params[2], 0);
+        int teamBPoints = Protocol::parseIntParam(params[3], 0);
+        int pairs = Protocol::parseIntParam(params[4], 0);
+        NodeState nodeState[10];
+        for (uint16_t i = 0; i < pairs && i < 10; i++)
+        {
+            uint8_t nodeId = (uint8_t)Protocol::parseIntParam(params[5 + i * 2], 0);
+            uint8_t controllingTeam = (uint8_t)Protocol::parseIntParam(params[6 + i * 2], 0);
+            nodeState[i].nodeId = nodeId;
+            nodeState[i].controllingTeam = (Team)controllingTeam;
+        }        
+
+        eventBus.publish(KOTH_SCORE_UPDATE, time, teamYPoints, teamBPoints, pairs, nodeState);
         break;
     }
     case GAME_OVER_INTERUPT:

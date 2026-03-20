@@ -30,6 +30,8 @@ private:
     FLAGServer *flagServer = nullptr;
     FLAGClient *flagClient = nullptr;
 
+    InformationModeComp *informationNode = nullptr;
+
     bool isMaster = false;
 
     EventType selectedConfig = CONF;

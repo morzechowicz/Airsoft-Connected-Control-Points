@@ -15,6 +15,7 @@ public:
     void stop();
     void update();
 
+    bool getDeleteThis() { return deleteThis; };
 private:
     EventBus* eventBus;
     HardwareManager* hardware;
@@ -25,8 +26,15 @@ private:
     bool gamePaused = false;
     
     KOTHGameScore lastKnownScore;
+    int nodeCount = 0;
+    NodeState lastKnownNodeStates[10];
+    int gameTime = 0;
 
     void updateDisplay();
+    void handleGameOver(Team winner);
+    void onButtonPressed(Event e);
+    void onButtonReleased(Event e);
+    void onNetworkMessage(Event e);
 
 };
 #endif // INFORMATION_MODE_COMP_H

@@ -1,6 +1,9 @@
 #ifndef EVENT_TYPE_H
 #define EVENT_TYPE_H
 
+#include <Arduino.h>
+#include "GameComponents/KOTH/KOTHTypes.h"
+
 enum EventType
 {
     // Hardware
@@ -65,6 +68,7 @@ struct Event
     int data3;
     int data4;
     int data5;
+    NodeState teamPoints[10];
 };
 
 #endif // EVENT_TYPE_H
