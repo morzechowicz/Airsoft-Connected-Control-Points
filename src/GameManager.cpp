@@ -82,34 +82,31 @@ void GameManager::startCountdownTask(int countdown)
         Serial.println("already running aborting");
         return;
     }
-    // Kill existing task if running
+
+    // Delete previous task if still somehow alive
     if (countdownHandler != nullptr)
     {
-        TaskHandle_t oldHandle = countdownHandler;
-        countdownHandler = nullptr; // Clear first!
-
-        if (eTaskGetState(oldHandle) != eDeleted)
-        {
-            Serial.print("Deleting old task: ");
-            Serial.println((uint32_t)oldHandle, HEX);
-            vTaskDelete(oldHandle);
-            vTaskDelay(pdMS_TO_TICKS(100)); // Give scheduler time to clean up
-        }
+        vTaskDelete(countdownHandler);
+        countdownHandler = nullptr;
     }
-    struct TaskParams
-    {
-        GameManager *mgr;
-        int countdown;
-    };
 
-    auto *params = new TaskParams{this, countdown};
-    // Create new task
+    // Heap-allocate so each invocation gets its own params
+    struct TaskParams { GameManager* mgr; int countdown; };
+    auto* params = new TaskParams{ this, countdown };
+
     xTaskCreate(
-        [](void *param)
+        [](void* param)
         {
-            auto *p = static_cast<TaskParams *>(param);
-            p->mgr->countdownTask(p->countdown);
-            delete p;
+            auto* p = static_cast<TaskParams*>(param);
+            GameManager* mgr = p->mgr;
+            int cd = p->countdown;
+
+            delete p; // free immediately, before doing any work
+
+            mgr->countdownTask(cd);
+
+            // Clear the handle on the manager before self-deleting
+            mgr->countdownHandler = nullptr;
             vTaskDelete(NULL);
         },
         "CountdownTask", 2048, params, 1, &countdownHandler);
