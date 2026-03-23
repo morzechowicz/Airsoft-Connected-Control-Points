@@ -9,7 +9,7 @@
 class InformationModeComp
 {
 public:
-    InformationModeComp(EventBus* eventBus, HardwareManager* hardware, NetworkManager* network);
+    InformationModeComp(EventBus* eventBus, HardwareManager* hardware, NetworkManager* network, KOTHConfig config);
     
     void start();
     void stop();
@@ -25,10 +25,12 @@ private:
     bool gameActive;
     bool gamePaused = false;
     
+    KOTHConfig config;
     KOTHGameScore lastKnownScore;
     int nodeCount = 0;
     NodeState lastKnownNodeStates[10];
     int gameTime = 0;
+    int gameMaxTime = 0;
 
     void updateDisplay();
     void handleGameOver(Team winner);

@@ -69,6 +69,7 @@ struct Event
     int data4;
     int data5;
     NodeState teamPoints[10];
+    String message;
 };
 
 #endif // EVENT_TYPE_H

@@ -153,8 +153,8 @@ void GameManager::onGameStarted(Event e)
     if (informationNode)
     {
         Serial.println("Starting as INFORMATION NODE");
-        InformationModeComp infoComp(eventBus, hardwareManager, networkManager);
-        infoComp.start();
+        infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
+        infoNode->start();
         return;
     }
     switch (selectedConfig)
@@ -183,6 +183,7 @@ void GameManager::onNewNode(Event e)
     if (!kothConfig.hasNode(e.data1))
     {
         kothConfig.addNode(e.data1);
+        eventBus->publish(DEBUG, SEARCH, "Node" + String(e.data1) + " added \n");
     }
     else
     {
@@ -220,13 +221,13 @@ void GameManager::update()
             hardwareManager->ledYellowButton.off();
         }
     }
-    if (informationNode)
+    if (infoNode)
     {
-        informationNode->update();
-        if (informationNode->getDeleteThis())
+        infoNode->update();
+        if (infoNode->getDeleteThis())
         {
-            delete informationNode;
-            informationNode = nullptr;
+            delete infoNode;
+            infoNode = nullptr;
             hardwareManager->ledBlueButton.off();
             hardwareManager->ledYellowButton.off();
         }

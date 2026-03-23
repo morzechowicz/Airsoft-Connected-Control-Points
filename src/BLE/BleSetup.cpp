@@ -2,12 +2,13 @@
 
 void BleSetup::BleStart()
 {
-                // Initialize BLE
+    // Initialize BLE
     Serial.println("Initializing BLE...");
     String deviceName = "LoRaCP_" + String(myNodeId);
     NimBLEDevice::init(deviceName.c_str());
     pServer = NimBLEDevice::createServer();
-    pServer->setCallbacks(new BleServer());
+    bleServer = new BleServer();
+    pServer->setCallbacks(bleServer);
 
     // Create BLE Service
     BLEService *pService = pServer->createService(SERVICE_UUID);
@@ -33,4 +34,12 @@ void BleSetup::BleStart()
 
 BleSetup::~BleSetup()
 {
+}
+
+void BleSetup::sendMessage(const String& message)
+{
+    if (pCharacteristic) {
+        pCharacteristic->setValue(message.c_str());
+        pCharacteristic->notify();
+    }
 }

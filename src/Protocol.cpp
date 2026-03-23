@@ -108,7 +108,7 @@ String Protocol::buildScoreUpdateMessage(uint16_t time, uint16_t teamYPoints, ui
 
     for (uint16_t i = 0; i < pairs && i < 10; i++)
     {
-        buffer += String(teamPoints[i].nodeId) + ",";
+        buffer += String(teamPoints[i].nodeId) + ";";
         buffer += String((int)teamPoints[i].controllingTeam) + ";";
     }
 

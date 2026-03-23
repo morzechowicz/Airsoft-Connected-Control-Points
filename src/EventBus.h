@@ -40,7 +40,8 @@ public:
                  int data3,
                  int len,
                  NodeState teamPoints[10]);
-
+    
+    void publish(EventType eventName, int data1, String msg);
     void processEvents();
 };
 

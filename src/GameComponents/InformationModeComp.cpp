@@ -1,14 +1,17 @@
 #include "InformationModeComp.h"
 
-InformationModeComp::InformationModeComp(EventBus *eventBus, HardwareManager *hardware, NetworkManager *network) : eventBus(eventBus),
-                                                                                                                   hardware(hardware),
-                                                                                                                   network(network)
+InformationModeComp::InformationModeComp(EventBus *eventBus, HardwareManager *hardware, NetworkManager *network, KOTHConfig config) : eventBus(eventBus),
+                                                                                                                                   hardware(hardware),
+                                                                                                                                   network(network),
+                                                                                                                                   config(config)
 {
 }
 
 void InformationModeComp::start()
 {
     Serial.println("Starting Information Mode Component");
+    gameActive = true;
+
     // Subscribe to game events
     eventBus->subscribe(GAME_OVER, [this](Event e)
                         {
@@ -55,20 +58,22 @@ void InformationModeComp::updateDisplay()
     if (!hardware)
     {
         return;
-    }
+    }   
+    hardware->lcd.clearScreen();
 
     if (gameActive)
     {
-        hardware->lcd.displayText(("TIME: " + String(gameTime) + "s").c_str(), 0);
-        hardware->lcd.displayText(("Y: " + String(lastKnownScore.yellowPoints) + " B: " + String(lastKnownScore.bluePoints)).c_str(), 1);
-        hardware->lcd.displayText(("CP 3: " + String(lastKnownNodeStates[1].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[1].controllingTeam == Team::BLUE ? "B"
-                                                                                                                                                                         : "N"))
-                                      .c_str(),
-                                  2);
-        hardware->lcd.displayText(("CP 4: " + String(lastKnownNodeStates[2].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[2].controllingTeam == Team::BLUE ? "B"
-                                                                                                                                                                         : "N"))
-                                      .c_str(),
-                                  3);
+        String timer = "T: " + String(gameTime) + "/" + String(config.gameDurationMinutes);
+        String score = ("Y: " + String(lastKnownScore.yellowPoints) + " B: " + String(lastKnownScore.bluePoints));
+        String node1 = ("CP " + String(lastKnownNodeStates[0].nodeId) + ": " + String(lastKnownNodeStates[0].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[0].controllingTeam == Team::BLUE ? "B"
+                                                                                                                                                                                                          : "N"));
+        String node2 = ("CP " + String(lastKnownNodeStates[1].nodeId) + ": " + String(lastKnownNodeStates[1].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[1].controllingTeam == Team::BLUE ? "B"
+                                                                                                                                                                                                          : "N"));
+        // display on LCD
+        hardware->lcd.displayText(timer.c_str(), 0);
+        hardware->lcd.displayText(score.c_str(), 1);
+        hardware->lcd.displayText(node1.c_str(), 2);
+        hardware->lcd.displayText(node2.c_str(), 3);
     }
 
     if (gamePaused)

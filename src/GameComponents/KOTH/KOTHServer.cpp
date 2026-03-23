@@ -81,9 +81,11 @@ void KOTHServer::enterMode()
         if (networkManager)
         {
             networkManager->broadcast(startMsg);
+            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes));
         }
     }
     Serial.println("KOTH Server ready!");
+    eventBus->publish(DEBUG, KOTH_CONFIG, 0,0, nodeCount, nodes); //change later
 }
 
 void KOTHServer::exitMode()

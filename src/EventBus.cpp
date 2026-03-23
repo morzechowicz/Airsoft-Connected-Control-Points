@@ -65,7 +65,26 @@ void EventBus::publish(EventType eventName, int data1, int data2, int data3, int
     queueTail = nextTail;
 }
 
-void EventBus::processEvents() {
+void EventBus::publish(EventType eventName, int data1, String msg)
+{
+    int nextTail = (queueTail + 1) % QUEUE_SIZE;
+    
+    if (nextTail == queueHead) {
+        // Queue full
+        Serial.println("WARNING: Event queue full!");
+        return;
+    }
+    
+    // Create event with all data
+    eventQueue[queueTail].type = eventName;
+    eventQueue[queueTail].data1 = data1;
+    eventQueue[queueTail].message = msg;
+    
+    queueTail = nextTail;
+}
+
+void EventBus::processEvents()
+{
     while (queueHead != queueTail) {
         Event currentEvent = eventQueue[queueHead];
         queueHead = (queueHead + 1) % QUEUE_SIZE;

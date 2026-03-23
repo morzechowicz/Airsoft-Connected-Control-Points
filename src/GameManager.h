@@ -30,7 +30,7 @@ private:
     FLAGServer *flagServer = nullptr;
     FLAGClient *flagClient = nullptr;
 
-    InformationModeComp *informationNode = nullptr;
+    InformationModeComp *infoNode = nullptr;
 
     bool isMaster = false;
 

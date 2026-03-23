@@ -136,13 +136,11 @@ void ConfigurationHandler::handleGameMessage(const String &cmd, const String par
         int teamYPoints = Protocol::parseIntParam(params[2], 0);
         int teamBPoints = Protocol::parseIntParam(params[3], 0);
         int pairs = Protocol::parseIntParam(params[4], 0);
-        NodeState nodeState[10];
-        for (uint16_t i = 0; i < pairs && i < 10; i++)
+
+        for (int i = 0; i < pairs; i++)
         {
-            uint8_t nodeId = (uint8_t)Protocol::parseIntParam(params[5 + i * 2], 0);
-            uint8_t controllingTeam = (uint8_t)Protocol::parseIntParam(params[6 + i * 2], 0);
-            nodeState[i].nodeId = nodeId;
-            nodeState[i].controllingTeam = (Team)controllingTeam;
+            nodeState[i].nodeId = Protocol::parseIntParam(params[5 + i * 2], 0);
+            nodeState[i].controllingTeam = (Team)Protocol::parseIntParam(params[5 + i * 2 + 1], 0);
         }        
 
         eventBus.publish(KOTH_SCORE_UPDATE, time, teamYPoints, teamBPoints, pairs, nodeState);
