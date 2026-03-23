@@ -29,10 +29,10 @@
 // Radio parameters
 // #define LORA_ADDRESS 0x02
 #define LORA_FREQUENCY 433.200
-#define LORA_TX_POWER 5
+#define LORA_TX_POWER 8
 #define LORA_SPREADING_FACTOR 7
 #define LORA_SIGNAL_BANDWIDTH 250.0
-#define LORA_CODING_RATE 7
+#define LORA_CODING_RATE 5
 
 //ble configuration
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
