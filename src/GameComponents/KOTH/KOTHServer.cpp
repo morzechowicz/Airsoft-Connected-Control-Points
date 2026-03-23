@@ -107,9 +107,9 @@ void KOTHServer::run()
             // Update score at intervals
             if (millis() - lastUpdate >= config.scoreIntervalMs)
             {
-                updateScore();
                 lastUpdate = millis();
                 scoringInterval++;
+                updateScore();
             }
 
             // Check win conditions
