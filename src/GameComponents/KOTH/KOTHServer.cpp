@@ -175,6 +175,14 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
     Serial.print(nodeId);
     Serial.print(" captured by ");
     Serial.println(team == Team::YELLOW ? "YELLOW" : "BLUE");
+    // Broadcast capture event
+    if(!config.singleNodeMode)
+    {
+        if (networkManager)
+        {
+            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes));
+        }
+    }
 }
 
 void KOTHServer::updateScore()
