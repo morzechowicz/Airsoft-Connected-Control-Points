@@ -67,6 +67,7 @@ void GameManager::onConfKoth(Event e)
 void GameManager::onConfigKothFromMaster(Event e)
 {
     kothConfig.maxPoints = e.data3;
+    kothConfig.gameDurationMinutes = e.data2;
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
     kothConfig.captureTime = e.data4;
     int countdown = e.data1;
