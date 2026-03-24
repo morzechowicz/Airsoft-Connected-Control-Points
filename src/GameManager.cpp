@@ -207,6 +207,8 @@ void GameManager::onDiscoverRequest(Event e)
 void GameManager::onDiscovered(Event e)
 {
     String msg = "CONNECTED: " + String(e.data1);
+    hardwareManager->buzzer.beep(200, 2, 200);
+    hardwareManager->lcd.clearScreen();
     hardwareManager->lcd.displayText(msg.c_str(), 1);
 }
 
