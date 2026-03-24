@@ -71,15 +71,21 @@ void InformationModeComp::updateDisplay()
     {
         String timer = "T: " + String(gameTime) + "/" + String(config.gameDurationMinutes);
         String score = ("Y: " + String(lastKnownScore.yellowPoints) + " B: " + String(lastKnownScore.bluePoints));
-        String node1 = ("CP " + String(lastKnownNodeStates[0].nodeId) + ": " + String(lastKnownNodeStates[0].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[0].controllingTeam == Team::BLUE ? "B"
-                                                                                                                                                                                                          : "N"));
-        String node2 = ("CP " + String(lastKnownNodeStates[1].nodeId) + ": " + String(lastKnownNodeStates[1].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[1].controllingTeam == Team::BLUE ? "B"
-                                                                                                                                                                                                          : "N"));
+        // String node1 = ("CP " + String(lastKnownNodeStates[0].nodeId) + ": " + String(lastKnownNodeStates[0].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[0].controllingTeam == Team::BLUE ? "B"
+        //                                                                                                                                                                                                   : "N"));
+        // String node2 = ("CP " + String(lastKnownNodeStates[1].nodeId) + ": " + String(lastKnownNodeStates[1].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[1].controllingTeam == Team::BLUE ? "B"
+        //                                                                                                                                                                                                   : "N"));
+
+        // Usage
+        
+        String line1 = buildRow(0, 4, nodeCount); // "P1:Y P2:B P3:N"
+        String line2 = buildRow(4, 4, nodeCount); // "" (empty string)
         // display on LCD
+
         hardware->lcd.displayText(timer.c_str(), 0);
         hardware->lcd.displayText(score.c_str(), 1);
-        hardware->lcd.displayText(node1.c_str(), 2);
-        hardware->lcd.displayText(node2.c_str(), 3);
+        hardware->lcd.displayText(line1.c_str(), 2);
+        hardware->lcd.displayText(line2.c_str(), 3);
     }
 
     if (gamePaused)
@@ -130,4 +136,16 @@ void InformationModeComp::resumeGame(Event e)
     gamePaused = false;
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
+}
+
+String InformationModeComp::buildRow(int startIdx, int count, int totalNodes)
+{
+    String row = "";
+    for (int i = startIdx; i < startIdx + count && i < totalNodes; i++)
+    {
+        if (i > startIdx)
+            row += " ";
+        row += "P" + String(lastKnownNodeStates[i].nodeId) + ":" + teamChar(lastKnownNodeStates[i].controllingTeam);
+    }
+    return row;
 }

@@ -25,6 +25,14 @@ private:
     bool gameActive;
     bool gamePaused = false;
     
+    const char teamChar(Team t) {
+    switch(t) {
+        case Team::YELLOW: return 'Y';
+        case Team::BLUE:   return 'B';
+        default:           return 'N';
+    }
+}
+
     KOTHConfig config;
     KOTHGameScore lastKnownScore;
     int nodeCount = 0;
@@ -40,5 +48,6 @@ private:
 
     void pauseGame(Event e);
     void resumeGame(Event e);
+    String buildRow(int startIdx, int count, int totalNodes);
 };
 #endif // INFORMATION_MODE_COMP_H
