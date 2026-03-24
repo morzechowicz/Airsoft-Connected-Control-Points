@@ -56,6 +56,11 @@ void ConfigurationHandler::handleSystemMessage(const String &cmd, const String p
         Serial.print(params[1]);
         Serial.println("");
         uint8_t masterAddress = params[1].toInt();
+        // If this is an information node, we do not want to respond to discovery messages
+        if(informationNode){
+            Serial.println("Not sending response because this is an information node");
+            return;
+        }
         eventBus.publish(NETWORK_DISCOVER, masterAddress);
     }
     if (cmd.toInt() == NETWROK_REPORT)
@@ -127,9 +132,18 @@ void ConfigurationHandler::handleGameMessage(const String &cmd, const String par
     }
     case KOTH_SCORE_UPDATE:
     {
-        uint16_t teamYPoints = (uint16_t)Protocol::parseIntParam(params[1], 0);
-        uint16_t teamBPoints = (uint16_t)Protocol::parseIntParam(params[2], 0);
-        eventBus.publish(KOTH_SCORE_UPDATE, teamYPoints, teamBPoints);
+        int time = Protocol::parseIntParam(params[1], 0);
+        int teamYPoints = Protocol::parseIntParam(params[2], 0);
+        int teamBPoints = Protocol::parseIntParam(params[3], 0);
+        int pairs = Protocol::parseIntParam(params[4], 0);
+
+        for (int i = 0; i < pairs; i++)
+        {
+            nodeState[i].nodeId = Protocol::parseIntParam(params[5 + i * 2], 0);
+            nodeState[i].controllingTeam = (Team)Protocol::parseIntParam(params[5 + i * 2 + 1], 0);
+        }        
+
+        eventBus.publish(KOTH_SCORE_UPDATE, time, teamYPoints, teamBPoints, pairs, nodeState);
         break;
     }
     case GAME_OVER_INTERUPT:

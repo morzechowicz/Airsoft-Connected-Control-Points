@@ -15,3 +15,10 @@ void BleServer::onDisconnect(BLEServer *pServer, NimBLEConnInfo &connInfo, int r
         Serial.println("Device disconnected");
         pServer->startAdvertising();  // Restart advertising
 }
+
+void BleServer::sendMessage(const String& message) {
+    if (deviceConnected && pCharacteristic) {
+        pCharacteristic->setValue(message.c_str());
+        pCharacteristic->notify();
+    }
+}

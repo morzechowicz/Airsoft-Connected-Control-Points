@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "EventBus.h"
 #include "Protocol.h"
+#include "Config.h"
 
 class ConfigurationHandler
 {
@@ -25,6 +26,8 @@ private:
     String lastResult;
     bool lastSuccess;
     
+    NodeState nodeState[10];
+
     // Individual command handlers
     void handleSystemMessage(const String& cmd, const String params[], int paramCount);
     void handleConfigurationMessage(const String& cmd, const String params[], int paramCount);

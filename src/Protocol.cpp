@@ -96,13 +96,22 @@ String Protocol::buildCaptureMessage(uint8_t nodeId, uint8_t teamId)
     return buffer;
 }
 
-String Protocol::buildScoreUpdateMessage(uint16_t teamYPoints, uint16_t teamBPoints)
+String Protocol::buildScoreUpdateMessage(uint16_t time, uint16_t teamYPoints, uint16_t teamBPoints, uint16_t pairs, NodeState teamPoints[10])
 {
     String buffer;
     buffer = String(GAME) + ";";
     buffer += String(KOTH_SCORE_UPDATE) + ";";
+    buffer += String(time) + ";";
     buffer += String(teamYPoints) + ";";
-    buffer += String(teamBPoints);
+    buffer += String(teamBPoints) + ";";
+    buffer += String(pairs) + ";";
+
+    for (uint16_t i = 0; i < pairs && i < 10; i++)
+    {
+        buffer += String(teamPoints[i].nodeId) + ";";
+        buffer += String((int)teamPoints[i].controllingTeam) + ";";
+    }
+
     return buffer;
 }
 

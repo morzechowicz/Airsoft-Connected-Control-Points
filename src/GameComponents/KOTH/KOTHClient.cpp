@@ -77,8 +77,8 @@ void KOTHClient::start()
     // Subscribe to score updates
     eventBus->subscribe(KOTH_SCORE_UPDATE, [this](Event e)
                         {
-        lastKnownScore.yellowPoints = e.data1;
-        lastKnownScore.bluePoints = e.data2;
+        lastKnownScore.yellowPoints = e.data2;
+        lastKnownScore.bluePoints = e.data3;
         updateDisplay(); });
 
     updateDisplay();

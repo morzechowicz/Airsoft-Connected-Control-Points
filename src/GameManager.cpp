@@ -1,6 +1,6 @@
 #include "GameManager.h"
 
-GameManager* GameManager::instance = nullptr;
+GameManager *GameManager::instance = nullptr;
 
 void GameManager::onConfigureFlag(Event e)
 {
@@ -67,6 +67,7 @@ void GameManager::onConfKoth(Event e)
 void GameManager::onConfigKothFromMaster(Event e)
 {
     kothConfig.maxPoints = e.data3;
+    kothConfig.gameDurationMinutes = e.data2;
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
     kothConfig.captureTime = e.data4;
     int countdown = e.data1;
@@ -150,7 +151,13 @@ void GameManager::countdownTask(int time)
 
 void GameManager::onGameStarted(Event e)
 {
-
+    if (informationNode)
+    {
+        Serial.println("Starting as INFORMATION NODE");
+        infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
+        infoNode->start();
+        return;
+    }
     switch (selectedConfig)
     {
     case KOTH_CONFIG:
@@ -177,6 +184,7 @@ void GameManager::onNewNode(Event e)
     if (!kothConfig.hasNode(e.data1))
     {
         kothConfig.addNode(e.data1);
+        eventBus->publish(DEBUG, SEARCH, "Node" + String(e.data1) + " added \n");
     }
     else
     {
@@ -190,22 +198,37 @@ void GameManager::onDiscover(Event e)
     networkManager->broadcast(msg);
 }
 
-
-void GameManager::update() {
-    if (kothClient) {
+void GameManager::update()
+{
+    if (kothClient)
+    {
         kothClient->update();
-        if (kothClient->getDeleteThis()) {
-            delete kothClient;        
+        if (kothClient->getDeleteThis())
+        {
+            delete kothClient;
             kothClient = nullptr;
             hardwareManager->ledBlueButton.off();
             hardwareManager->ledYellowButton.off();
         }
     }
-    if (flagClient) {
+    if (flagClient)
+    {
         flagClient->update();
-        if (flagClient->getDeleteThis()) {
+        if (flagClient->getDeleteThis())
+        {
             delete flagClient;
             flagClient = nullptr;
+            hardwareManager->ledBlueButton.off();
+            hardwareManager->ledYellowButton.off();
+        }
+    }
+    if (infoNode)
+    {
+        infoNode->update();
+        if (infoNode->getDeleteThis())
+        {
+            delete infoNode;
+            infoNode = nullptr;
             hardwareManager->ledBlueButton.off();
             hardwareManager->ledYellowButton.off();
         }

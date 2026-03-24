@@ -5,6 +5,7 @@
 #include <functional>
 #include <vector>
 #include <Arduino.h>
+#include "GameComponents/KOTH/KOTHTypes.h"
 
 class EventBus
 {
@@ -32,7 +33,15 @@ public:
                  int data3 = 0,
                  int data4 = 0,
                  int data5 = 0);
-
+    
+    void publish(EventType eventName,
+                 int data1,
+                 int data2,
+                 int data3,
+                 int len,
+                 NodeState teamPoints[10]);
+    
+    void publish(EventType eventName, int data1, String msg);
     void processEvents();
 };
 

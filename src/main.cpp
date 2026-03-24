@@ -57,6 +57,10 @@ void setup()
     hardware.buzzer.createBeepTask();
     hardware.lcd.clearScreen();
     hardware.lcd.displayText("WAITING", 0);
+
+    #ifdef INFORMATION_NODE
+    hardware.lcd.displayText("INF MODE", 1);
+    #endif
 }
 
 void loop()

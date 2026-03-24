@@ -81,9 +81,11 @@ void KOTHServer::enterMode()
         if (networkManager)
         {
             networkManager->broadcast(startMsg);
+            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes));
         }
     }
     Serial.println("KOTH Server ready!");
+    eventBus->publish(DEBUG, KOTH_CONFIG, 0,0, nodeCount, nodes); //change later
 }
 
 void KOTHServer::exitMode()
@@ -105,9 +107,9 @@ void KOTHServer::run()
             // Update score at intervals
             if (millis() - lastUpdate >= config.scoreIntervalMs)
             {
-                updateScore();
                 lastUpdate = millis();
                 scoringInterval++;
+                updateScore();
             }
 
             // Check win conditions
@@ -173,6 +175,14 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
     Serial.print(nodeId);
     Serial.print(" captured by ");
     Serial.println(team == Team::YELLOW ? "YELLOW" : "BLUE");
+    // Broadcast capture event
+    if(!config.singleNodeMode)
+    {
+        if (networkManager)
+        {
+            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes));
+        }
+    }
 }
 
 void KOTHServer::updateScore()
@@ -201,12 +211,12 @@ void KOTHServer::updateScore()
     {
         broadcastScoreUpdate();
     }
-    eventBus->publish(KOTH_SCORE_UPDATE, score.yellowPoints, score.bluePoints);
+    eventBus->publish(KOTH_SCORE_UPDATE, scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes);
 }
 
 void KOTHServer::broadcastScoreUpdate()
 {
-    String msg = Protocol::buildScoreUpdateMessage(score.yellowPoints, score.bluePoints);
+    String msg = Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes);
 
     if (networkManager)
     {

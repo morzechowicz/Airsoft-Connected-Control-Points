@@ -12,6 +12,8 @@ public:
     void onConnect(BLEServer *pServer, NimBLEConnInfo& connInfo) override;
     void onDisconnect(BLEServer *pServer, NimBLEConnInfo& connInfo, int reason) override;
 
+    bool isDeviceConnected() const { return deviceConnected; }
+    void sendMessage(const String& message);
 private:
     BLEServer *pServer;
     BLECharacteristic *pCharacteristic;

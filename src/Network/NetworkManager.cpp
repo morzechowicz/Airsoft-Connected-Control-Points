@@ -65,7 +65,6 @@ void NetworkManager::sendTo(uint8_t address, const String &message)
     }
 }
 
-// NetworkManager.cpp
 bool NetworkManager::sendToAll(const std::vector<uint8_t>& addresses, const String& message)
 {
     if (!networkReady) return false;
@@ -115,6 +114,17 @@ bool NetworkManager::sendToAll(const std::vector<uint8_t>& addresses, const Stri
     return false;
 }
 
+void NetworkManager::sendToUnreliable(uint8_t address, const String &message)
+{
+    if (networkReady)
+    {
+        char msg[120];
+        snprintf(msg, sizeof(msg), "%s", message.c_str());
+
+        SComm.sendUnreliable(address, (uint8_t *)msg, strlen(msg));
+    }
+}
+
 void NetworkManager::handleReceived(const ReceivedPacket &packet)
 {
     if (s_instance)
@@ -144,10 +154,8 @@ void NetworkManager::onPacketReceived(const ReceivedPacket &packet)
 {
     Message msg;
     msg = Protocol::parse((const char *)packet.data, packet.dataLen);
-    Serial.println("msg content");
-    Serial.println(msg.type);
-    Serial.println(msg.paramCount);
-    Serial.println("msg content");
+    Serial.print("msg content ");
+    Serial.println((const char *)packet.data);
     bool result = confHandler.handleCommand(msg);
     if (!result)
     {
