@@ -73,17 +73,10 @@ void InformationModeComp::updateDisplay()
     {
         String timer = "T: " + String(gameTime) + "/" + String(config.gameDurationMinutes);
         String score = ("Y: " + String(lastKnownScore.yellowPoints) + " B: " + String(lastKnownScore.bluePoints));
-        // String node1 = ("CP " + String(lastKnownNodeStates[0].nodeId) + ": " + String(lastKnownNodeStates[0].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[0].controllingTeam == Team::BLUE ? "B"
-        //                                                                                                                                                                                                   : "N"));
-        // String node2 = ("CP " + String(lastKnownNodeStates[1].nodeId) + ": " + String(lastKnownNodeStates[1].controllingTeam == Team::YELLOW ? "Y" : lastKnownNodeStates[1].controllingTeam == Team::BLUE ? "B"
-        //                                                                                                                                                                                                   : "N"));
+        String line1 = buildRow(0, 4, nodeCount);
+        String line2 = buildRow(4, 4, nodeCount);
 
-        // Usage
-        
-        String line1 = buildRow(0, 4, nodeCount); // "P1:Y P2:B P3:N"
-        String line2 = buildRow(4, 4, nodeCount); // "" (empty string)
         // display on LCD
-
         hardware->lcd.displayText(timer.c_str(), 0);
         hardware->lcd.displayText(score.c_str(), 1);
         hardware->lcd.displayText(line1.c_str(), 2);
