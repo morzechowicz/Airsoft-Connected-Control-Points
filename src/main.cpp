@@ -40,8 +40,10 @@ void setup()
 
     GameManager::instance = &gameManager;
 
+    eventBus.subscribe(NETWORK_DISCOVER, [](Event e)
+                       { GameManager::instance->onDiscovered(e); });
     eventBus.subscribe(SEARCH, [](Event e)
-                       { GameManager::instance->onDiscover(e); });
+                       { GameManager::instance->onDiscoverRequest(e); });
     eventBus.subscribe(NETWROK_REPORT, [](Event e)
                        { GameManager::instance->onNewNode(e); });
     eventBus.subscribe(GAME_STARTED, [](Event e)

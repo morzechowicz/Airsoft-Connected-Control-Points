@@ -49,7 +49,8 @@ public:
     void onConfigKothFromMaster(Event e);
     void onConfKoth(Event e);
     void onConfigureFlag(Event e);
-    void onDiscover(Event e);
+    void onDiscoverRequest(Event e);
+    void onDiscovered(Event e);
     void update();
 
     void countdownTask(int time);

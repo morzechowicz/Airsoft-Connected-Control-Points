@@ -185,6 +185,12 @@ void GameManager::onNewNode(Event e)
     {
         kothConfig.addNode(e.data1);
         eventBus->publish(DEBUG, SEARCH, "Node" + String(e.data1) + " added \n");
+        String nodes = "";
+        for (int i = 0; i < kothConfig.nodeCount; i++)
+        {
+            nodes += "N" + String(kothConfig.nodeIds[i]);
+        }
+        hardwareManager->lcd.displayText(nodes.c_str(), 1);
     }
     else
     {
@@ -192,10 +198,16 @@ void GameManager::onNewNode(Event e)
     }
 }
 
-void GameManager::onDiscover(Event e)
+void GameManager::onDiscoverRequest(Event e)
 {
     String msg = Protocol::buildDiscoverRequest();
     networkManager->broadcast(msg);
+}
+
+void GameManager::onDiscovered(Event e)
+{
+    String msg = "CONNECTED: " + String(e.data1);
+    hardwareManager->lcd.displayText(msg.c_str(), 1);
 }
 
 void GameManager::update()
