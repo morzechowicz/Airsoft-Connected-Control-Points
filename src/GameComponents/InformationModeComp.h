@@ -38,5 +38,7 @@ private:
     void onButtonReleased(Event e);
     void onNetworkMessage(Event e);
 
+    void pauseGame(Event e);
+    void resumeGame(Event e);
 };
 #endif // INFORMATION_MODE_COMP_H

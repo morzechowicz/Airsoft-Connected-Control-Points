@@ -1,9 +1,9 @@
 #include "InformationModeComp.h"
 
 InformationModeComp::InformationModeComp(EventBus *eventBus, HardwareManager *hardware, NetworkManager *network, KOTHConfig config) : eventBus(eventBus),
-                                                                                                                                   hardware(hardware),
-                                                                                                                                   network(network),
-                                                                                                                                   config(config)
+                                                                                                                                      hardware(hardware),
+                                                                                                                                      network(network),
+                                                                                                                                      config(config)
 {
 }
 
@@ -11,6 +11,12 @@ void InformationModeComp::start()
 {
     Serial.println("Starting Information Mode Component");
     gameActive = true;
+
+    // Subscribe to game pause/resume events
+    eventBus->subscribe(PAUSE, [this](Event e)
+                        { pauseGame(e); });
+    eventBus->subscribe(RESUME, [this](Event e)
+                        { resumeGame(e); });
 
     // Subscribe to game events
     eventBus->subscribe(GAME_OVER, [this](Event e)
@@ -58,7 +64,7 @@ void InformationModeComp::updateDisplay()
     if (!hardware)
     {
         return;
-    }   
+    }
     hardware->lcd.clearScreen();
 
     if (gameActive)
@@ -110,4 +116,18 @@ void InformationModeComp::onButtonReleased(Event e)
 
 void InformationModeComp::onNetworkMessage(Event e)
 {
+}
+
+void InformationModeComp::pauseGame(Event e)
+{
+    gamePaused = true;
+    hardware->buzzer.beep(2000, 2, 1000);
+    updateDisplay();
+}
+
+void InformationModeComp::resumeGame(Event e)
+{
+    gamePaused = false;
+    hardware->buzzer.beepOnce(4000);
+    updateDisplay();
 }
