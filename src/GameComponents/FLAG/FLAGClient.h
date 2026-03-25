@@ -7,6 +7,7 @@
 #include "Network/NetworkManager.h"
 #include "FLAGTypes.h"
 #include "Protocol.h"
+#include "../lib/Logging/LogManager.h"
 
 class FLAGClient
 {

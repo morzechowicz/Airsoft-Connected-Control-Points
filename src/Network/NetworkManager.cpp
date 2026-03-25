@@ -32,9 +32,7 @@ void NetworkManager::setAsClient(uint8_t addres)
 
 void NetworkManager::sendToMaster(const String &message)
 {
-    Serial.print("[NETWORK] ");
-    Serial.print(masterAddress);
-    Serial.println(" Sending message to master");
+    LOG_INFO("NETWORK", "Sending message to master (0x%02X)", masterAddress);
 
     if (networkReady && role == ROLE_CLIENT)
     {
@@ -101,14 +99,14 @@ bool NetworkManager::sendToAll(const std::vector<uint8_t>& addresses, const Stri
     vEventGroupDelete(ackEvents);
 
     if ((result & expectedBits) == expectedBits) {
-        Serial.println("[NETWORK] All nodes confirmed");
+        LOG_INFO("NETWORK", "All nodes confirmed");
         return true;
     }
 
     // Log exactly who failed
     for (int i = 0; i < addresses.size(); i++) {
         if (!(result & (1 << i))) {
-            Serial.printf("[NETWORK] Node 0x%02X did not ACK\n", addresses[i]);
+            LOG_ERROR("NETWORK", "Node 0x%02X did not ACK", addresses[i]);
         }
     }
     return false;
@@ -139,8 +137,7 @@ void NetworkManager::networkDiscoverCallback(Event e)
     {
         s_instance->setAsClient(e.data1);
         String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
-        Serial.print("respondindg with: ");
-        Serial.println(response);
+        LOG_INFO("NETWORK", "Responding with: %s", response.c_str());
         s_instance->sendToMaster(response);
     }
 }
@@ -154,11 +151,10 @@ void NetworkManager::onPacketReceived(const ReceivedPacket &packet)
 {
     Message msg;
     msg = Protocol::parse((const char *)packet.data, packet.dataLen);
-    Serial.print("msg content ");
-    Serial.println((const char *)packet.data);
+    LOG_INFO("NETWORK", "Received message: %s", (const char *)packet.data);
     bool result = confHandler.handleCommand(msg);
     if (!result)
     {
-        Serial.println("Something went wrong at Configuration handler");
+        LOG_ERROR("NETWORK", "Something went wrong at Configuration handler");
     }
 }

@@ -45,14 +45,14 @@ bool LoRaSComm::begin(uint8_t address,
     // Validate address
     if (!LoRaSCommPacketCodec::isValidAddress(address) || address == LORASCOMM_BROADCAST_ADDR)
     {
-        LORASCOMM_PRINTLN(F("[LoRaSComm] Error: Invalid address (must be 0x01-0xFE)"));
+        LOG_INFO("LoRaSComm", "Invalid address: 0x%02X. Must be 0x01-0xFE (0xFF is broadcast)", address);
         return false;
     }
 
     myAddress = address;
 
     // Initialize RadioLib
-    LORASCOMM_PRINT(F("[LoRaSComm] Initializing SX1278... "));
+    LOG_INFO("LoRaSComm", "Initializing SX1278...");
     int state = radio->begin(frequency,
                              signalBandwidth,
                              spreadingFactor,
@@ -64,18 +64,17 @@ bool LoRaSComm::begin(uint8_t address,
 
     if (state != RADIOLIB_ERR_NONE)
     {
-        LORASCOMM_PRINT(F("failed, code "));
-        LORASCOMM_PRINTLN(state);
+        LOG_ERROR("LoRaSComm", "Failed, code %d", state);
         return false;
     }
-    LORASCOMM_PRINTLN(F("success!"));
+    LOG_INFO("LoRaSComm", "Success!");
 
     // Configure for explicit header mode (we need payload length)
     state = radio->explicitHeader();
     if (state != RADIOLIB_ERR_NONE)
     {
-        LORASCOMM_PRINT(F("[LoRaSComm] Error: Failed to set explicit header mode, code "));
-        LORASCOMM_PRINTLN(state);
+        LOG_ERROR("LoRaSComm", "Failed to set explicit header mode, code %d", state);
+        LOG_ERROR("LoRaSComm", "Error: %d", state);
         return false;
     }
 
@@ -83,25 +82,24 @@ bool LoRaSComm::begin(uint8_t address,
     state = radio->setCRC(true);
     if (state != RADIOLIB_ERR_NONE)
     {
-        LORASCOMM_PRINT(F("[LoRaSComm] Warning: Failed to enable hardware CRC, code "));
-        LORASCOMM_PRINTLN(state);
+        LOG_WARN("LoRaSComm", "Failed to enable hardware CRC, code %d", state);
         // Not fatal, we have our own CRC
     }
 
     // Create FreeRTOS objects
-    LORASCOMM_PRINTLN(F("[LoRaSComm] Creating FreeRTOS objects..."));
+    LOG_INFO("LoRaSComm", "Creating FreeRTOS objects...");
 
     rxQueue = xQueueCreate(LORASCOMM_RX_QUEUE_SIZE, sizeof(ReceivedPacket));
     if (rxQueue == nullptr)
     {
-        LORASCOMM_PRINTLN(F("[LoRaSComm] Error: Failed to create RX queue"));
+        LOG_ERROR("LoRaSComm", "Error: Failed to create RX queue");
         return false;
     }
 
     txQueue = xQueueCreate(LORASCOMM_TX_QUEUE_SIZE, sizeof(TxQueueItem));
     if (txQueue == nullptr)
     {
-        LORASCOMM_PRINTLN(F("[LoRaSComm] Error: Failed to create TX queue"));
+        LOG_ERROR("LoRaSComm", "Error: Failed to create TX queue");
         vQueueDelete(rxQueue);
         return false;
     }
@@ -109,7 +107,7 @@ bool LoRaSComm::begin(uint8_t address,
     ackPendingQueue = xQueueCreate(LORASCOMM_ACK_PENDING_SIZE, sizeof(PendingAck));
     if (ackPendingQueue == nullptr)
     {
-        LORASCOMM_PRINTLN(F("[LoRaSComm] Error: Failed to create ACK pending queue"));
+        LOG_ERROR("LoRaSComm", "Error: Failed to create ACK pending queue");
         vQueueDelete(rxQueue);
         vQueueDelete(txQueue);
         return false;
@@ -118,7 +116,7 @@ bool LoRaSComm::begin(uint8_t address,
     radioMutex = xSemaphoreCreateMutex();
     if (radioMutex == nullptr)
     {
-        LORASCOMM_PRINTLN(F("[LoRaSComm] Error: Failed to create radio mutex"));
+        LOG_ERROR("LoRaSComm", "Error: Failed to create radio mutex");
         vQueueDelete(rxQueue);
         vQueueDelete(txQueue);
         vQueueDelete(ackPendingQueue);
@@ -126,7 +124,7 @@ bool LoRaSComm::begin(uint8_t address,
     }
 
     // Create FreeRTOS tasks
-    LORASCOMM_PRINTLN(F("[LoRaSComm] Creating FreeRTOS tasks..."));
+    LOG_INFO("LoRaSComm", "Creating FreeRTOS tasks...");
 
     BaseType_t result;
 
@@ -141,7 +139,7 @@ bool LoRaSComm::begin(uint8_t address,
 
     if (result != pdPASS)
     {
-        LORASCOMM_PRINTLN(F("[LoRaSComm] Error: Failed to create RX task"));
+        LOG_ERROR("LoRaSComm", "Error: Failed to create RX task");
         end();
         return false;
     }
@@ -157,7 +155,7 @@ bool LoRaSComm::begin(uint8_t address,
 
     if (result != pdPASS)
     {
-        LORASCOMM_PRINTLN(F("[LoRaSComm] Error: Failed to create TX task"));
+        LOG_ERROR("LoRaSComm", "Error: Failed to create TX task");
         end();
         return false;
     }
@@ -173,15 +171,15 @@ bool LoRaSComm::begin(uint8_t address,
 
     if (result != pdPASS)
     {
-        LORASCOMM_PRINTLN(F("[LoRaSComm] Error: Failed to create User task"));
+        LOG_ERROR("LoRaSComm", "Error: Failed to create User task");
         end();
         return false;
     }
 
     initialized = true;
 
-    LORASCOMM_LOG("[LoRaSComm] Initialized successfully! Address: 0x%02X, Frequency: %.1f MHz\n",
-                  myAddress, frequency);
+    LOG_INFO("LoRaSComm", "Initialized successfully! Address: 0x%02X, Frequency: %.1f MHz\n",
+             myAddress, frequency);
 
     return true;
 }
@@ -193,7 +191,7 @@ void LoRaSComm::end()
         return;
     }
 
-    LORASCOMM_PRINTLN(F("[LoRaSComm] Shutting down..."));
+    LOG_INFO("LoRaSComm", "Shutting down...");
 
     // Delete tasks
     if (rxTaskHandle != nullptr)
@@ -240,7 +238,7 @@ void LoRaSComm::end()
     }
 
     initialized = false;
-    LORASCOMM_PRINTLN(F("[LoRaSComm] Shutdown complete"));
+    LOG_INFO("LoRaSComm", "Shutdown complete");
 }
 
 // Configuration methods
@@ -273,19 +271,19 @@ bool LoRaSComm::sendUnreliable(uint8_t dest, const uint8_t *data, size_t len)
 {
     if (!initialized)
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Not initialized"));
+        LOG_ERROR("LoRaSComm", "Error: Not initialized");
         return false;
     }
 
     if (len > LORASCOMM_MAX_PAYLOAD_SIZE)
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Payload too large"));
+        LOG_ERROR("LoRaSComm", "Error: Payload too large");
         return false;
     }
 
     if (!LoRaSCommPacketCodec::isValidAddress(dest))
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Invalid destination address"));
+        LOG_ERROR("LoRaSComm", "Error: Invalid destination address");
         return false;
     }
 
@@ -297,7 +295,7 @@ bool LoRaSComm::sendUnreliable(uint8_t dest, const uint8_t *data, size_t len)
 
     if (xQueueSend(txQueue, &item, pdMS_TO_TICKS(100)) != pdTRUE)
     {
-        LORASCOMM_PRINTLN(F("[API] Error: TX queue full"));
+        LOG_ERROR("LoRaSComm", "Error: TX queue full");
         return false;
     }
 
@@ -308,25 +306,25 @@ bool LoRaSComm::sendReliable(uint8_t dest, const uint8_t *data, size_t len, Even
 {
     if (!initialized)
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Not initialized"));
+        LOG_ERROR("LoRaSComm", "Error: Not initialized");
         return false;
     }
 
     if (len > LORASCOMM_MAX_PAYLOAD_SIZE)
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Payload too large"));
+        LOG_ERROR("LoRaSComm", "Error: Payload too large");
         return false;
     }
 
     if (!LoRaSCommPacketCodec::isValidAddress(dest))
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Invalid destination address"));
+        LOG_ERROR("LoRaSComm", "Error: Invalid destination address");
         return false;
     }
 
     if (dest == LORASCOMM_BROADCAST_ADDR)
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Cannot send reliable to broadcast address"));
+        LOG_ERROR("LoRaSComm", "Error: Cannot send reliable to broadcast address");
         return false;
     }
 
@@ -340,7 +338,7 @@ bool LoRaSComm::sendReliable(uint8_t dest, const uint8_t *data, size_t len, Even
 
     if (xQueueSend(txQueue, &item, pdMS_TO_TICKS(100)) != pdTRUE)
     {
-        LORASCOMM_PRINTLN(F("[API] Error: TX queue full"));
+        LOG_ERROR("LoRaSComm", "Error: TX queue full");
         return false;
     }
 
@@ -351,19 +349,19 @@ bool LoRaSComm::testSendAck(uint8_t dest)
 {
     if (!initialized)
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Not initialized"));
+        LOG_ERROR("LoRaSComm", "Error: Not initialized");
         return false;
     }
 
     if (!LoRaSCommPacketCodec::isValidAddress(dest))
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Invalid destination address"));
+        LOG_ERROR("LoRaSComm", "Error: Invalid destination address");
         return false;
     }
 
     if (dest == LORASCOMM_BROADCAST_ADDR)
     {
-        LORASCOMM_PRINTLN(F("[API] Error: Cannot send reliable to broadcast address"));
+        LOG_ERROR("LoRaSComm", "Error: Cannot send reliable to broadcast address");
         return false;
     }
 
@@ -397,7 +395,7 @@ void LoRaSComm::rxTask(void *params)
 {
     LoRaSComm *instance = static_cast<LoRaSComm *>(params);
 
-    LORASCOMM_PRINTLN(F("[RX Task] Started"));
+    LOG_INFO("LoRaSComm", "[RX Task] Started");
 
     uint8_t buffer[LORASCOMM_MAX_PACKET_SIZE];
 
@@ -406,7 +404,7 @@ void LoRaSComm::rxTask(void *params)
     {
         instance->radio->startReceive();
         xSemaphoreGive(instance->radioMutex);
-        LORASCOMM_PRINTLN(F("[RX Task] Radio in RX mode"));
+        LOG_INFO("LoRaSComm", "[RX Task] Radio in RX mode");
     }
 
     while (true)
@@ -437,7 +435,7 @@ void LoRaSComm::rxTask(void *params)
                         instance->lastRssi = instance->radio->getRSSI();
                         instance->lastSnr = instance->radio->getSNR();
 
-                        LORASCOMM_LOG("[RX Task] Raw packet received, len=%d, RSSI=%d\n", len, instance->lastRssi);
+                        LOG_INFO("LoRaSComm", "[RX Task] Raw packet received, len=%d, RSSI=%d\n", len, instance->lastRssi);
 
                         // Decode packet
                         LoRaSCommPacket packet;
@@ -449,13 +447,12 @@ void LoRaSComm::rxTask(void *params)
                         }
                         else
                         {
-                            LORASCOMM_PRINTLN(F("[RX Task] CRC validation failed"));
-                            LORASCOMM_PRINT(F("[RX Task] Raw data: "));
+                            LOG_ERROR("LoRaSComm", "CRC validation failed");
+                            LOG_INFO("LoRaSComm", "Raw data: ");
                             for (size_t i = 0; i < len && i < 32; i++)
                             {
-                                LORASCOMM_LOG("%02X ", buffer[i]);
+                                LOG_INFO("LoRaSComm", "%02X ", buffer[i]);
                             }
-                            LORASCOMM_PRINTLN();
                         }
                     }
                 }
@@ -490,7 +487,7 @@ void LoRaSComm::txTask(void *params)
 {
     LoRaSComm *instance = static_cast<LoRaSComm *>(params);
 
-    LORASCOMM_PRINTLN(F("[TX Task] Started"));
+    LOG_INFO("LoRaSComm", "[TX Task] Started");
 
     TxQueueItem txItem;
     uint8_t buffer[LORASCOMM_MAX_PACKET_SIZE];
@@ -541,18 +538,18 @@ void LoRaSComm::txTask(void *params)
                         // Add to pending queue (non-blocking)
                         if (xQueueSend(instance->ackPendingQueue, &pending, 0) != pdTRUE)
                         {
-                            LORASCOMM_PRINTLN(F("[TX Task] Warning: ACK pending queue full"));
+                            LOG_WARN("LoRaSComm", "[TX Task] Warning: ACK pending queue full");
                             instance->failedTxCount++;
                         }
                     }
 
-                    LORASCOMM_LOG("[TX Task] Sent %s packet to 0x%02X, seq=%d, size=%d\n",
-                                  txItem.packetType == PACKET_DATA_RELIABLE ? "RELIABLE" : "UNRELIABLE",
-                                  txItem.destAddr, sequence, packetSize);
+                    LOG_INFO("LoRaSComm", "[TX Task] Sent %s packet to 0x%02X, seq=%d, size=%d\n",
+                             txItem.packetType == PACKET_DATA_RELIABLE ? "RELIABLE" : "UNRELIABLE",
+                             txItem.destAddr, sequence, packetSize);
                 }
                 else
                 {
-                    LORASCOMM_PRINTLN(F("[TX Task] Transmission failed"));
+                    LOG_ERROR("LoRaSComm", "[TX Task] Transmission failed");
                     instance->failedTxCount++;
                 }
             }
@@ -570,7 +567,7 @@ void LoRaSComm::userTask(void *params)
 {
     LoRaSComm *instance = static_cast<LoRaSComm *>(params);
 
-    LORASCOMM_PRINTLN(F("[User Task] Started"));
+    LOG_INFO("LoRaSComm", "[User Task] Started");
 
     ReceivedPacket packet;
 
@@ -626,10 +623,10 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
 
         if (xQueueSend(rxQueue, &rxPacket, 0) != pdTRUE)
         {
-            LORASCOMM_PRINTLN(F("[RX] Warning: RX queue full, packet dropped"));
+            LOG_WARN("LoRaSComm", "[RX] Warning: RX queue full, packet dropped");
         }
 
-        LORASCOMM_LOG("[RX] Received %s from 0x%02X, seq=%d, len=%d, RSSI=%d\n",
+        LOG_INFO("LoRaSComm", "[RX] Received %s from 0x%02X, seq=%d, len=%d, RSSI=%d\n",
                       packet.header.packetType == PACKET_DATA_RELIABLE ? "RELIABLE" : "UNRELIABLE",
                       packet.header.srcAddr, packet.header.sequence,
                       packet.header.payloadLen, lastRssi);
@@ -652,9 +649,9 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
                     pending.sequence == packet.header.sequence)
                 {
                     // Match! Remove from queue
-                    LORASCOMM_LOG("[RX] Received %s from 0x%02X for seq=%d\n",
-                                  packet.header.packetType == PACKET_ACK ? "ACK" : "NACK",
-                                  packet.header.srcAddr, packet.header.sequence);
+                    LOG_INFO("LoRaSComm", "[RX] Received %s from 0x%02X for seq=%d\n",
+                             packet.header.packetType == PACKET_ACK ? "ACK" : "NACK",
+                             packet.header.srcAddr, packet.header.sequence);
                     // Don't put back in queue
                 }
                 else
@@ -668,7 +665,7 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
     }
 
     default:
-        LORASCOMM_LOG("[RX] Unknown packet type: 0x%02X\n", packet.header.packetType);
+        LOG_WARN("LoRaSComm", "[RX] Unknown packet type: 0x%02X\n", packet.header.packetType);
         break;
     }
 }
@@ -684,7 +681,7 @@ void LoRaSComm::sendAck(uint8_t dest, uint8_t sequence)
         vTaskDelay(pdMS_TO_TICKS(100));
 
         transmitPacket(buffer, packetSize);
-        LORASCOMM_LOG("[TX] Sent ACK to 0x%02X for seq=%d\n", dest, sequence);
+        LOG_INFO("LoRaSComm", "[TX] Sent ACK to 0x%02X for seq=%d\n", dest, sequence);
 
         // Small delay after ACK to let it transmit
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -699,7 +696,7 @@ void LoRaSComm::sendNack(uint8_t dest, uint8_t sequence)
     if (packetSize > 0)
     {
         transmitPacket(buffer, packetSize);
-        LORASCOMM_LOG("[TX] Sent NACK to 0x%02X for seq=%d\n", dest, sequence);
+        LOG_INFO("LoRaSComm", "[TX] Sent NACK to 0x%02X for seq=%d\n", dest, sequence);
     }
 }
 
@@ -718,7 +715,7 @@ bool LoRaSComm::transmitPacket(const uint8_t *buffer, size_t len)
         }
         else
         {
-            Serial.println(state);
+            LOG_ERROR("LoRaSComm", "[TX] Transmission failed with error: %d\n", state);
         }
 
         xSemaphoreGive(radioMutex);
@@ -768,9 +765,9 @@ void LoRaSComm::processAckTimeout()
 
                     if (transmitPacket(buffer, packetSize))
                     {
-                        LORASCOMM_LOG("[TX] Retry %d/%d for seq=%d to 0x%02X\n",
-                                      pending.retryCount, maxRetries,
-                                      pending.sequence, pending.destAddr);
+                        LOG_INFO("LoRaSComm", "[TX] Retry %d/%d for seq=%d to 0x%02X\n",
+                                 pending.retryCount, maxRetries,
+                                 pending.sequence, pending.destAddr);
 
                         // Put back in queue
                         xQueueSend(ackPendingQueue, &pending, 0);
@@ -778,15 +775,15 @@ void LoRaSComm::processAckTimeout()
                     else
                     {
                         failedTxCount++;
-                        LORASCOMM_LOG("[TX] Retry failed for seq=%d\n", pending.sequence);
+                        LOG_ERROR("LoRaSComm", "[TX] Retry failed for seq=%d\n", pending.sequence);
                     }
                 }
                 else
                 {
                     // Max retries reached, give up
                     failedTxCount++;
-                    LORASCOMM_LOG("[TX] Max retries reached for seq=%d to 0x%02X\n",
-                                  pending.sequence, pending.destAddr);
+                    LOG_ERROR("LoRaSComm", "[TX] Max retries reached for seq=%d to 0x%02X\n",
+                              pending.sequence, pending.destAddr);
                     // Don't put back in queue (dropped)
                 }
             }

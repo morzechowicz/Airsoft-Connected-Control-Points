@@ -6,6 +6,7 @@
 #include <vector>
 #include <Arduino.h>
 #include "GameComponents/KOTH/KOTHTypes.h"
+#include "../lib/Logging/LogManager.h"
 
 class EventBus
 {

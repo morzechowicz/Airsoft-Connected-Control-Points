@@ -4,7 +4,7 @@
 #include "GameComponents/BaseComponent.h"
 #include "Protocol.h"
 #include "FLAGTypes.h"
-
+#include "../lib/Logging/LogManager.h"
 
 class FLAGServer : public BaseComponent {
 public:

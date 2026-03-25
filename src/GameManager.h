@@ -12,6 +12,7 @@
 #include "Hardware/HardwareManager.h"
 #include "Network/NetworkManager.h"
 #include "ConfigurationHandler.h"
+#include "../lib/Logging/LogManager.h"
 
 class GameManager
 {

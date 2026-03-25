@@ -12,7 +12,7 @@ void BleCallback::onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo 
     bool result = handler.handleCommand(msg);
     if (!result)
     {
-        Serial.println("Something went wrong at Configuration handler");
+        LOG_ERROR("BLE_CALLBACK", "Failed to handle command: %s", value.c_str());
     }
 }
 

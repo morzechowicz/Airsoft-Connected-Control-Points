@@ -13,6 +13,7 @@
 #include <freertos/queue.h>
 #include <freertos/semphr.h>
 #include "LoRaSCommPacket.h"
+#include "../Logging/LogManager.h"
 
 // FreeRTOS Configuration
 #define LORASCOMM_RX_QUEUE_SIZE 10
@@ -30,19 +31,6 @@
 // Protocol defaults
 #define LORASCOMM_DEFAULT_MAX_RETRIES 3
 #define LORASCOMM_DEFAULT_ACK_TIMEOUT 2000  // ms
-
-// Debug logging control
-#define LORASCOMM_DEBUG 1  // Set to 0 to disable all debug output
-
-#if LORASCOMM_DEBUG
-  #define LORASCOMM_LOG(...) Serial.printf(__VA_ARGS__)
-  #define LORASCOMM_PRINTLN(...) Serial.println(__VA_ARGS__)
-  #define LORASCOMM_PRINT(...) Serial.print(__VA_ARGS__)
-#else
-  #define LORASCOMM_LOG(...)
-  #define LORASCOMM_PRINTLN(...)
-  #define LORASCOMM_PRINT(...)
-#endif
 
 // Received packet info
 struct ReceivedPacket {

@@ -9,7 +9,7 @@ InformationModeComp::InformationModeComp(EventBus *eventBus, HardwareManager *ha
 
 void InformationModeComp::start()
 {
-    Serial.println("Starting Information Mode Component");
+    LOG_INFO("INFO_MODE", "Starting Information Mode Component");
     gameActive = true;
 
     // Subscribe to game pause/resume events
@@ -99,19 +99,19 @@ void InformationModeComp::updateDisplay()
 
 void InformationModeComp::handleGameOver(Team winner)
 {
-    Serial.println("Game Over! Winner: " + String((int)winner));
+    LOG_INFO("INFO_MODE", "Game Over! Winner: %d", (int)winner);
     // Here you can add code to update the display with the winner information
 }
 
 void InformationModeComp::onButtonPressed(Event e)
 {
-    Serial.println("Button Pressed: " + String(e.data1));
+    LOG_INFO("INFO_MODE", "Button Pressed: %d", e.data1);
     // Here you can add code to handle button presses, e.g., switch display modes
 }
 
 void InformationModeComp::onButtonReleased(Event e)
 {
-    Serial.println("Button Released: " + String(e.data1));
+    LOG_INFO("INFO_MODE", "Button Released: %d", e.data1);
     // Here you can add code to handle button releases if needed
 }
 
