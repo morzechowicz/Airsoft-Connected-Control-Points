@@ -26,23 +26,23 @@ void setup()
     LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
     LOG.enableColors(false);
     LOG.setTimestamps(false);
-    LOG.setBLECallback([](const char* msg) { ble.sendMessage(msg); });
     
     LOG_INFO("MAIN", "System starting...");
-
+    
     vTaskDelay(200); // Wait for LOG to initialize
-#ifdef BIG_SCREEN
+    #ifdef BIG_SCREEN
     hardware.lcd.begin(0x27, 16, 4);
-#else
+    #else
     hardware.lcd.begin(0x27, 16, 2);
-#endif
-
+    #endif
+    
     hardware.lcd.displayText("      SPAS", 0);
     hardware.lcd.displayText("INITIALAZING", 1);
     vTaskDelay(500);
     ble.BleStart();
-
     vTaskDelay(500);
+    
+    LOG.setBLECallback([](const char* msg) { ble.sendMessage(msg); });
     network.begin();
 
     GameManager::instance = &gameManager;
