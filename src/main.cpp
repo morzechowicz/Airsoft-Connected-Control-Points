@@ -23,9 +23,10 @@ void powerResetCallback(Event e) {
 
 void setup()
 {
-    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL);
-    LOG.enableColors(true);
-    LOG.setTimestamps(true);
+    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
+    LOG.enableColors(false);
+    LOG.setTimestamps(false);
+    LOG.setBLECallback([](const char* msg) { ble.sendMessage(msg); });
     
     LOG_INFO("MAIN", "System starting...");
 

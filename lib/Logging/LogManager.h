@@ -44,6 +44,7 @@ public:
     void enableColors(bool enable);
     void setTimestamps(bool enable);
     void setTags(bool enable);
+    void setBLEStatus(bool connected);
     
     // Output callbacks (for BLE/LoRa)
     void setBLECallback(std::function<void(const char*)> callback);
@@ -84,6 +85,7 @@ private:
     bool useColors;
     bool useTimestamps;
     bool useTags;
+    bool BLEConnected;
     
     SemaphoreHandle_t logMutex;
     

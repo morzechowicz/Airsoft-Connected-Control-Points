@@ -7,11 +7,13 @@ BleServer::BleServer()
 void BleServer::onConnect(BLEServer *pServer, NimBLEConnInfo &connInfo)
 {
         deviceConnected = true;
+        LOG.setBLEStatus(true);
         LOG_INFO("BLE_SERVER", "Device connected");
 }
 void BleServer::onDisconnect(BLEServer *pServer, NimBLEConnInfo &connInfo, int reason)
 {
         deviceConnected = false;
+        LOG.setBLEStatus(false);
         LOG_INFO("BLE_SERVER", "Device disconnected");
         pServer->startAdvertising();  // Restart advertising
 }

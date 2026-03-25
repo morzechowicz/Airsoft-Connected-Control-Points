@@ -53,6 +53,11 @@ void LogManager::setTags(bool enable) {
     useTags = enable;
 }
 
+void LogManager::setBLEStatus(bool connected)
+{
+    BLEConnected = connected;
+}
+
 void LogManager::setBLECallback(std::function<void(const char*)> callback) {
     bleCallback = callback;
 }
@@ -211,7 +216,7 @@ void LogManager::output(const char* message, uint8_t outputs) {
     }
     
     // BLE output
-    if ((outputs & LOG_OUTPUT_BLE) && bleCallback) {
+    if ((outputs & LOG_OUTPUT_BLE) && bleCallback && BLEConnected) {
         bleCallback(message);
     }
     
