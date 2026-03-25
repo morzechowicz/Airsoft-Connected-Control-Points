@@ -17,7 +17,7 @@ BaseComponent::~BaseComponent()
 
 bool BaseComponent::startModeTask(const char* name, UBaseType_t priority, uint32_t stack) {
     if (modeTaskHandle != nullptr) {
-        Serial.println("Task already running!");
+        LOG_INFO("BASE_COMPONENT", "Task already running: %s", name);
         return false;
     }
 
@@ -33,12 +33,10 @@ bool BaseComponent::startModeTask(const char* name, UBaseType_t priority, uint32
     );
 
     if (res == pdPASS) {
-        Serial.print("Task started: ");
-        Serial.println(name);
+        LOG_INFO("BASE_COMPONENT", "Task started: %s", name);
         return true;
     } else {
-        Serial.print("Task creation failed: ");
-        Serial.println(name);
+        LOG_ERROR("BASE_COMPONENT", "Task creation failed: %s", name);
         taskRunning = false;
         modeTaskHandle = nullptr;
         return false;
@@ -48,7 +46,7 @@ bool BaseComponent::startModeTask(const char* name, UBaseType_t priority, uint32
 void BaseComponent::stopModeTask() {
     if (modeTaskHandle == nullptr) return;
     
-    Serial.println("Stopping task...");
+    LOG_INFO("BASE_COMPONENT", "Stopping task...");
     
     // Signal task to stop
     taskRunning = false;
@@ -62,5 +60,5 @@ void BaseComponent::stopModeTask() {
         modeTaskHandle = nullptr;
     }
     
-    Serial.println("Task stopped");
+    LOG_INFO("BASE_COMPONENT", "Task stopped");
 }

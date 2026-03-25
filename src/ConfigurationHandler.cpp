@@ -10,38 +10,41 @@ bool ConfigurationHandler::handleCommand(const Message &command)
 
     if (command.type == SYS)
     {
+        LOG_DEBUG("HANDLER", "Handling system message");
         handleSystemMessage(command.params[0], command.params, command.paramCount);
         return true;
     };
     if (command.type == GAME)
     {
+        LOG_DEBUG("HANDLER", "Handling game message");
         handleGameMessage(command.params[0], command.params, command.paramCount);
         return true;
     }
     if (command.type == CONF)
     {
+        LOG_DEBUG("HANDLER", "Handling configuration message");
         handleConfigurationMessage(command.params[0], command.params, command.paramCount);
         return true;
     }
     if (command.type == SEARCH)
     {
-        Serial.println("Received BLE_SEARCH_REQUEST message");
+        LOG_DEBUG("HANDLER", "Received BLE_SEARCH_REQUEST message");
         eventBus.publish(SEARCH);
         return true;
     }
     if (command.type == END_RESTART)
     {
-        Serial.println("Received BLE_END_RESTART message");
+        LOG_DEBUG("HANDLER", "Received BLE_END_RESTART message");
         return true;
     }
     if (command.type == REQUEST_LOG)
     {
-        Serial.println("Received BLE_REQUEST_LOG message");
+        LOG_DEBUG("HANDLER", "Received BLE_REQUEST_LOG message");
         return true;
     }
     if (command.type == UNKNOWN)
     {
-        Serial.println("Received UNKNOWN message");
+        LOG_DEBUG("HANDLER", "Received UNKNOWN message");
     }
     return false;
 }
@@ -52,13 +55,11 @@ void ConfigurationHandler::handleSystemMessage(const String &cmd, const String p
 {
     if (cmd.toInt() == NETWORK_DISCOVER)
     {
-        Serial.print("response to");
-        Serial.print(params[1]);
-        Serial.println("");
+        LOG_INFO("HANDLER", "Received discovery request from master at address %s", params[1].c_str());
         uint8_t masterAddress = params[1].toInt();
         // If this is an information node, we do not want to respond to discovery messages
         if(informationNode){
-            Serial.println("Not sending response because this is an information node");
+            LOG_DEBUG("HANDLER", "Not sending response because this is an information node");
             return;
         }
         eventBus.publish(NETWORK_DISCOVER, masterAddress);
@@ -111,16 +112,14 @@ void ConfigurationHandler::handleGameMessage(const String &cmd, const String par
     }
     case PAUSE:
     {
-        Serial.print("PAUSE:");
+        LOG_DEBUG("HANDLER", "Received PAUSE message");
         eventBus.publish(PAUSE, Protocol::parseIntParam(params[1], 0));
-        Serial.println(":DONE");
         break;
     }
     case RESUME:
     {
-        Serial.print("RESUME:");
+        LOG_DEBUG("HANDLER", "Received RESUME message");
         eventBus.publish(RESUME, Protocol::parseIntParam(params[1], 0));
-        Serial.println(":DONE");
         break;
     }
     case KOTH_POINT_CAPTURED:

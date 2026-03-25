@@ -9,7 +9,7 @@ Buzzer::Buzzer(int pin, bool generator)
 
 void Buzzer::beepTask(void)
 {
-    Serial.println("Buzzer task started");
+    LOG_INFO("Buzzer", "Buzzer task started");
     while (true)
     {
         if (beepCount)
@@ -23,19 +23,21 @@ void Buzzer::beepTask(void)
         vTaskDelay(100);
     }
     BeepTaskHandle = nullptr;
-    Serial.println("Buzzer task ended");
+    LOG_INFO("Buzzer", "Buzzer task ended");
 }
 
 void Buzzer::createBeepTask()
 {
     if (BeepTaskHandle == nullptr)
     {
+        LOG_DEBUG("Buzzer", "Creating beep task");
         xTaskCreate(
             [](void *param)
             {
                 Buzzer *buzzer = static_cast<Buzzer *>(param);
                 buzzer->beepTask();
                 vTaskDelete(nullptr); // Delete this task when done
+                LOG_DEBUG("Buzzer", "Beep task deleted");
             },
             "BuzzerBeepTask",
             2048,

@@ -7,23 +7,20 @@ FLAGServer::FLAGServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
       lastScoreUpdate(0),
       gameRunning(false)
 {
-    Serial.print("Initializing FLAG with ");
-    Serial.print(cfg.initTeamCount);
-    Serial.println(" teams");
+    LOG_INFO("FLAG_SERVER", "Initializing FLAG Server with %d teams", cfg.initTeamCount);
 
     // Initialize scoring 0 is none so skip it
     for (uint8_t i = 1; i < cfg.initTeamCount; i++)
     {
         score.AddTeam();
+        LOG_INFO("FLAG_SERVER", "Added team: %s", getFlagTeamName((FlagTeam)i));
 
-        Serial.print("Added ");
-        Serial.println(getFlagTeamName((FlagTeam)i));
     }
 
     // if i get idea for using the network i will
     if (true)
     {
-        Serial.println("Single node mode - network messages disabled");
+        LOG_DEBUG("FLAG_SERVER", "Single node mode - network messages disabled");
     }
 }
 
@@ -38,7 +35,7 @@ FLAGServer::~FLAGServer()
 
 void FLAGServer::enterMode()
 {
-    Serial.println("=== FLAG Server Mode ===");
+    LOG_INFO("FLAG_SERVER", "Entering FLAG Server Mode");  
 
     // Reset game state
     gameStartTime = millis();
@@ -69,18 +66,18 @@ void FLAGServer::enterMode()
     //         networkManager->broadcast(startMsg);
     //     }
     // }
-    Serial.println("FLAG Server ready!");
+    LOG_INFO("FLAG_SERVER", "FLAG Server ready!");
 }
 
 void FLAGServer::exitMode()
 {
     gameRunning = false;
-    Serial.println("FLAG Server exiting...");
+    LOG_INFO("FLAG_SERVER", "FLAG Server exiting...");
 }
 
 void FLAGServer::run()
 {
-    Serial.println("FLAGServer::run() starting main loop");
+    LOG_INFO("FLAG_SERVER", "FLAGServer::run() starting main loop");
 
     unsigned long lastUpdate = millis();
 
@@ -107,7 +104,7 @@ void FLAGServer::run()
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 
-    Serial.println("FLAGServer::run() exiting loop");
+    LOG_INFO("FLAG_SERVER", "FLAGServer::run() exiting loop");
 }
 
 void FLAGServer::onCaptureRequest(Event e)
@@ -124,25 +121,21 @@ void FLAGServer::processCaptureRequest(FlagTeam team)
     // Validate team
     if ((uint8_t)team > FlagTeam::MAX_TEAMS || (uint8_t)team < 0)
     {
-        Serial.print("[SERVER] ");
-        Serial.println("Invalid team in capture request");
+        LOG_ERROR("FLAG_SERVER", "Invalid team in capture request");
         return;
     }
 
     // Check if already controlled by this team
     if (score.controler == team)
     {
-        Serial.print("[SERVER] ");
-        Serial.println(" already controlled by this team");
+        LOG_INFO("FLAG_SERVER", " already controlled by this team");
         return;
     }
 
     // Capture the node!
     score.controler = team;
 
-    Serial.print("[SERVER] ");
-    Serial.print(" captured by ");
-    Serial.println(getFlagTeamName(team));
+    LOG_INFO("FLAG_SERVER", " captured by %s", getFlagTeamName(team));
 }
 
 void FLAGServer::updateScore()
@@ -153,12 +146,7 @@ void FLAGServer::updateScore()
     {
         score.teams[controler].score++;
     }
-    Serial.print("[SERVER] ");
-    Serial.print("Team: ");
-    Serial.print(getFlagTeamName(controler));
-    Serial.print(" controls points with");
-    Serial.print(score.teams[controler].score);
-    Serial.println(" points");
+    LOG_INFO("FLAG_SERVER", "Team: %s controls points with %d points", getFlagTeamName(controler), score.teams[controler].score);
     // Broadcast score update
     // if (!config.singleNodeMode)
     // {
@@ -183,13 +171,9 @@ void FLAGServer::checkWinConditions()
 
 void FLAGServer::endGame(FlagTeam winner)
 {
-    Serial.print("[SERVER] ");
-    Serial.println("========== GAME OVER ==========");
-    Serial.print("Winner: ");
-    Serial.println(getFlagTeamName(winner));
-    Serial.print("Final Score - ");
-    Serial.print(score.teams[winner].score);
-    Serial.println("===============================");
+    LOG_INFO("FLAG_SERVER", "========== GAME OVER ==========");
+    LOG_INFO("FLAG_SERVER", "Winner: %s", getFlagTeamName(winner));
+    LOG_INFO("FLAG_SERVER", "Final Score - %d", score.teams[winner].score);
 
     // Broadcast game over
     // String msg = Protocol::buildGameOver((uint8_t)winner);

@@ -8,6 +8,7 @@
 #include "../Protocol.h"
 #include "../Config.h"
 #include "ConfigurationHandler.h"
+#include "../lib/Logging/LogManager.h"
 
 // Other nodes discovery struct
 struct NodeInfo {

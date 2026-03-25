@@ -5,6 +5,7 @@
 #include "EventBus.h"
 #include "Protocol.h"
 #include "Config.h"
+#include "../lib/Logging/LogManager.h"
 
 class ConfigurationHandler
 {

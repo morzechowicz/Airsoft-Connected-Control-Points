@@ -9,7 +9,7 @@
 #include <ConfigurationHandler.h>
 #include "BleServer.h"
 #include "BleCallback.h"
-
+#include "LogManager.h"
 
 class BleSetup
 {

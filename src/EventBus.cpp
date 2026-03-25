@@ -12,8 +12,7 @@ void EventBus::subscribe(EventType eventName, EventCallback callback) {
 void EventBus::unsubscribe(EventType eventName) {
     if (eventName >= 0 && eventName < EVENT_MAX) {
         listeners[eventName].clear();
-        Serial.print("Unsubscribed all listeners from event: ");
-        Serial.println(eventName);
+        LOG_DEBUG("EVENT_BUS", "Unsubscribed all listeners from event: %d", eventName);
     }
 }
 
@@ -27,7 +26,7 @@ void EventBus::publish(EventType eventName, int data1, int data2, int data3, int
     
     if (nextTail == queueHead) {
         // Queue full
-        Serial.println("WARNING: Event queue full!");
+        LOG_WARN("EVENT_BUS", "Event queue full! Cannot publish event: %d", eventName);
         return;
     }
     
@@ -48,7 +47,7 @@ void EventBus::publish(EventType eventName, int data1, int data2, int data3, int
     
     if (nextTail == queueHead) {
         // Queue full
-        Serial.println("WARNING: Event queue full!");
+        LOG_WARN("EVENT_BUS", "Event queue full! Cannot publish event: %d", eventName);
         return;
     }
     
@@ -71,7 +70,7 @@ void EventBus::publish(EventType eventName, int data1, String msg)
     
     if (nextTail == queueHead) {
         // Queue full
-        Serial.println("WARNING: Event queue full!");
+        LOG_WARN("EVENT_BUS", "Event queue full! Cannot publish event: %d", eventName);
         return;
     }
     
