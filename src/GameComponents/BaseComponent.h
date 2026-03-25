@@ -69,6 +69,7 @@ protected:
         
         LOG_INFO("BASE_COMPONENT", "Task entry - deleting task");
         vTaskDelete(NULL);
+        self->~BaseComponent();  // Ensure destructor is called
     }
 };
 

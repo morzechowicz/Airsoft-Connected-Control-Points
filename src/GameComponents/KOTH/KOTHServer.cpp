@@ -29,12 +29,11 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
 
 KOTHServer::~KOTHServer()
 {
+    LOG_DEBUG("KOTH_SERVER", "Destroying KOTH Server");
     eventBus->unsubscribe(KOTH_POINT_CAPTURED);
     eventBus->unsubscribe(PAUSE);
     eventBus->unsubscribe(RESUME);
-    eventBus->unsubscribe(GAME_STARTED);
     eventBus->unsubscribe(GAME_OVER_INTERUPT);
-    eventBus->unsubscribe(GAME);
 
     stopModeTask();
 }
@@ -87,6 +86,14 @@ void KOTHServer::exitMode()
 {
     gameRunning = false;
     LOG_INFO("KOTH_SERVER", "KOTH Server exiting...");
+
+    LOG_DEBUG("KOTH_SERVER", "Destroying KOTH Server");
+    eventBus->unsubscribe(KOTH_POINT_CAPTURED);
+    eventBus->unsubscribe(PAUSE);
+    eventBus->unsubscribe(RESUME);
+    eventBus->unsubscribe(GAME_OVER_INTERUPT);
+
+    stopModeTask();
 }
 
 void KOTHServer::run()
@@ -119,6 +126,7 @@ void KOTHServer::run()
     }
 
     LOG_INFO("KOTH_SERVER", "KOTHServer::run() exiting loop");
+
 }
 
 void KOTHServer::onCaptureRequest(Event e)
@@ -199,14 +207,6 @@ void KOTHServer::broadcastScoreUpdate()
     }
 }
 
-void KOTHServer::checkWinConditions()
-{
-    if (isGameOver())
-    {
-        Team winner = determineWinner();
-        endGame(winner);
-    }
-}
 
 bool KOTHServer::isGameOver()
 {
