@@ -2,6 +2,7 @@
 #define BUZZER_H
 
 #include <Arduino.h>
+#include "../lib/Logging/LogManager.h"
 
 class Buzzer
 {

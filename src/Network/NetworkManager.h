@@ -11,6 +11,7 @@
 #include "../Protocol.h"
 #include "../Config.h"
 #include "ConfigurationHandler.h"
+#include "../lib/Logging/LogManager.h"
 
 // Node discovery struct
 struct NodeInfo {

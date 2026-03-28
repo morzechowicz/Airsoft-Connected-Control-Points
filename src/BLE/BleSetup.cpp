@@ -3,7 +3,7 @@
 void BleSetup::BleStart()
 {
     // Initialize BLE
-    Serial.println("Initializing BLE...");
+    LOG_INFO("BLE", "Initializing BLE...");
     String deviceName = "LoRaCP_" + String(myNodeId);
     NimBLEDevice::init(deviceName.c_str());
     pServer = NimBLEDevice::createServer();
@@ -22,14 +22,14 @@ void BleSetup::BleStart()
 
     // Start the service
     pService->start();
-    Serial.println("BLE Service started");
+    LOG_INFO("BLE", "BLE Service started");
     vTaskDelay(200);
     // Start advertising
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
     pAdvertising->setName(deviceName.c_str());
     pAdvertising->start();
-    Serial.println("BLE Ready! Waiting for connections...");
+    LOG_INFO("BLE", "BLE Ready! Waiting for connections...");
 }
 
 BleSetup::~BleSetup()

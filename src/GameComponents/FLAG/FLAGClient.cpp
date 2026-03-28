@@ -22,30 +22,19 @@ FLAGClient::~FLAGClient()
 
 void FLAGClient::start()
 {
-    Serial.println("=== FLAG Client Started ===");
-    Serial.print("Node ID: ");
-    Serial.println(myNodeId);
-    Serial.print("[CLIENT] ");
-    Serial.println("Game started!");
-    Serial.print("myNodeId");
-    Serial.println(myNodeId);
-    Serial.print("captureTimeMs");
-    Serial.println(captureTimeMs);
-    Serial.print("FlagTeam: ");
+    LOG_INFO("FLAG_CLIENT", "Starting FLAG Client with Node ID: %d", myNodeId);
+    
+    LOG_INFO("FLAG_CLIENT", "Game started!");
+    LOG_INFO("FLAG_CLIENT", "Node ID: %d", myNodeId);
+    LOG_INFO("FLAG_CLIENT", "Capture Time: %d", captureTimeMs);
     captureTimeMs = captureTimeMs * 1000;
     currentController = FlagTeam::NONE;
     gameActive = true;
     locatingBeepSpacingUpdate = millis() + 5000;
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
-    if (currentController == FlagTeam::NONE)
-    {
-        Serial.println("NONE");
-    }
-    else
-    {
-        Serial.println(getFlagTeamName(currentController));
-    }
+    
+    LOG_DEBUG("FLAG_CLIENT", "Initial Controller: %s", getFlagTeamName(currentController));
     // Subscribe to game events
     eventBus->subscribe(GAME_OVER, [this](Event e)
                         {
@@ -79,7 +68,7 @@ void FLAGClient::stop()
     // eventBus->unsubscribe(NETWORK_MESSAGE_RECEIVED);
     eventBus->unsubscribe(KOTH_SCORE_UPDATE);
     capturing = false;
-    Serial.println("FLAG Client stopped");
+    LOG_INFO("FLAG_CLIENT", "FLAG Client stopped");
 }
 
 void FLAGClient::update()
@@ -133,8 +122,7 @@ void FLAGClient::onButtonPressed(Event e)
     // Already controlled by this team?
     if (currentController == buttonTeam && currentController != FlagTeam::NONE)
     {
-        Serial.print("[CLIENT] ");
-        Serial.println("Already controlled by your team");
+        LOG_DEBUG("FLAG_CLIENT", "Already controlled by %s, ignoring button press", getFlagTeamName(buttonTeam));
         return;
     }
 
@@ -147,9 +135,7 @@ void FLAGClient::startCapture(FlagTeam team)
     capturing = true;
     capturingTeam = team;
     captureStartTime = millis();
-    Serial.print("[CLIENT] ");
-    Serial.print("Started capturing for ");
-    Serial.println(getFlagTeamName(team));
+    LOG_INFO("FLAG_CLIENT", "Started capturing for %s", getFlagTeamName(team));
 }
 
 void FLAGClient::updateCapture()
@@ -174,16 +160,13 @@ void FLAGClient::updateCapture()
 void FLAGClient::completeCapture()
 {
     currentController = capturingTeam;
-    Serial.print("[CLIENT] ");
-    Serial.print("Point captured by ");
-    Serial.println(getFlagTeamName(currentController));
+    LOG_INFO("FLAG_CLIENT", "Point captured by %s", getFlagTeamName(currentController));
 
     // Send capture message to server
     String msg = Protocol::buildCaptureMessage(myNodeId, (uint8_t)capturingTeam);
     if (network)
     {
-        Serial.print("[CLIENT] ");
-        Serial.println("Sending capture message to server");
+        LOG_INFO("FLAG_CLIENT", "Sending capture message to server");
         network->sendToMaster(msg);
     }
 
@@ -224,10 +207,8 @@ void FLAGClient::onNetworkMessage(Event e)
 
 void FLAGClient::handleGameOver(FlagTeam winner)
 {
-    Serial.print("[CLIENT] ");
-    Serial.println("========== GAME OVER ==========");
-    Serial.print("Winner: ");
-    Serial.println(getFlagTeamName(winner));
+    LOG_INFO("FLAG_CLIENT", "========== GAME OVER ==========");
+    LOG_INFO("FLAG_CLIENT", "Winner: %s", getFlagTeamName(winner));
     // Victory animation
     if (hardware)
     {

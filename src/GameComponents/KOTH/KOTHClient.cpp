@@ -25,16 +25,11 @@ KOTHClient::~KOTHClient()
 
 void KOTHClient::start()
 {
-    Serial.println("=== KOTH Client Started ===");
-    Serial.print("Node ID: ");
-    Serial.println(myNodeId);
-    Serial.print("Team: ");
-    Serial.print("[CLIENT] ");
-    Serial.println("Game started!");
-    Serial.print("myNodeId");
-    Serial.println(myNodeId);
-    Serial.print("captureTimeMs");
-    Serial.println(captureTimeMs);
+    LOG_INFO("KOTH_CLIENT", "Starting KOTH Client on node %d", myNodeId);
+
+    LOG_INFO("KOTH_CLIENT", "Game started!");
+    LOG_INFO("KOTH_CLIENT", "Node ID: %d", myNodeId);
+    LOG_INFO("KOTH_CLIENT", "Capture Time: %d ms", captureTimeMs);
     captureTimeMs = captureTimeMs * 1000;
     currentController = Team::NONE;
     gameActive = true;
@@ -42,14 +37,7 @@ void KOTHClient::start()
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
     updateLEDs();
-    if (currentController == Team::NONE)
-    {
-        Serial.println("NONE");
-    }
-    else
-    {
-        Serial.println(currentController == Team::YELLOW ? "YELLOW" : "BLUE");
-    }
+    
     //Subscribe to pause/resume
     eventBus->subscribe(PAUSE, [this](Event e)
                         { pauseGame(e); });
@@ -92,7 +80,7 @@ void KOTHClient::stop()
     eventBus->unsubscribe(NETWORK_MESSAGE_RECEIVED);
     eventBus->unsubscribe(KOTH_SCORE_UPDATE);
     capturing = false;
-    Serial.println("KOTH Client stopped");
+    LOG_INFO("KOTH_CLIENT", "KOTH Client stopped");
 }
 
 void KOTHClient::update()
@@ -150,8 +138,7 @@ void KOTHClient::onButtonPressed(Event e)
     // Already controlled by this team?
     if (currentController == buttonTeam && currentController != Team::NONE)
     {
-        Serial.print("[CLIENT] ");
-        Serial.println("Already controlled by your team");
+        LOG_INFO("KOTH_CLIENT", "Already controlled by your team");
         return;
     }
 
@@ -177,9 +164,7 @@ void KOTHClient::startCapture(Team team)
         capturing = true;
         capturingTeam = team;
         captureStartTime = millis();
-        Serial.print("[CLIENT] ");
-        Serial.print("Started capturing for ");
-        Serial.println(team == Team::YELLOW ? "YELLOW" : "BLUE");
+        LOG_INFO("KOTH_CLIENT", "Started capturing for %s team", team == Team::YELLOW ? "YELLOW" : "BLUE");
     }
 }
 
@@ -200,8 +185,7 @@ void KOTHClient::updateCapture()
         currentController != capturingTeam && captureTimeMs > 5000)
     {
         currentController = Team::NONE;
-        Serial.print("[CLIENT] ");
-        Serial.println("Point neutralized!");
+        LOG_INFO("KOTH_CLIENT", "Point neutralized!");
         updateLEDs();
         updateDisplay();
         if (hardware)
@@ -220,16 +204,13 @@ void KOTHClient::updateCapture()
 void KOTHClient::completeCapture()
 {
     currentController = capturingTeam;
-    Serial.print("[CLIENT] ");
-    Serial.print("Point captured by ");
-    Serial.println(capturingTeam == Team::YELLOW ? "YELLOW" : "BLUE");
+    LOG_INFO("KOTH_CLIENT", "Point captured by %s team", capturingTeam == Team::YELLOW ? "YELLOW" : "BLUE");
 
     // Send capture message to server
     String msg = Protocol::buildCaptureMessage(myNodeId, (uint8_t)capturingTeam);
     if (network)
     {
-        Serial.print("[CLIENT] ");
-        Serial.println("Sending capture message to server");
+        LOG_INFO("KOTH_CLIENT", "Sending capture message to server");
         network->sendToMaster(msg);
     }
 
@@ -254,8 +235,7 @@ void KOTHClient::cancelCapture()
 {
     capturing = false;
     capturingTeam = Team::NONE;
-    Serial.print("[CLIENT] ");
-    Serial.println("Capture cancelled");
+    LOG_INFO("KOTH_CLIENT", "Capture cancelled");
     updateLEDs();
     updateDisplay();
 }
@@ -280,12 +260,7 @@ void KOTHClient::onNetworkMessage(Event e)
 
 void KOTHClient::handleGameOver(Team winner)
 {
-    Serial.print("[CLIENT] ");
-    Serial.println("========== GAME OVER ==========");
-    Serial.print("Winner: ");
-    Serial.println(winner == Team::YELLOW ? "YELLOW" : winner == Team::BLUE ? "BLUE"
-                                                                            : "DRAW");
-
+    LOG_INFO("KOTH_CLIENT", "Game over! Winner: %s", winner == Team::YELLOW ? "YELLOW" : winner == Team::BLUE ? "BLUE" : "DRAW");
     // Victory animation
     if (hardware)
     {

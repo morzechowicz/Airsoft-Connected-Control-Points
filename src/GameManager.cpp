@@ -17,16 +17,9 @@ void GameManager::onConfigureFlag(Event e)
     isMaster = true;
     int countdown = e.data1;
     selectedConfig = FLAG_CONFIG;
-
-    Serial.print("maxPoints");
-    Serial.println(flagConfig.maxPoints);
-    Serial.print("gameDurationMinutes");
-    Serial.println(flagConfig.maxTime);
-    Serial.print("scoreIntervalMs");
-    Serial.println(flagConfig.scoreIntervalMs);
-    Serial.print("captureTimeMs");
-    Serial.println(flagConfig.captureTime);
-    Serial.println("Countdown started");
+    LOG_INFO("GAME_MANAGER", "Received FLAG configuration: maxPoints=%d, maxTime=%d, captureTime=%d, scoreIntervalMs=%d, initTeamCount=%d",
+             flagConfig.maxPoints, flagConfig.maxTime, flagConfig.captureTime, flagConfig.scoreIntervalMs, flagConfig.initTeamCount);
+    LOG_INFO("GAME_MANAGER", "Countdown started");
 
     startCountdownTask(countdown);
 }
@@ -45,15 +38,9 @@ void GameManager::onConfKoth(Event e)
     int countdown = e.data1;
     selectedConfig = KOTH_CONFIG;
 
-    Serial.print("maxPoints");
-    Serial.println(kothConfig.maxPoints);
-    Serial.print("gameDurationMinutes");
-    Serial.println(kothConfig.gameDurationMinutes);
-    Serial.print("scoreIntervalMs");
-    Serial.println(kothConfig.scoreIntervalMs);
-    Serial.print("captureTimeMs");
-    Serial.println(kothConfig.captureTime);
-    Serial.println("Countdown started");
+    LOG_INFO("GAME_MANAGER", "Received KOTH configuration: maxPoints=%d, gameDurationMinutes=%d, captureTime=%d, scoreIntervalMs=%d",
+             kothConfig.maxPoints, kothConfig.gameDurationMinutes, kothConfig.captureTime, kothConfig.scoreIntervalMs);
+    LOG_INFO("GAME_MANAGER", "Countdown started");
 
     if (!kothConfig.singleNodeMode)
     {
@@ -77,10 +64,10 @@ void GameManager::onConfigKothFromMaster(Event e)
 
 void GameManager::startCountdownTask(int countdown)
 {
-    Serial.println("Starting countdown task");
+    LOG_DEBUG("GAME_MANAGER", "Starting countdown task");
     if (kothClient != nullptr || flagClient != nullptr)
     {
-        Serial.println("already running aborting");
+        LOG_WARN("GAME_MANAGER", "A client is already running, aborting");
         return;
     }
 
@@ -112,8 +99,7 @@ void GameManager::startCountdownTask(int countdown)
         },
         "CountdownTask", 2048, params, 1, &countdownHandler);
 
-    Serial.print("Created countdown task: ");
-    Serial.println((uint32_t)countdownHandler, HEX);
+    LOG_DEBUG("GAME_MANAGER", "Created countdown task: %p", (void*)countdownHandler);
 }
 
 void GameManager::countdownTask(int time)
@@ -123,27 +109,27 @@ void GameManager::countdownTask(int time)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
         countdown--;
-        Serial.println(countdown);
+        LOG_DEBUG("GAME_MANAGER", "Countdown: %d", countdown);
         hardwareManager->lcd.clearScreen();
         hardwareManager->lcd.displayText("COUNTDOWN", 0);
         hardwareManager->lcd.displayText(String(countdown).c_str(), 1);
     }
-    Serial.println("Countdown ended");
+    LOG_INFO("GAME_MANAGER", "Countdown ended");
     if (isMaster)
     {
         switch (selectedConfig)
         {
         case KOTH_CONFIG:
-            Serial.println("Starting KOTH as MASTER");
+            LOG_INFO("GAME_MANAGER", "Starting KOTH as MASTER");
             kothServer = new KOTHServer(eventBus, hardwareManager, networkManager, kothConfig);
             kothServer->startModeTask("KOTH-Server", 1, 8192);
             break;
         case FLAG_CONFIG:
-            Serial.println("Starting FLAG as MASTER");
+            LOG_INFO("GAME_MANAGER", "Starting FLAG as MASTER");
             flagServer = new FLAGServer(eventBus, hardwareManager, networkManager, flagConfig);
             flagServer->startModeTask("FLAG-Server", 1, 8192);
         default:
-            Serial.println("Nothing was selected aborting");
+            LOG_INFO("GAME_MANAGER", "Nothing was selected aborting");
             break;
         }
     }
@@ -153,7 +139,7 @@ void GameManager::onGameStarted(Event e)
 {
     if (informationNode)
     {
-        Serial.println("Starting as INFORMATION NODE");
+        LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
         infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
         infoNode->start();
         return;
@@ -161,16 +147,16 @@ void GameManager::onGameStarted(Event e)
     switch (selectedConfig)
     {
     case KOTH_CONFIG:
-        Serial.println("Starting as CLIENT");
+        LOG_INFO("GAME_MANAGER", "Starting as CLIENT");
         kothClient = new KOTHClient(eventBus, hardwareManager, networkManager, myNodeId, kothConfig);
         kothClient->start();
         break;
     case FLAG_CONFIG:
-        Serial.println("Starting as CLIENT");
+        LOG_INFO("GAME_MANAGER", "Starting as CLIENT");
         flagClient = new FLAGClient(eventBus, hardwareManager, networkManager, myNodeId, flagConfig);
         flagClient->start();
     default:
-        Serial.println("Nothing was selected aborting");
+        LOG_INFO("GAME_MANAGER", "Nothing was selected aborting");
         break;
     }
 }
@@ -194,7 +180,7 @@ void GameManager::onNewNode(Event e)
     }
     else
     {
-        Serial.println("Node already exists");
+        LOG_WARN("GAME_MANAGER", "Node already exists");
     }
 }
 

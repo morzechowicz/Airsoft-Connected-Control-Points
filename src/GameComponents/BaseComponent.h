@@ -8,6 +8,7 @@
 #include "Network/NetworkManager.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "../lib/Logging/LogManager.h"
 
 #define BASECOMPONENT_MODE_TASK_STACK 8192  // Increased from 4096
 #define BASECOMPONENT_MODE_TASK_PRIORITY 1
@@ -48,26 +49,27 @@ protected:
     static void modeTaskEntry(void* pv) {
         BaseComponent* self = static_cast<BaseComponent*>(pv);
         if (!self) {
-            Serial.println("ERROR: Null component in task entry!");
+            LOG_ERROR("BASE_COMPONENT", "Null component in task entry!");
             vTaskDelete(NULL);
             return;
         }
         
-        Serial.println("Task entry - calling enterMode()");
+        LOG_INFO("BASE_COMPONENT", "Task entry - calling enterMode()");
         self->enterMode();
         
-        Serial.println("Task entry - calling run()");
+        LOG_INFO("BASE_COMPONENT", "Task entry - calling run()");
         self->run();
         
-        Serial.println("Task entry - calling exitMode()");
+        LOG_INFO("BASE_COMPONENT", "Task entry - calling exitMode()");
         self->exitMode();
         
         // Clear handle before deleting
         self->modeTaskHandle = nullptr;
         self->taskRunning = false;
         
-        Serial.println("Task entry - deleting task");
+        LOG_INFO("BASE_COMPONENT", "Task entry - deleting task");
         vTaskDelete(NULL);
+        self->~BaseComponent();  // Ensure destructor is called
     }
 };
 

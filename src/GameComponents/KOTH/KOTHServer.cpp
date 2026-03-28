@@ -9,9 +9,7 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
       lastScoreUpdate(0),
       gameRunning(false)
 {
-    Serial.print("Initializing KOTH with ");
-    Serial.print(nodeCount);
-    Serial.println(" nodes");
+    LOG_INFO("KOTH_SERVER", "Initializing KOTH Server with %d nodes", nodeCount);
 
     // Initialize nodes from config
     for (uint8_t i = 0; i < nodeCount; i++)
@@ -19,34 +17,30 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
         nodes[i].nodeId = config.nodeIds[i];
         nodes[i].controllingTeam = Team::NONE;
         nodes[i].capturedAt = 0;
+        LOG_INFO("KOTH_SERVER", "Configured node %d with ID %d", i, nodes[i].nodeId);
 
-        Serial.print("  Node ");
-        Serial.print(i);
-        Serial.print(": ID = ");
-        Serial.println(nodes[i].nodeId);
     }
 
     if (config.singleNodeMode)
     {
-        Serial.println("Single node mode - network messages disabled");
+        LOG_INFO("KOTH_SERVER", "Single node mode - network messages disabled");
     }
 }
 
 KOTHServer::~KOTHServer()
 {
+    LOG_DEBUG("KOTH_SERVER", "Destroying KOTH Server");
     eventBus->unsubscribe(KOTH_POINT_CAPTURED);
     eventBus->unsubscribe(PAUSE);
     eventBus->unsubscribe(RESUME);
-    eventBus->unsubscribe(GAME_STARTED);
     eventBus->unsubscribe(GAME_OVER_INTERUPT);
-    eventBus->unsubscribe(GAME);
 
     stopModeTask();
 }
 
 void KOTHServer::enterMode()
 {
-    Serial.println("=== KOTH Server Mode ===");
+    LOG_INFO("KOTH_SERVER", "Entering KOTH Server mode");
 
     // Reset game state
     score.yellowPoints = 0;
@@ -84,19 +78,27 @@ void KOTHServer::enterMode()
             networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes));
         }
     }
-    Serial.println("KOTH Server ready!");
+    LOG_INFO("KOTH_SERVER", "KOTH Server ready!");
     eventBus->publish(DEBUG, KOTH_CONFIG, 0,0, nodeCount, nodes); //change later
 }
 
 void KOTHServer::exitMode()
 {
     gameRunning = false;
-    Serial.println("KOTH Server exiting...");
+    LOG_INFO("KOTH_SERVER", "KOTH Server exiting...");
+
+    LOG_DEBUG("KOTH_SERVER", "Destroying KOTH Server");
+    eventBus->unsubscribe(KOTH_POINT_CAPTURED);
+    eventBus->unsubscribe(PAUSE);
+    eventBus->unsubscribe(RESUME);
+    eventBus->unsubscribe(GAME_OVER_INTERUPT);
+
+    stopModeTask();
 }
 
 void KOTHServer::run()
 {
-    Serial.println("KOTHServer::run() starting main loop");
+    LOG_INFO("KOTH_SERVER", "KOTHServer::run() starting main loop");
 
     unsigned long lastUpdate = millis();
 
@@ -123,7 +125,8 @@ void KOTHServer::run()
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 
-    Serial.println("KOTHServer::run() exiting loop");
+    LOG_INFO("KOTH_SERVER", "KOTHServer::run() exiting loop");
+
 }
 
 void KOTHServer::onCaptureRequest(Event e)
@@ -141,8 +144,7 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
     // Validate team
     if (team != Team::YELLOW && team != Team::BLUE)
     {
-        Serial.print("[SERVER] ");
-        Serial.println("Invalid team in capture request");
+        LOG_ERROR("KOTH_SERVER", "Invalid team in capture request");
         return;
     }
 
@@ -150,19 +152,14 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
     NodeState *node = findNode(nodeId);
     if (!node)
     {
-        Serial.print("[SERVER] ");
-        Serial.print("Unknown node: ");
-        Serial.println(nodeId);
+        LOG_ERROR("KOTH_SERVER", "Unknown node: %d", nodeId);
         return;
     }
 
     // Check if already controlled by this team
     if (node->controllingTeam == team)
     {
-        Serial.print("[SERVER] ");
-        Serial.print("Node ");
-        Serial.print(nodeId);
-        Serial.println(" already controlled by this team");
+        LOG_INFO("KOTH_SERVER", "Node %d already controlled by this team", nodeId);
         return;
     }
 
@@ -170,11 +167,7 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
     node->controllingTeam = team;
     node->capturedAt = millis();
 
-    Serial.print("[SERVER] ");
-    Serial.print("Node ");
-    Serial.print(nodeId);
-    Serial.print(" captured by ");
-    Serial.println(team == Team::YELLOW ? "YELLOW" : "BLUE");
+    LOG_INFO("KOTH_SERVER", "Node %d captured by %s team", nodeId, team == Team::YELLOW ? "YELLOW" : "BLUE");
     // Broadcast capture event
     if(!config.singleNodeMode)
     {
@@ -194,18 +187,8 @@ void KOTHServer::updateScore()
     // Award points (1 point per node per interval)
     score.yellowPoints += yellowNodes;
     score.bluePoints += blueNodes;
-
-    Serial.print("[SERVER] ");
-    Serial.print("Score: Yellow ");
-    Serial.print(score.yellowPoints);
-    Serial.print(" (");
-    Serial.print(yellowNodes);
-    Serial.print(" nodes), Blue ");
-    Serial.print(score.bluePoints);
-    Serial.print(" (");
-    Serial.print(blueNodes);
-    Serial.println(" nodes)");
-
+    
+    LOG_INFO("KOTH_SERVER", "Score: Yellow %d (%d nodes), Blue %d (%d nodes)", score.yellowPoints, yellowNodes, score.bluePoints, blueNodes);
     // Broadcast score update
     if (!config.singleNodeMode)
     {
@@ -224,14 +207,6 @@ void KOTHServer::broadcastScoreUpdate()
     }
 }
 
-void KOTHServer::checkWinConditions()
-{
-    if (isGameOver())
-    {
-        Team winner = determineWinner();
-        endGame(winner);
-    }
-}
 
 bool KOTHServer::isGameOver()
 {
@@ -257,28 +232,9 @@ Team KOTHServer::determineWinner()
 
 void KOTHServer::endGame(Team winner)
 {
-    Serial.print("[SERVER] ");
-    Serial.println("========== GAME OVER ==========");
-    Serial.print("Winner: ");
-
-    if (winner == Team::YELLOW)
-    {
-        Serial.println("YELLOW");
-    }
-    else if (winner == Team::BLUE)
-    {
-        Serial.println("BLUE");
-    }
-    else
-    {
-        Serial.println("DRAW");
-    }
-
-    Serial.print("Final Score - Yellow: ");
-    Serial.print(score.yellowPoints);
-    Serial.print(", Blue: ");
-    Serial.println(score.bluePoints);
-    Serial.println("===============================");
+    LOG_INFO("KOTH_SERVER", "========== GAME OVER ==========");
+    LOG_INFO("KOTH_SERVER", "Winner: %s", winner == Team::YELLOW ? "YELLOW" : winner == Team::BLUE ? "BLUE" : "DRAW");
+    LOG_INFO("KOTH_SERVER", "Final Score - Yellow: %d, Blue: %d", score.yellowPoints, score.bluePoints);
 
     // Broadcast game over
     String msg = Protocol::buildGameOver((uint8_t)winner);
@@ -301,7 +257,7 @@ void KOTHServer::pauseGame(Event e)
     gameRunning = false;
     if (e.data1)
     {
-        Serial.println("Sending Pause msg");
+        LOG_INFO("KOTH_SERVER", "Sending Pause msg");
         String msg = Protocol::buildPause();
         networkManager->broadcast(msg);
     }
@@ -312,7 +268,7 @@ void KOTHServer::resumeGame(Event e)
     gameRunning = true;
     if (e.data1)
     {
-        Serial.println("Sending Resume msg");
+        LOG_INFO("KOTH_SERVER", "Sending Resume msg");
         String msg = Protocol::buildResume();
         networkManager->broadcast(msg);
     }
