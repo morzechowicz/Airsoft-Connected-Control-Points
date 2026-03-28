@@ -23,7 +23,7 @@ void powerResetCallback(Event e) {
 
 void setup()
 {
-    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
+    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL);
     LOG.enableColors(false);
     LOG.setTimestamps(false);
     
