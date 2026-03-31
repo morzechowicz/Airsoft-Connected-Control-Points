@@ -35,7 +35,7 @@ void NetworkManager::setAsClient(uint8_t addres)
     this->role = ROLE_CLIENT;
 }
 
-void NetworkManager::sendToMaster(const String &message)
+void NetworkManager::sendToMain(const String &message)
 {
     LOG_INFO("NETWORK", "Sending message to master (0x%02X)", masterAddress);
 
@@ -143,7 +143,7 @@ void NetworkManager::networkDiscoverCallback(Event e)
         s_instance->setAsClient(e.data1);
         String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
         LOG_INFO("NETWORK", "Responding with: %s", response.c_str());
-        s_instance->sendToMaster(response);
+        s_instance->sendToMain(response);
     }
 }
 

@@ -167,7 +167,7 @@ void FLAGClient::completeCapture()
     if (network)
     {
         LOG_INFO("FLAG_CLIENT", "Sending capture message to server");
-        network->sendToMaster(msg);
+        network->sendToMain(msg);
     }
 
     // Local event

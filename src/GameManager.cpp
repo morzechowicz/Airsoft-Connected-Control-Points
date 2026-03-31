@@ -79,14 +79,18 @@ void GameManager::startCountdownTask(int countdown)
     }
 
     // Heap-allocate so each invocation gets its own params
-    struct TaskParams { GameManager* mgr; int countdown; };
-    auto* params = new TaskParams{ this, countdown };
+    struct TaskParams
+    {
+        GameManager *mgr;
+        int countdown;
+    };
+    auto *params = new TaskParams{this, countdown};
 
     xTaskCreate(
-        [](void* param)
+        [](void *param)
         {
-            auto* p = static_cast<TaskParams*>(param);
-            GameManager* mgr = p->mgr;
+            auto *p = static_cast<TaskParams *>(param);
+            GameManager *mgr = p->mgr;
             int cd = p->countdown;
 
             delete p; // free immediately, before doing any work
@@ -99,7 +103,61 @@ void GameManager::startCountdownTask(int countdown)
         },
         "CountdownTask", 2048, params, 1, &countdownHandler);
 
-    LOG_DEBUG("GAME_MANAGER", "Created countdown task: %p", (void*)countdownHandler);
+    LOG_DEBUG("GAME_MANAGER", "Created countdown task: %p", (void *)countdownHandler);
+}
+
+void GameManager::startAfterCountdownTask(int waitTime)
+{
+    LOG_DEBUG("GAME_MANAGER", "Starting after countdown task");
+    xTaskCreate(
+        [](void *param)
+        {
+            auto *p = static_cast<std::pair<GameManager *, int> *>(param);
+            GameManager *mgr = p->first;
+            int wt = p->second;
+
+            delete p; // free immediately, before doing any work
+
+            mgr->afterCountdownTask(wt);
+
+            // Clear the handle on the manager before self-deleting
+            mgr->afterCountdownHandler = nullptr;
+            vTaskDelete(NULL);
+        },
+        "AfterCountdownTask", 2048, new std::pair<GameManager *, int>{this, waitTime}, 1, &afterCountdownHandler);
+}
+
+void GameManager::afterCountdownTask(int time)
+{
+    int responseWait = time;
+    while (time > 0)
+    {
+        if (kothClient)
+        {
+            LOG_DEBUG("GAME_MANAGER", "AfterCountdownTask: KOTH client already running, aborting");
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        time--;
+    }
+    LOG_INFO("GAME_MANAGER", "After countdown ended, client didnt start");
+
+    String msg = Protocol::buildAskForGameStats(myNodeId);
+    networkManager->sendToMain(msg);
+    while (responseWait > 0)
+    {
+        if (kothClient)
+        {
+            LOG_DEBUG("GAME_MANAGER", "AfterCountdownTask: KOTH client started after request");
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        responseWait--;
+    }
+    LOG_INFO("GAME_MANAGER", "No response received PANIC MODE");
+    hardwareManager->lcd.clearScreen();
+    hardwareManager->lcd.displayText("NET ERROR", 0);
+    hardwareManager->lcd.displayText("CALL GAME ORG", 1);
 }
 
 void GameManager::countdownTask(int time)
@@ -132,6 +190,9 @@ void GameManager::countdownTask(int time)
             LOG_INFO("GAME_MANAGER", "Nothing was selected aborting");
             break;
         }
+    }
+    if (!isMaster && !informationNode)
+    {
     }
 }
 

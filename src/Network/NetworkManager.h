@@ -40,7 +40,7 @@ public:
     void setAsClient(uint8_t address);
     
     // === Existing send methods ===
-    void sendToMaster(const String& message);
+    void sendToMain(const String& message);
     void broadcast(const String& message);
     void sendTo(uint8_t address, const String& message);
     bool sendToAll(const std::vector<uint8_t>& addresses, const String& message);

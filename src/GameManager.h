@@ -37,6 +37,7 @@ private:
 
     EventType selectedConfig = CONF;
     TaskHandle_t countdownHandler = nullptr;
+    TaskHandle_t afterCountdownHandler = nullptr;
 
 public:
     GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net)
@@ -54,8 +55,10 @@ public:
     void onDiscovered(Event e);
     void update();
 
-    void countdownTask(int time);
     void startCountdownTask(int countdown);
+    void countdownTask(int time);
+    void startAfterCountdownTask(int waitTime);
+    void afterCountdownTask(int time);
 };
 
 #endif // GameManager_h

@@ -31,7 +31,7 @@ void setup()
     
     vTaskDelay(200); // Wait for LOG to initialize
     #ifdef BIG_SCREEN
-    hardware.lcd.begin(0x27, 16, 4);
+    hardware.lcd.begin(0x27, 20, 4);
     #else
     hardware.lcd.begin(0x27, 16, 2);
     #endif

@@ -33,6 +33,7 @@ enum EventType
     GAME_COUNTDOWN,
     GAME_PAUSE,
     GAME_OVER_INTERUPT,
+    GAME_REQUEST_START_CONF,
 
     // KOTH specific
     KOTH_CONFIG,
