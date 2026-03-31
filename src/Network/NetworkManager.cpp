@@ -68,6 +68,17 @@ void NetworkManager::sendTo(uint8_t address, const String &message)
     }
 }
 
+void NetworkManager::sendToAndWait(uint8_t address, const String &message, EventGroupHandle_t event, EventBits_t bits)
+{
+        if (networkReady)
+    {
+        char msg[120];
+        snprintf(msg, sizeof(msg), "%s", message.c_str());
+
+        SComm.sendReliable(address, (uint8_t *)msg, strlen(msg),event,bits);
+    }
+}
+
 bool NetworkManager::sendToAll(const std::vector<uint8_t>& addresses, const String& message)
 {
     if (!networkReady) return false;

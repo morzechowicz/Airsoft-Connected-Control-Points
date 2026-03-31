@@ -43,6 +43,7 @@ private:
     void endGame(Team winner);
     void pauseGame(Event e);
     void resumeGame(Event e);
+    void gameConfRequest(Event e);
 
     // Helper functions
     NodeState* findNode(uint8_t nodeId);

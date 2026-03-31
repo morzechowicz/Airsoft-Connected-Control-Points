@@ -33,7 +33,7 @@ private:
 
     InformationModeComp *infoNode = nullptr;
 
-    bool isMaster = false;
+    bool isMain = false;
 
     EventType selectedConfig = CONF;
     TaskHandle_t countdownHandler = nullptr;
@@ -53,6 +53,7 @@ public:
     void onConfigureFlag(Event e);
     void onDiscoverRequest(Event e);
     void onDiscovered(Event e);
+    void onGameStartconfRequest(Event e);
     void update();
 
     void startCountdownTask(int countdown);

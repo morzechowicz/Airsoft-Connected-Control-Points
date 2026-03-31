@@ -14,7 +14,7 @@ void GameManager::onConfigureFlag(Event e)
     Event newNode;
     newNode.data1 = LORA_ADDRESS;
 
-    isMaster = true;
+    isMain = true;
     int countdown = e.data1;
     selectedConfig = FLAG_CONFIG;
     LOG_INFO("GAME_MANAGER", "Received FLAG configuration: maxPoints=%d, maxTime=%d, captureTime=%d, scoreIntervalMs=%d, initTeamCount=%d",
@@ -34,7 +34,7 @@ void GameManager::onConfKoth(Event e)
     newNode.data1 = LORA_ADDRESS;
     // add itself to the table
     onNewNode(newNode);
-    isMaster = true;
+    isMain = true;
     int countdown = e.data1;
     selectedConfig = KOTH_CONFIG;
 
@@ -44,7 +44,7 @@ void GameManager::onConfKoth(Event e)
 
     if (!kothConfig.singleNodeMode)
     {
-        String configBroadcast = Protocol::buildKothConfigUpdated(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
+        String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
         networkManager->broadcast(configBroadcast);
     }
 
@@ -173,7 +173,7 @@ void GameManager::countdownTask(int time)
         hardwareManager->lcd.displayText(String(countdown).c_str(), 1);
     }
     LOG_INFO("GAME_MANAGER", "Countdown ended");
-    if (isMaster)
+    if (isMain)
     {
         switch (selectedConfig)
         {
@@ -191,8 +191,9 @@ void GameManager::countdownTask(int time)
             break;
         }
     }
-    if (!isMaster && !informationNode)
+    if (!isMain && !informationNode)
     {
+        startAfterCountdownTask(10);
     }
 }
 
@@ -257,6 +258,15 @@ void GameManager::onDiscovered(Event e)
     hardwareManager->buzzer.beep(200, 2, 200);
     hardwareManager->lcd.clearScreen();
     hardwareManager->lcd.displayText(msg.c_str(), 1);
+}
+
+void GameManager::onGameStartconfRequest(Event e)
+{
+    if (!isMain && !informationNode)
+    {
+        LOG_INFO("GAME_MANAGER", "Received game start request from node %d", e.data1);
+        startAfterCountdownTask(10);
+    }
 }
 
 void GameManager::update()

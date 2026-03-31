@@ -150,6 +150,12 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
         eventBus.publish(GAME_OVER_INTERUPT,(uint16_t)Protocol::parseIntParam(params[1], 0));
         break;
     }
+    case GAME_REQUEST_START_CONF:
+    {
+        int nodeID = Protocol::parseIntParam(params[1], 0);
+        eventBus.publish(GAME_REQUEST_START_CONF, nodeID);
+        break;
+    }
     default:
         break;
     }

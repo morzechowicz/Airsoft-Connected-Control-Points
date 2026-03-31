@@ -15,10 +15,11 @@ BleSetup ble(eventBus, confHandler);
 
 GameManager gameManager(&eventBus, &hardware, &network);
 
-
-void powerResetCallback(Event e) {
-    if (e.data1) network.broadcastReset();  // tell the network first
-    hardware.reboot();                       // then go down yourself
+void powerResetCallback(Event e)
+{
+    if (e.data1)
+        network.broadcastReset(); // tell the network first
+    hardware.reboot();            // then go down yourself
 }
 
 void setup()
@@ -26,23 +27,24 @@ void setup()
     LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL);
     LOG.enableColors(false);
     LOG.setTimestamps(false);
-    
+
     LOG_INFO("MAIN", "System starting...");
-    
+
     vTaskDelay(200); // Wait for LOG to initialize
-    #ifdef BIG_SCREEN
+#ifdef BIG_SCREEN
     hardware.lcd.begin(0x27, 20, 4);
-    #else
+#else
     hardware.lcd.begin(0x27, 16, 2);
-    #endif
-    
+#endif
+
     hardware.lcd.displayText("      SPAS", 0);
     hardware.lcd.displayText("INITIALAZING", 1);
     vTaskDelay(500);
     ble.BleStart();
     vTaskDelay(500);
-    
-    LOG.setBLECallback([](const char* msg) { ble.sendMessage(msg); });
+
+    LOG.setBLECallback([](const char *msg)
+                       { ble.sendMessage(msg); });
     network.begin();
 
     GameManager::instance = &gameManager;
@@ -61,15 +63,17 @@ void setup()
                        { GameManager::instance->onConfKoth(e); });
     eventBus.subscribe(FLAG_CONFIG, [](Event e)
                        { GameManager::instance->onConfigureFlag(e); });
+    eventBus.subscribe(GAME_REQUEST_START_CONF, [](Event e)
+                       { GameManager::instance->onGameStartconfRequest(e); });
     eventBus.subscribe(POWER_RESET, powerResetCallback);
 
     hardware.buzzer.createBeepTask();
     hardware.lcd.clearScreen();
     hardware.lcd.displayText("WAITING", 0);
 
-    #ifdef INFORMATION_NODE
+#ifdef INFORMATION_NODE
     hardware.lcd.displayText("INF MODE", 1);
-    #endif
+#endif
 }
 
 void loop()

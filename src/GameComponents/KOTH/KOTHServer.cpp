@@ -18,7 +18,6 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
         nodes[i].controllingTeam = Team::NONE;
         nodes[i].capturedAt = 0;
         LOG_INFO("KOTH_SERVER", "Configured node %d with ID %d", i, nodes[i].nodeId);
-
     }
 
     if (config.singleNodeMode)
@@ -63,11 +62,12 @@ void KOTHServer::enterMode()
                         { pauseGame(e); });
     eventBus->subscribe(RESUME, [this](Event e)
                         { resumeGame(e); });
-
-    eventBus->publish(GAME_STARTED, 0);
+    eventBus->subscribe(GAME_REQUEST_START_CONF, [this](Event e)
+                        { gameConfRequest(e); });
     eventBus->subscribe(GAME_OVER_INTERUPT, [this](Event e)
                         { gameOverInterup(); });
 
+    eventBus->publish(GAME_STARTED, 0);
     // Broadcast game start
     if (!config.singleNodeMode)
     {
@@ -75,11 +75,11 @@ void KOTHServer::enterMode()
         if (networkManager)
         {
             networkManager->broadcast(startMsg);
-            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes));
+            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
         }
     }
     LOG_INFO("KOTH_SERVER", "KOTH Server ready!");
-    eventBus->publish(DEBUG, KOTH_CONFIG, 0,0, nodeCount, nodes); //change later
+    eventBus->publish(DEBUG, KOTH_CONFIG, 0, 0, nodeCount, nodes); // change later
 }
 
 void KOTHServer::exitMode()
@@ -126,7 +126,6 @@ void KOTHServer::run()
     }
 
     LOG_INFO("KOTH_SERVER", "KOTHServer::run() exiting loop");
-
 }
 
 void KOTHServer::onCaptureRequest(Event e)
@@ -169,11 +168,11 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
 
     LOG_INFO("KOTH_SERVER", "Node %d captured by %s team", nodeId, team == Team::YELLOW ? "YELLOW" : "BLUE");
     // Broadcast capture event
-    if(!config.singleNodeMode)
+    if (!config.singleNodeMode)
     {
         if (networkManager)
         {
-            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes));
+            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
         }
     }
 }
@@ -187,7 +186,7 @@ void KOTHServer::updateScore()
     // Award points (1 point per node per interval)
     score.yellowPoints += yellowNodes;
     score.bluePoints += blueNodes;
-    
+
     LOG_INFO("KOTH_SERVER", "Score: Yellow %d (%d nodes), Blue %d (%d nodes)", score.yellowPoints, yellowNodes, score.bluePoints, blueNodes);
     // Broadcast score update
     if (!config.singleNodeMode)
@@ -199,14 +198,13 @@ void KOTHServer::updateScore()
 
 void KOTHServer::broadcastScoreUpdate()
 {
-    String msg = Protocol::buildScoreUpdateMessage(scoringInterval,score.yellowPoints, score.bluePoints,nodeCount,nodes);
+    String msg = Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes);
 
     if (networkManager)
     {
         networkManager->broadcast(msg);
     }
 }
-
 
 bool KOTHServer::isGameOver()
 {
@@ -233,7 +231,8 @@ Team KOTHServer::determineWinner()
 void KOTHServer::endGame(Team winner)
 {
     LOG_INFO("KOTH_SERVER", "========== GAME OVER ==========");
-    LOG_INFO("KOTH_SERVER", "Winner: %s", winner == Team::YELLOW ? "YELLOW" : winner == Team::BLUE ? "BLUE" : "DRAW");
+    LOG_INFO("KOTH_SERVER", "Winner: %s", winner == Team::YELLOW ? "YELLOW" : winner == Team::BLUE ? "BLUE"
+                                                                                                   : "DRAW");
     LOG_INFO("KOTH_SERVER", "Final Score - Yellow: %d, Blue: %d", score.yellowPoints, score.bluePoints);
 
     // Broadcast game over
@@ -271,6 +270,36 @@ void KOTHServer::resumeGame(Event e)
         LOG_INFO("KOTH_SERVER", "Sending Resume msg");
         String msg = Protocol::buildResume();
         networkManager->broadcast(msg);
+    }
+}
+
+void KOTHServer::gameConfRequest(Event e)
+{
+    uint8_t nodeId = e.data1;
+    // add new node if it doesn't exist
+    if (findNode(nodeId) == nullptr && nodeCount < 10)
+    {
+        nodes[nodeCount].nodeId = nodeId;
+        nodes[nodeCount].controllingTeam = Team::NONE;
+        nodes[nodeCount].capturedAt = 0;
+        nodeCount++;
+    }
+    EventGroupHandle_t ackEvents = xEventGroupCreate();
+    EventBits_t expectedBits = (1 << nodeId);
+
+    LOG_INFO("KOTH_SERVER", "Received game config request, sending current config");
+    String configMsg = Protocol::buildKothConfigClient(config.maxPoints, config.gameDurationMinutes, config.captureTime, config.gameDurationMinutes);
+    networkManager->sendTo(e.data1, configMsg);
+    LOG_DEBUG("KOTH_SERVER", "Waiting for ACK from node %d", nodeId);
+    EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
+    vEventGroupDelete(ackEvents);
+    LOG_DEBUG("KOTH_SERVER", "ACK wait result: 0x%02X", result);
+    vTaskDelay(pdMS_TO_TICKS(100)); // Small delay to ensure ACK processing
+    String startMsg = Protocol::buildGameStart();
+    if (networkManager)
+    {
+        networkManager->sendTo(e.data1, startMsg);
+        networkManager->sendTo(e.data1, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
     }
 }
 

@@ -43,6 +43,7 @@ public:
     void sendToMain(const String& message);
     void broadcast(const String& message);
     void sendTo(uint8_t address, const String& message);
+    void sendToAndWait(uint8_t address, const String& message,EventGroupHandle_t event,EventBits_t bits);
     bool sendToAll(const std::vector<uint8_t>& addresses, const String& message);
     void sendToUnreliable(uint8_t address, const String& message);
 

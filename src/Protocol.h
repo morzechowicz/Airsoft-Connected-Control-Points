@@ -32,7 +32,7 @@ public:
     static String buildKothConfig(uint8_t maxPoints,uint8_t countdown, uint8_t captureTime, uint8_t maxTime);
     static String buildCaptureMessage(uint8_t nodeId, uint8_t teamId);
     static String buildScoreUpdateMessage(uint16_t time,uint16_t teamYPoints, uint16_t teamBPoints,uint16_t pairs,NodeState teamPoints[10]);
-    static String buildKothConfigUpdated(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime);
+    static String buildKothConfigClient(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime);
 
     // Message parser
     static Message parse(const char *data, size_t length);
