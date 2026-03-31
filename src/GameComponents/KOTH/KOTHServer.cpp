@@ -290,11 +290,14 @@ void KOTHServer::gameConfRequest(Event e)
     LOG_INFO("KOTH_SERVER", "Received game config request, sending current config");
     String configMsg = Protocol::buildKothConfigClient(config.maxPoints, config.gameDurationMinutes, config.captureTime, config.gameDurationMinutes);
     networkManager->sendTo(e.data1, configMsg);
+    
     LOG_DEBUG("KOTH_SERVER", "Waiting for ACK from node %d", nodeId);
     EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
     vEventGroupDelete(ackEvents);
+   
     LOG_DEBUG("KOTH_SERVER", "ACK wait result: 0x%02X", result);
     vTaskDelay(pdMS_TO_TICKS(100)); // Small delay to ensure ACK processing
+   
     String startMsg = Protocol::buildGameStart();
     if (networkManager)
     {

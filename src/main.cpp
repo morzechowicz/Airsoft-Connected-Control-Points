@@ -47,24 +47,6 @@ void setup()
                        { ble.sendMessage(msg); });
     network.begin();
 
-    GameManager::instance = &gameManager;
-
-    eventBus.subscribe(NETWORK_DISCOVER, [](Event e)
-                       { GameManager::instance->onDiscovered(e); });
-    eventBus.subscribe(SEARCH, [](Event e)
-                       { GameManager::instance->onDiscoverRequest(e); });
-    eventBus.subscribe(NETWROK_REPORT, [](Event e)
-                       { GameManager::instance->onNewNode(e); });
-    eventBus.subscribe(GAME_STARTED, [](Event e)
-                       { GameManager::instance->onGameStarted(e); });
-    eventBus.subscribe(KOTH_CONF_UPDATED, [](Event e)
-                       { GameManager::instance->onConfigKothFromMaster(e); });
-    eventBus.subscribe(KOTH_CONFIG, [](Event e)
-                       { GameManager::instance->onConfKoth(e); });
-    eventBus.subscribe(FLAG_CONFIG, [](Event e)
-                       { GameManager::instance->onConfigureFlag(e); });
-    eventBus.subscribe(GAME_REQUEST_START_CONF, [](Event e)
-                       { GameManager::instance->onGameStartconfRequest(e); });
     eventBus.subscribe(POWER_RESET, powerResetCallback);
 
     hardware.buzzer.createBeepTask();

@@ -223,6 +223,28 @@ void GameManager::onGameStarted(Event e)
     }
 }
 
+GameManager::GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net)
+    : eventBus(eb), hardwareManager(hw), networkManager(net)
+{
+    eventBus->subscribe(NETWORK_DISCOVER, [this](Event e)
+                    { onDiscovered(e); });
+    eventBus->subscribe(SEARCH, [this](Event e)
+                       { onDiscoverRequest(e); });
+    eventBus->subscribe(NETWROK_REPORT, [this](Event e)
+                       { onNewNode(e); });
+    eventBus->subscribe(GAME_STARTED, [this](Event e)
+                       { onGameStarted(e); });
+    eventBus->subscribe(KOTH_CONF_UPDATED, [this](Event e)
+                       { onConfigKothFromMaster(e); });
+    eventBus->subscribe(KOTH_CONFIG, [this](Event e)
+                       { onConfKoth(e); });
+    eventBus->subscribe(FLAG_CONFIG, [this](Event e)
+                       { onConfigureFlag(e); });
+    eventBus->subscribe(GAME_REQUEST_START_CONF, [this](Event e)
+                       { onGameStartconfRequest(e); });
+
+}
+
 GameManager::~GameManager()
 {
 }
