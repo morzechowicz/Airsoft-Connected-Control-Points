@@ -8,7 +8,7 @@
 #include "../lib/Logging/LogManager.h"
 
 EventBus eventBus;
-ConfigurationHandler confHandler(eventBus);
+MessageHandler confHandler(eventBus);
 HardwareManager hardware(&eventBus);
 NetworkManager network(eventBus, confHandler);
 BleSetup ble(eventBus, confHandler);

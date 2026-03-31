@@ -3,7 +3,7 @@
 NetworkManager *NetworkManager::s_instance = nullptr;
 
 // Update constructor
-NetworkManager::NetworkManager(EventBus &eventBus, ConfigurationHandler &confHandler) 
+NetworkManager::NetworkManager(EventBus &eventBus, MessageHandler &confHandler) 
     : eventBus(eventBus), confHandler(confHandler)
 {
     role = ROLE_UNDEFINED;

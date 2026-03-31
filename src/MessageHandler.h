@@ -7,10 +7,10 @@
 #include "Config.h"
 #include "../lib/Logging/LogManager.h"
 
-class ConfigurationHandler
+class MessageHandler
 {
 public:
-    ConfigurationHandler(EventBus& eb);
+    MessageHandler(EventBus& eb);
     
     // Main entry point - handles ANY config command from ANY source
     bool handleCommand(const Message& command);

@@ -1,11 +1,11 @@
-#include "ConfigurationHandler.h"
+#include "MessageHandler.h"
 
-ConfigurationHandler::ConfigurationHandler(EventBus &eb)
+MessageHandler::MessageHandler(EventBus &eb)
     : eventBus(eb), lastSuccess(false)
 {
 }
 
-bool ConfigurationHandler::handleCommand(const Message &command)
+bool MessageHandler::handleCommand(const Message &command)
 {
 
     if (command.type == SYS)
@@ -51,7 +51,7 @@ bool ConfigurationHandler::handleCommand(const Message &command)
 
 
 
-void ConfigurationHandler::handleSystemMessage(const String &cmd, const String params[], int paramCount)
+void MessageHandler::handleSystemMessage(const String &cmd, const String params[], int paramCount)
 {
     if (cmd.toInt() == NETWORK_DISCOVER)
     {
@@ -75,7 +75,7 @@ void ConfigurationHandler::handleSystemMessage(const String &cmd, const String p
     
 }
 
-void ConfigurationHandler::handleConfigurationMessage(const String &cmd, const String params[], int paramCount)
+void MessageHandler::handleConfigurationMessage(const String &cmd, const String params[], int paramCount)
 {
     uint16_t countdown = Protocol::parseIntParam(params[1], 0);
     uint16_t gameDurationMinutes = Protocol::parseIntParam(params[2], 0);
@@ -97,7 +97,7 @@ void ConfigurationHandler::handleConfigurationMessage(const String &cmd, const S
     }
 }
 
-void ConfigurationHandler::handleGameMessage(const String &cmd, const String params[], int paramCount)
+void MessageHandler::handleGameMessage(const String &cmd, const String params[], int paramCount)
 {
     switch (cmd.toInt())
     {

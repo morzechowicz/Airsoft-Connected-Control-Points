@@ -1,6 +1,6 @@
 #include "BleCallback.h"
 
-BleCallback::BleCallback(EventBus &ev, ConfigurationHandler &handler) : eventBus(ev), handler(handler)
+BleCallback::BleCallback(EventBus &ev, MessageHandler &handler) : eventBus(ev), handler(handler)
 {
 }
 

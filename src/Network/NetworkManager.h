@@ -10,7 +10,7 @@
 #include "../lib/LoRaSComm/LoRaSComm.h"
 #include "../Protocol.h"
 #include "../Config.h"
-#include "ConfigurationHandler.h"
+#include "MessageHandler.h"
 #include "../lib/Logging/LogManager.h"
 
 // Node discovery struct
@@ -33,7 +33,7 @@ enum NetworkRole {
 
 class NetworkManager {
 public:
-    NetworkManager(EventBus& eventBus, ConfigurationHandler& confHandler);
+    NetworkManager(EventBus& eventBus, MessageHandler& confHandler);
     
     void begin();
     void setAsServer();
@@ -79,7 +79,7 @@ private:
     SX1278 radio = SX1278(new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1));
     LoRaSComm SComm = LoRaSComm(&radio);
     EventBus& eventBus;
-    ConfigurationHandler& confHandler;
+    MessageHandler& confHandler;
     
     static NetworkManager* s_instance;
     NetworkRole role;
