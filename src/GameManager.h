@@ -40,8 +40,7 @@ private:
     TaskHandle_t afterCountdownHandler = nullptr;
 
 public:
-    GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net)
-        : eventBus(eb), hardwareManager(hw), networkManager(net) {};
+    GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net);
     ~GameManager();
 
     static GameManager* instance;
