@@ -68,6 +68,14 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     {
         eventBus.publish(NETWROK_REPORT, params[1].toInt());
     }
+    if (cmd.toInt() == NETWORK_MAIN_LOOKUP)
+    {
+        if(informationNode){
+            LOG_ERROR("HANDLER", "Received main lookup request but this is an information node");
+            return;
+        }
+        eventBus.publish(NETWORK_MAIN_LOOKUP, params[1].toInt());
+    }
     if (cmd.toInt() == POWER_RESET)
     {
         eventBus.publish(POWER_RESET,params[1].toInt());

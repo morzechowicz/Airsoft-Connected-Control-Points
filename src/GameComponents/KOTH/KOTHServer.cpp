@@ -66,6 +66,9 @@ void KOTHServer::enterMode()
                         { gameConfRequest(e); });
     eventBus->subscribe(GAME_OVER_INTERUPT, [this](Event e)
                         { gameOverInterup(); });
+    eventBus->subscribe(NETWORK_MAIN_LOOKUP, [this](Event e)
+                        { onMainLookup(e); });
+
 
     eventBus->publish(GAME_STARTED, 0);
     // Broadcast game start
@@ -284,26 +287,52 @@ void KOTHServer::gameConfRequest(Event e)
         nodes[nodeCount].capturedAt = 0;
         nodeCount++;
     }
+    addingNodeAfterStart(nodeId, e);
+}
+
+void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
+{
     EventGroupHandle_t ackEvents = xEventGroupCreate();
     EventBits_t expectedBits = (1 << nodeId);
+
+    //send discover message to new node
+    String discoverMsg = Protocol::buildDiscoverRequest();
+    networkManager->sendTo(e.data1, discoverMsg);
+    vTaskDelay(pdMS_TO_TICKS(200)); // Small delay to ensure discover message is sent before waiting for ACK
 
     LOG_INFO("KOTH_SERVER", "Received game config request, sending current config");
     String configMsg = Protocol::buildKothConfigClient(config.maxPoints, config.gameDurationMinutes, config.captureTime, config.gameDurationMinutes);
     networkManager->sendTo(e.data1, configMsg);
-    
+
     LOG_DEBUG("KOTH_SERVER", "Waiting for ACK from node %d", nodeId);
     EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
     vEventGroupDelete(ackEvents);
-   
+
     LOG_DEBUG("KOTH_SERVER", "ACK wait result: 0x%02X", result);
     vTaskDelay(pdMS_TO_TICKS(100)); // Small delay to ensure ACK processing
-   
+
     String startMsg = Protocol::buildGameStart();
     if (networkManager)
     {
         networkManager->sendTo(e.data1, startMsg);
         networkManager->sendTo(e.data1, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
     }
+}
+
+void KOTHServer::onMainLookup(Event e)
+{
+    uint8_t nodeId = e.data1;
+    LOG_INFO("KOTH_SERVER", "Received main lookup request from node %d", nodeId);
+    // add new node if it doesn't exist
+    if (findNode(nodeId) == nullptr && nodeCount < 10)
+    {
+        nodes[nodeCount].nodeId = nodeId;
+        nodes[nodeCount].controllingTeam = Team::NONE;
+        nodes[nodeCount].capturedAt = 0;
+        nodeCount++;
+    }
+    //send network discover to node
+    addingNodeAfterStart(nodeId, e);
 }
 
 NodeState *KOTHServer::findNode(uint8_t nodeId)

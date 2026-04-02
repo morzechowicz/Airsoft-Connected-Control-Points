@@ -26,6 +26,7 @@ enum EventType
     NETWORK_MESSAGE_RECEIVED,
     NETWORK_DISCOVER,
     NETWROK_REPORT,
+    NETWORK_MAIN_LOOKUP,
 
     // Game universal
     GAME_STARTED,

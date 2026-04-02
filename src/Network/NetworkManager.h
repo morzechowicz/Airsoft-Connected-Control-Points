@@ -47,7 +47,7 @@ public:
     bool sendToAll(const std::vector<uint8_t>& addresses, const String& message);
     void sendToUnreliable(uint8_t address, const String& message);
 
-    // === NEW: Network polling methods ===
+    // === Why i even made all of this ? ===
     
     // Method 1: Sequential poll (simple, reliable)
     // Polls each node one by one, returns list of alive nodes

@@ -71,6 +71,15 @@ String Protocol::buildAskForGameStats(uint8_t nodeID)
     return buffer;
 }
 
+String Protocol::buildNetworkMainLookup(uint8_t nodeID)
+{
+    String buffer;
+    buffer = String(SYS) + ";";
+    buffer += String(NETWORK_MAIN_LOOKUP) + ";";
+    buffer += String(nodeID);
+    return buffer;
+}
+
 String Protocol::buildKothConfigClient(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime)
 {
     String buffer;

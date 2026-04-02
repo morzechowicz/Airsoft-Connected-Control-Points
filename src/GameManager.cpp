@@ -286,8 +286,15 @@ void GameManager::onGameStartconfRequest(Event e)
 {
     if (!isMain && !informationNode)
     {
-        LOG_INFO("GAME_MANAGER", "Received game start request from node %d", e.data1);
-        startAfterCountdownTask(10);
+        if(e.data1 < 0x02)
+        {
+            LOG_ERROR("GAME_MANAGER", "Connecting to existing game");
+            String msg = Protocol::buildNetworkMainLookup(myNodeId);
+            networkManager->broadcast(msg);
+        }else{
+            LOG_INFO("GAME_MANAGER", "Received game start request from node %d", e.data1);
+            startAfterCountdownTask(10);
+        }
     }
 }
 
