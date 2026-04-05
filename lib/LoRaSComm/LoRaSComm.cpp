@@ -24,8 +24,12 @@ LoRaSComm::LoRaSComm(SX1278 *radioModule)
       failedTxCount(0),
       lastRssi(0),
       lastSnr(0.0f),
+      repeaterMode(false),
+      seenHead(0),
+      repeaterForwardCount(0),
       receiveCallback(nullptr)
 {
+    memset(seenTable, 0, sizeof(seenTable));
 }
 
 // Destructor
@@ -124,7 +128,7 @@ bool LoRaSComm::begin(uint8_t address,
     }
 
     // Create FreeRTOS tasks
-    LOG_INFO("LoRaSComm", "Creating FreeRTOS tasks...");
+    LOG_INFO("LoRaSComm", "Creating FreeresultRTOS tasks...");
 
     BaseType_t result;
 
@@ -497,60 +501,124 @@ void LoRaSComm::txTask(void *params)
         // Check for packets to send
         if (xQueueReceive(instance->txQueue, &txItem, pdMS_TO_TICKS(50)) == pdTRUE)
         {
+            size_t packetSize = 0;
 
-            // Determine packet type
-            LoRaSCommPacketType type = txItem.packetType;
-
-            // Get sequence number
-            uint8_t sequence = instance->currentSequence++;
-
-            // Encode packet
-            size_t packetSize = LoRaSCommPacketCodec::encode(
-                buffer,
-                instance->myAddress,
-                txItem.destAddr,
-                type,
-                sequence,
-                txItem.data,
-                txItem.dataLen);
-
-            if (packetSize > 0)
+            // ---- ACK ----
+            if (txItem.packetType == PACKET_ACK)
             {
-                // Transmit the packet
-                bool success = instance->transmitPacket(buffer, packetSize);
+                uint8_t sequence = txItem.data[0];
+                packetSize = LoRaSCommPacketCodec::encodeAck(
+                    buffer, instance->myAddress, txItem.destAddr, sequence);
 
-                if (success)
+                if (packetSize > 0 && instance->transmitPacket(buffer, packetSize))
                 {
                     instance->txPacketCount++;
-
-                    // If reliable, add to pending ACK queue
-                    if (txItem.packetType == PACKET_DATA_RELIABLE)
-                    {
-                        PendingAck pending;
-                        pending.destAddr = txItem.destAddr;
-                        pending.sequence = sequence;
-                        pending.retryCount = 0;
-                        pending.sentTime = millis();
-                        pending.dataLen = txItem.dataLen;
-                        memcpy(pending.data, txItem.data, txItem.dataLen);
-                        pending.active = true;
-
-                        // Add to pending queue (non-blocking)
-                        if (xQueueSend(instance->ackPendingQueue, &pending, 0) != pdTRUE)
-                        {
-                            LOG_WARN("LoRaSComm", "[TX Task] Warning: ACK pending queue full");
-                            instance->failedTxCount++;
-                        }
-                    }
-
-                    LOG_INFO("LoRaSComm", "[TX Task] Sent %s packet to 0x%02X, seq=%d, size=%d\n",
-                             txItem.packetType == PACKET_DATA_RELIABLE ? "RELIABLE" : "UNRELIABLE",
-                             txItem.destAddr, sequence, packetSize);
+                    LOG_INFO("LoRaSComm", "[TX Task] Sent ACK to 0x%02X seq=%d", txItem.destAddr, sequence);
                 }
-                else
+                else if (packetSize > 0)
                 {
-                    LOG_ERROR("LoRaSComm", "[TX Task] Transmission failed");
                     instance->failedTxCount++;
+                }
+            }
+            // ---- NACK ----
+            else if (txItem.packetType == PACKET_NACK)
+            {
+                uint8_t sequence = txItem.data[0];
+                packetSize = LoRaSCommPacketCodec::encodeNack(
+                    buffer, instance->myAddress, txItem.destAddr, sequence);
+
+                if (packetSize > 0 && instance->transmitPacket(buffer, packetSize))
+                {
+                    instance->txPacketCount++;
+                    LOG_INFO("LoRaSComm", "[TX Task] Sent NACK to 0x%02X seq=%d", txItem.destAddr, sequence);
+                }
+                else if (packetSize > 0)
+                {
+                    instance->failedTxCount++;
+                }
+            }
+            // ---- REPEATER FORWARD ----
+            else if (txItem.isForward)
+            {
+                // Re-encode preserving original srcAddr and sequence.
+                // TTL (decremented) is in data[0], payload follows from data[1].
+                uint8_t ttl = txItem.data[0];
+                const uint8_t* payload = txItem.dataLen > 0 ? txItem.data + 1 : nullptr;
+
+                packetSize = LoRaSCommPacketCodec::encode(
+                    buffer,
+                    txItem.originalSrcAddr,   // preserve original sender
+                    txItem.destAddr,
+                    txItem.packetType,
+                    txItem.originalSequence,  // preserve original sequence
+                    payload,
+                    txItem.dataLen,
+                    ttl);
+
+                if (packetSize > 0 && instance->transmitPacket(buffer, packetSize))
+                {
+                    instance->txPacketCount++;
+                    LOG_INFO("LoRaSComm", "[TX Task] Forwarded packet from 0x%02X to 0x%02X seq=%d TTL=%d",
+                             txItem.originalSrcAddr, txItem.destAddr, txItem.originalSequence, ttl);
+                }
+                else if (packetSize > 0)
+                {
+                    instance->failedTxCount++;
+                    LOG_ERROR("LoRaSComm", "[TX Task] Forward transmission failed");
+                }
+            }
+            // ---- NORMAL DATA (RELIABLE / UNRELIABLE) ----
+            else
+            {
+                uint8_t sequence = instance->currentSequence++;
+
+                packetSize = LoRaSCommPacketCodec::encode(
+                    buffer,
+                    instance->myAddress,
+                    txItem.destAddr,
+                    txItem.packetType,
+                    sequence,
+                    txItem.data,
+                    txItem.dataLen);
+
+                if (packetSize > 0)
+                {
+                    bool success = instance->transmitPacket(buffer, packetSize);
+
+                    if (success)
+                    {
+                        instance->txPacketCount++;
+
+                        // Reliable — track for ACK/retry
+                        if (txItem.packetType == PACKET_DATA_RELIABLE)
+                        {
+                            PendingAck pending;
+                            pending.destAddr = txItem.destAddr;
+                            pending.sequence = sequence;
+                            pending.retryCount = 0;
+                            pending.sentTime = millis();
+                            pending.dataLen = txItem.dataLen;
+                            memcpy(pending.data, txItem.data, txItem.dataLen);
+                            pending.active = true;
+                            pending.eventGroup = txItem.eventGroup;
+                            pending.eventBit = txItem.eventBit;
+
+                            if (xQueueSend(instance->ackPendingQueue, &pending, 0) != pdTRUE)
+                            {
+                                LOG_WARN("LoRaSComm", "[TX Task] Warning: ACK pending queue full");
+                                instance->failedTxCount++;
+                            }
+                        }
+
+                        LOG_INFO("LoRaSComm", "[TX Task] Sent %s to 0x%02X seq=%d size=%d",
+                                 txItem.packetType == PACKET_DATA_RELIABLE ? "RELIABLE" : "UNRELIABLE",
+                                 txItem.destAddr, sequence, packetSize);
+                    }
+                    else
+                    {
+                        LOG_ERROR("LoRaSComm", "[TX Task] Transmission failed");
+                        instance->failedTxCount++;
+                    }
                 }
             }
         }
@@ -592,10 +660,19 @@ void LoRaSComm::userTask(void *params)
 
 void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
 {
-    // Check if packet is for us or broadcast
+    // Ignore packets we ourselves sent (own echo, or repeated copy coming back)
+    if (packet.header.srcAddr == myAddress)
+    {
+        return;
+    }
+
+    // Not addressed to us — repeater mode handles forwarding, otherwise drop
     if (packet.header.destAddr != myAddress && packet.header.destAddr != LORASCOMM_BROADCAST_ADDR)
     {
-        // Not for us, ignore
+        if (repeaterMode)
+        {
+            forwardPacket(packet);
+        }
         return;
     }
 
@@ -606,11 +683,11 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
     case PACKET_DATA_UNRELIABLE:
     case PACKET_DATA_RELIABLE:
     {
-        // Send ACK if reliable
+        // Enqueue ACK through TX queue — RX task must not transmit directly
         if (packet.header.packetType == PACKET_DATA_RELIABLE &&
             packet.header.destAddr != LORASCOMM_BROADCAST_ADDR)
         {
-            sendAck(packet.header.srcAddr, packet.header.sequence);
+            enqueueAck(packet.header.srcAddr, packet.header.sequence);
         }
 
         // Add to RX queue for user
@@ -644,19 +721,16 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
         {
             if (xQueueReceive(ackPendingQueue, &pending, 0) == pdTRUE)
             {
-                // Check if this ACK matches
                 if (pending.destAddr == packet.header.srcAddr &&
                     pending.sequence == packet.header.sequence)
                 {
-                    // Match! Remove from queue
                     LOG_INFO("LoRaSComm", "[RX] Received %s from 0x%02X for seq=%d\n",
                              packet.header.packetType == PACKET_ACK ? "ACK" : "NACK",
                              packet.header.srcAddr, packet.header.sequence);
-                    // Don't put back in queue
+                    // Match — don't put back, effectively removes it from queue
                 }
                 else
                 {
-                    // Not a match, put back in queue
                     xQueueSend(ackPendingQueue, &pending, 0);
                 }
             }
@@ -670,21 +744,83 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
     }
 }
 
+void LoRaSComm::forwardPacket(const LoRaSCommPacket &packet)
+{
+    // TTL check — drop if expired
+    if (packet.header.flags == 0)
+    {
+        LOG_WARN("LoRaSComm", "[Repeater] TTL expired, dropping packet from 0x%02X seq=%d",
+                 packet.header.srcAddr, packet.header.sequence);
+        return;
+    }
+
+    // Deduplication — drop if we already forwarded this recently
+    if (repeaterAlreadySeen(packet.header.srcAddr, packet.header.sequence))
+    {
+        LOG_INFO("LoRaSComm", "[Repeater] Duplicate, dropping packet from 0x%02X seq=%d",
+                 packet.header.srcAddr, packet.header.sequence);
+        return;
+    }
+    repeaterMarkSeen(packet.header.srcAddr, packet.header.sequence);
+
+    // Enqueue for forwarding — TX task will re-encode preserving original src/dest/sequence
+    TxQueueItem item;
+    item.destAddr = packet.header.destAddr;
+    item.packetType = static_cast<LoRaSCommPacketType>(packet.header.packetType);
+    item.dataLen = packet.header.payloadLen;
+    item.originalSrcAddr = packet.header.srcAddr;
+    item.originalSequence = packet.header.sequence;
+    item.isForward = true;
+    // TTL decremented here — stored in data[0] since forward items use originalSequence
+    item.data[0] = packet.header.flags - 1;
+    if (packet.header.payloadLen > 0) {
+        memcpy(item.data + 1, packet.payload, packet.header.payloadLen);
+    }
+    item.eventGroup = nullptr;
+
+    if (xQueueSend(txQueue, &item, 0) != pdTRUE)
+    {
+        LOG_WARN("LoRaSComm", "[Repeater] TX queue full, dropped forward from 0x%02X seq=%d",
+                 packet.header.srcAddr, packet.header.sequence);
+        return;
+    }
+
+    repeaterForwardCount++;
+    LOG_INFO("LoRaSComm", "[Repeater] Queued forward from 0x%02X to 0x%02X seq=%d TTL=%d",
+             packet.header.srcAddr, packet.header.destAddr,
+             packet.header.sequence, packet.header.flags - 1);
+}
+
+bool LoRaSComm::repeaterAlreadySeen(uint8_t src, uint8_t seq)
+{
+    uint32_t now = millis();
+    for (auto &entry : seenTable)
+    {
+        if (entry.srcAddr == src &&
+            entry.sequence == seq &&
+            (now - entry.timestamp) < LORASCOMM_REPEATER_SEEN_EXPIRY_MS)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void LoRaSComm::repeaterMarkSeen(uint8_t src, uint8_t seq)
+{
+    seenTable[seenHead].srcAddr = src;
+    seenTable[seenHead].sequence = seq;
+    seenTable[seenHead].timestamp = millis();
+    seenHead = (seenHead + 1) % LORASCOMM_REPEATER_SEEN_TABLE_SIZE;
+}
+
 void LoRaSComm::sendAck(uint8_t dest, uint8_t sequence)
 {
     uint8_t buffer[LORASCOMM_MAX_PACKET_SIZE];
     size_t packetSize = LoRaSCommPacketCodec::encodeAck(buffer, myAddress, dest, sequence);
-
-    if (packetSize > 0)
-    {
-        // Small delay before sending ACK to let sender switch to RX
-        vTaskDelay(pdMS_TO_TICKS(100));
-
+    if (packetSize > 0) {
         transmitPacket(buffer, packetSize);
         LOG_INFO("LoRaSComm", "[TX] Sent ACK to 0x%02X for seq=%d\n", dest, sequence);
-
-        // Small delay after ACK to let it transmit
-        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -692,38 +828,107 @@ void LoRaSComm::sendNack(uint8_t dest, uint8_t sequence)
 {
     uint8_t buffer[LORASCOMM_MAX_PACKET_SIZE];
     size_t packetSize = LoRaSCommPacketCodec::encodeNack(buffer, myAddress, dest, sequence);
-
-    if (packetSize > 0)
-    {
+    if (packetSize > 0) {
         transmitPacket(buffer, packetSize);
         LOG_INFO("LoRaSComm", "[TX] Sent NACK to 0x%02X for seq=%d\n", dest, sequence);
     }
 }
 
+void LoRaSComm::enqueueAck(uint8_t dest, uint8_t sequence)
+{
+    TxQueueItem item;
+    item.destAddr = dest;
+    item.packetType = PACKET_ACK;
+    item.data[0] = sequence;  // sequence carried in first byte, no real payload
+    item.dataLen = 0;
+    item.eventGroup = nullptr;
+    item.isForward = false;
+
+    if (xQueueSend(txQueue, &item, 0) != pdTRUE) {
+        LOG_WARN("LoRaSComm", "[RX] ACK queue full, dropped ACK for seq=%d", sequence);
+    }
+}
+
+void LoRaSComm::enqueueNack(uint8_t dest, uint8_t sequence)
+{
+    TxQueueItem item;
+    item.destAddr = dest;
+    item.packetType = PACKET_NACK;
+    item.data[0] = sequence;
+    item.dataLen = 0;
+    item.eventGroup = nullptr;
+    item.isForward = false;
+
+    if (xQueueSend(txQueue, &item, 0) != pdTRUE) {
+        LOG_WARN("LoRaSComm", "[RX] NACK queue full, dropped NACK for seq=%d", sequence);
+    }
+}
+
 bool LoRaSComm::transmitPacket(const uint8_t *buffer, size_t len)
 {
-    if (xSemaphoreTake(radioMutex, pdMS_TO_TICKS(100)) == pdTRUE)
-    {
-        int state = radio->transmit(const_cast<uint8_t *>(buffer), len);
-
-        // Put radio back in RX mode after TX
-        if (state == RADIOLIB_ERR_NONE)
-        {
-            // Small delay to ensure transmission completes
-            vTaskDelay(pdMS_TO_TICKS(10));
-            radio->startReceive();
-        }
-        else
-        {
-            LOG_ERROR("LoRaSComm", "[TX] Transmission failed with error: %d\n", state);
-        }
-
-        xSemaphoreGive(radioMutex);
-
-        return (state == RADIOLIB_ERR_NONE);
+    if (xSemaphoreTake(radioMutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+        return false;
     }
 
-    return false;
+    // Listen Before Talk — sample channel RSSI before transmitting.
+    // Mutex is released during backoff so the RX task stays alive.
+    for (uint8_t attempt = 0; attempt < LORASCOMM_LBT_MAX_ATTEMPTS; attempt++)
+    {
+        radio->startReceive();
+        // Release mutex briefly so the delay doesn't starve the RX task,
+        // then re-acquire before reading RSSI
+        xSemaphoreGive(radioMutex);
+        vTaskDelay(pdMS_TO_TICKS(LORASCOMM_LBT_SAMPLE_TIME_MS));
+        if (xSemaphoreTake(radioMutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+            return false;
+        }
+
+        int16_t rssi = radio->getRSSI();
+
+        if (rssi < LORASCOMM_LBT_RSSI_THRESHOLD)
+        {
+            // Channel clear, proceed to transmit
+            LOG_INFO("LoRaSComm", "[LBT] Channel clear (RSSI=%d), transmitting", rssi);
+            break;
+        }
+
+        if (attempt == LORASCOMM_LBT_MAX_ATTEMPTS - 1)
+        {
+            LOG_ERROR("LoRaSComm", "[LBT] Channel busy after %d attempts, dropping packet",
+                      LORASCOMM_LBT_MAX_ATTEMPTS);
+            xSemaphoreGive(radioMutex);
+            failedTxCount++;
+            return false;
+        }
+
+        // Random backoff — breaks symmetry so two nodes don't keep colliding
+        uint32_t backoff = (esp_random() % (LORASCOMM_LBT_MAX_BACKOFF_MS - LORASCOMM_LBT_MIN_BACKOFF_MS)) 
+                   + LORASCOMM_LBT_MIN_BACKOFF_MS;
+        LOG_WARN("LoRaSComm", "[LBT] Channel busy (RSSI=%d), backoff %dms (attempt %d/%d)",
+                 rssi, backoff, attempt + 1, LORASCOMM_LBT_MAX_ATTEMPTS);
+
+        xSemaphoreGive(radioMutex);
+        vTaskDelay(pdMS_TO_TICKS(backoff));
+        if (xSemaphoreTake(radioMutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+            return false;
+        }
+    }
+
+    int state = radio->transmit(const_cast<uint8_t *>(buffer), len);
+
+    if (state == RADIOLIB_ERR_NONE)
+    {
+        vTaskDelay(pdMS_TO_TICKS(10));
+        radio->startReceive();
+    }
+    else
+    {
+        LOG_ERROR("LoRaSComm", "[TX] Transmission failed with error: %d\n", state);
+        radio->startReceive();
+    }
+
+    xSemaphoreGive(radioMutex);
+    return (state == RADIOLIB_ERR_NONE);
 }
 
 void LoRaSComm::processAckTimeout()

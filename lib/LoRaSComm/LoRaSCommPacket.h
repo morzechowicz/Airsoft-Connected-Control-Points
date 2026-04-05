@@ -25,6 +25,10 @@
 // Special addresses
 #define LORASCOMM_BROADCAST_ADDR 0xFF
 
+// Default TTL for packet forwarding (stored in header.flags)
+// Protects against forwarding loops if two repeaters are accidentally in range
+#define LORASCOMM_DEFAULT_TTL 3
+
 // Packet types
 enum LoRaSCommPacketType : uint8_t {
     PACKET_DATA_UNRELIABLE = 0x00,
@@ -39,7 +43,7 @@ struct LoRaSCommHeader {
     uint8_t destAddr;       // Destination address
     uint8_t packetType;     // Type of packet (see LoRaSCommPacketType)
     uint8_t sequence;       // Sequence number (0-255, rolls over)
-    uint8_t flags;          // Reserved for future use
+    uint8_t flags;          // TTL for repeater forwarding (decremented each hop, drop at 0)
     uint8_t payloadLen;     // Actual payload length (0-119)
     uint8_t reserved;       // Reserved byte for alignment
 } __attribute__((packed));
@@ -93,7 +97,8 @@ public:
                         LoRaSCommPacketType type,
                         uint8_t sequence,
                         const uint8_t* payload,
-                        size_t payloadLen) {
+                        size_t payloadLen,
+                        uint8_t ttl = LORASCOMM_DEFAULT_TTL) {
         
         if (payloadLen > LORASCOMM_MAX_PAYLOAD_SIZE) {
             return 0; // Error: payload too large
@@ -105,7 +110,7 @@ public:
         header.destAddr = destAddr;
         header.packetType = type;
         header.sequence = sequence;
-        header.flags = 0;
+        header.flags = ttl;
         header.payloadLen = payloadLen;
         header.reserved = 0;
         
