@@ -49,18 +49,6 @@ public:
 
     // === Why i even made all of this ? ===
     
-    // Method 1: Sequential poll (simple, reliable)
-    // Polls each node one by one, returns list of alive nodes
-    std::vector<NodeInfo> pollNodesSequential(const std::vector<uint8_t>& addresses, uint32_t timeoutMs = 2000);
-    
-    // Method 2: Broadcast poll with TDMA slots
-    // Broadcasts poll request, nodes respond in assigned time slots
-    std::vector<NodeInfo> pollNodesTDMA(const std::vector<uint8_t>& addresses, uint16_t slotMs = 300);
-    
-    // Method 3: Discovery poll (finds unknown nodes)
-    // Broadcasts poll, any node can respond (with random backoff)
-    std::vector<NodeInfo> discoverNodes(uint32_t listenDurationMs = 3000);
-    
     // Node list management
     void addKnownNode(uint8_t address);
     void removeKnownNode(uint8_t address);
