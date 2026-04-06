@@ -90,6 +90,10 @@ void MessageHandler::handleConfigurationMessage(const String &cmd, const String 
     uint16_t maxPoints = Protocol::parseIntParam(params[3], 0);
     uint16_t captureTime = Protocol::parseIntParam(params[4], 0);
     uint16_t teamsCount = Protocol::parseIntParam(params[5], 0);
+    if(informationNode)
+    {
+        return;
+    }
     switch (cmd.toInt())
     {
     case KOTH_CONFIG:
