@@ -9,7 +9,7 @@ void BleCallback::onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo 
     std::string value = pCharacteristic->getValue();
     Message msg;
     msg = Protocol::parse(value.c_str(), value.length());
-    bool result = handler.handleCommand(msg);
+    bool result = handler.handleCommand(msg,(const char *)value.c_str());
     if (!result)
     {
         LOG_ERROR("BLE_CALLBACK", "Failed to handle command: %s", value.c_str());
