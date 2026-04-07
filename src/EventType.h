@@ -53,7 +53,8 @@ enum EventType
     CONF,
     DEBUG,
     UNKNOWN,
-    FORWARD, 
+    FORWARD,
+    TEST,
 
     // FLAG specific
     FLAG_CAPTURED,

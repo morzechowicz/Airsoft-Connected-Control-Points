@@ -49,6 +49,11 @@ bool MessageHandler::handleCommand(const Message &command, String rasMsg)
     {
         LOG_DEBUG("HANDLER", "Received UNKNOWN message");
     }
+    if (command.type == DEBUG)
+    {
+        handleDebugMessage(command.params[0], command.params, command.paramCount);
+        LOG_DEBUG("HANDLER", "Received DEBUG message");
+    }
     return false;
 }
 
@@ -192,4 +197,13 @@ void MessageHandler::handleForwardingMsg(const String &cmd, const String params[
 
     LOG_DEBUG("HANDLER", "Forwarding message to node %d: %s", targetNode, rawMsg.c_str());
     eventBus.publish(FORWARD, targetNode, rawMsg);
+}
+
+void MessageHandler::handleDebugMessage(const String &cmd, const String params[], int paramCount)
+{
+    if(cmd.toInt() == TEST)
+    {
+        LOG_INFO("HANDLER", "Testing connection with audio response");
+        eventBus.publish(TEST,1);
+    }
 }

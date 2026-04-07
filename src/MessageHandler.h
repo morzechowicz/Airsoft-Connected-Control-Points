@@ -34,7 +34,8 @@ private:
     void handleConfigurationMessage(const String& cmd, const String params[], int paramCount);
     void handleGameMessage(const String& cmd, const String params[], int paramCount);
     void handleForwardingMsg(const String& cmd, const String params[], int paramCount,String rawMsg);
-    
+    void handleDebugMessage(const String& cmd, const String params[], int paramCount);
+
     // // Helpers
     // void setResult(bool success, const String& message);
 };
