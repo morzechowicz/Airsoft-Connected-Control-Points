@@ -180,7 +180,7 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
 
 void MessageHandler::handleForwardingMsg(const String &cmd, const String params[], int paramCount, String rawMsg)
 {
-    uint16_t targetNode = Protocol::parseIntParam(params[1], 0);
+    uint8_t targetNode = Protocol::parseIntParam(params[0], 0);
 
     if (targetNode == 0)
     {
