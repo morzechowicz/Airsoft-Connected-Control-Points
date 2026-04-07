@@ -9,8 +9,10 @@ bool MessageHandler::handleCommand(const Message &command, String rasMsg)
 {
     if (command.type == FORWARD)
     {
+        LOG_DEBUG("HANDLER", "Handling forwarding message");
+        handleForwardingMsg(command.params[0], command.params, command.paramCount, rasMsg);
+        return true;
     }
-
     if (command.type == SYS)
     {
         LOG_DEBUG("HANDLER", "Handling system message");
