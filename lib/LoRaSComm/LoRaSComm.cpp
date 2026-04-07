@@ -543,14 +543,14 @@ void LoRaSComm::txTask(void *params)
                 // Re-encode preserving original srcAddr and sequence.
                 // TTL (decremented) is in data[0], payload follows from data[1].
                 uint8_t ttl = txItem.data[0];
-                const uint8_t* payload = txItem.dataLen > 0 ? txItem.data + 1 : nullptr;
+                const uint8_t *payload = txItem.dataLen > 0 ? txItem.data + 1 : nullptr;
 
                 packetSize = LoRaSCommPacketCodec::encode(
                     buffer,
-                    txItem.originalSrcAddr,   // preserve original sender
+                    txItem.originalSrcAddr, // preserve original sender
                     txItem.destAddr,
                     txItem.packetType,
-                    txItem.originalSequence,  // preserve original sequence
+                    txItem.originalSequence, // preserve original sequence
                     payload,
                     txItem.dataLen,
                     ttl);
@@ -704,9 +704,9 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
         }
 
         LOG_INFO("LoRaSComm", "[RX] Received %s from 0x%02X, seq=%d, len=%d, RSSI=%d\n",
-                      packet.header.packetType == PACKET_DATA_RELIABLE ? "RELIABLE" : "UNRELIABLE",
-                      packet.header.srcAddr, packet.header.sequence,
-                      packet.header.payloadLen, lastRssi);
+                 packet.header.packetType == PACKET_DATA_RELIABLE ? "RELIABLE" : "UNRELIABLE",
+                 packet.header.srcAddr, packet.header.sequence,
+                 packet.header.payloadLen, lastRssi);
         break;
     }
 
@@ -773,7 +773,8 @@ void LoRaSComm::forwardPacket(const LoRaSCommPacket &packet)
     item.isForward = true;
     // TTL decremented here — stored in data[0] since forward items use originalSequence
     item.data[0] = packet.header.flags - 1;
-    if (packet.header.payloadLen > 0) {
+    if (packet.header.payloadLen > 0)
+    {
         memcpy(item.data + 1, packet.payload, packet.header.payloadLen);
     }
     item.eventGroup = nullptr;
@@ -818,7 +819,8 @@ void LoRaSComm::sendAck(uint8_t dest, uint8_t sequence)
 {
     uint8_t buffer[LORASCOMM_MAX_PACKET_SIZE];
     size_t packetSize = LoRaSCommPacketCodec::encodeAck(buffer, myAddress, dest, sequence);
-    if (packetSize > 0) {
+    if (packetSize > 0)
+    {
         transmitPacket(buffer, packetSize);
         LOG_INFO("LoRaSComm", "[TX] Sent ACK to 0x%02X for seq=%d\n", dest, sequence);
     }
@@ -828,7 +830,8 @@ void LoRaSComm::sendNack(uint8_t dest, uint8_t sequence)
 {
     uint8_t buffer[LORASCOMM_MAX_PACKET_SIZE];
     size_t packetSize = LoRaSCommPacketCodec::encodeNack(buffer, myAddress, dest, sequence);
-    if (packetSize > 0) {
+    if (packetSize > 0)
+    {
         transmitPacket(buffer, packetSize);
         LOG_INFO("LoRaSComm", "[TX] Sent NACK to 0x%02X for seq=%d\n", dest, sequence);
     }
@@ -839,12 +842,13 @@ void LoRaSComm::enqueueAck(uint8_t dest, uint8_t sequence)
     TxQueueItem item;
     item.destAddr = dest;
     item.packetType = PACKET_ACK;
-    item.data[0] = sequence;  // sequence carried in first byte, no real payload
+    item.data[0] = sequence; // sequence carried in first byte, no real payload
     item.dataLen = 0;
     item.eventGroup = nullptr;
     item.isForward = false;
 
-    if (xQueueSend(txQueue, &item, 0) != pdTRUE) {
+    if (xQueueSend(txQueue, &item, 0) != pdTRUE)
+    {
         LOG_WARN("LoRaSComm", "[RX] ACK queue full, dropped ACK for seq=%d", sequence);
     }
 }
@@ -859,74 +863,53 @@ void LoRaSComm::enqueueNack(uint8_t dest, uint8_t sequence)
     item.eventGroup = nullptr;
     item.isForward = false;
 
-    if (xQueueSend(txQueue, &item, 0) != pdTRUE) {
+    if (xQueueSend(txQueue, &item, 0) != pdTRUE)
+    {
         LOG_WARN("LoRaSComm", "[RX] NACK queue full, dropped NACK for seq=%d", sequence);
     }
 }
 
 bool LoRaSComm::transmitPacket(const uint8_t *buffer, size_t len)
 {
-    if (xSemaphoreTake(radioMutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(radioMutex, pdMS_TO_TICKS(1000)) != pdTRUE)
+    {
         return false;
     }
 
-    // Listen Before Talk — sample channel RSSI before transmitting.
-    // Mutex is released during backoff so the RX task stays alive.
     for (uint8_t attempt = 0; attempt < LORASCOMM_LBT_MAX_ATTEMPTS; attempt++)
     {
-        radio->startReceive();
-        // Release mutex briefly so the delay doesn't starve the RX task,
-        // then re-acquire before reading RSSI
-        xSemaphoreGive(radioMutex);
-        vTaskDelay(pdMS_TO_TICKS(LORASCOMM_LBT_SAMPLE_TIME_MS));
-        if (xSemaphoreTake(radioMutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
-            return false;
-        }
+        int16_t cadResult = radio->scanChannel();
 
-        int16_t rssi = radio->getRSSI();
-
-        if (rssi < LORASCOMM_LBT_RSSI_THRESHOLD)
+        if (cadResult == RADIOLIB_CHANNEL_FREE)
         {
-            // Channel clear, proceed to transmit
-            LOG_INFO("LoRaSComm", "[LBT] Channel clear (RSSI=%d), transmitting", rssi);
+            LOG_INFO("LoRaSComm", "[LBT] Channel clear, transmitting");
             break;
         }
 
         if (attempt == LORASCOMM_LBT_MAX_ATTEMPTS - 1)
         {
-            LOG_ERROR("LoRaSComm", "[LBT] Channel busy after %d attempts, dropping packet",
+            LOG_ERROR("LoRaSComm", "[LBT] Channel busy after %d attempts, dropping",
                       LORASCOMM_LBT_MAX_ATTEMPTS);
+            radio->startReceive();
             xSemaphoreGive(radioMutex);
             failedTxCount++;
             return false;
         }
 
-        // Random backoff — breaks symmetry so two nodes don't keep colliding
-        uint32_t backoff = (esp_random() % (LORASCOMM_LBT_MAX_BACKOFF_MS - LORASCOMM_LBT_MIN_BACKOFF_MS)) 
-                   + LORASCOMM_LBT_MIN_BACKOFF_MS;
-        LOG_WARN("LoRaSComm", "[LBT] Channel busy (RSSI=%d), backoff %dms (attempt %d/%d)",
-                 rssi, backoff, attempt + 1, LORASCOMM_LBT_MAX_ATTEMPTS);
+        uint32_t backoff = (esp_random() % (LORASCOMM_LBT_MAX_BACKOFF_MS - LORASCOMM_LBT_MIN_BACKOFF_MS)) + LORASCOMM_LBT_MIN_BACKOFF_MS;
+        LOG_WARN("LoRaSComm", "[LBT] Preamble detected, backoff %dms", backoff);
 
         xSemaphoreGive(radioMutex);
         vTaskDelay(pdMS_TO_TICKS(backoff));
-        if (xSemaphoreTake(radioMutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+        if (xSemaphoreTake(radioMutex, pdMS_TO_TICKS(1000)) != pdTRUE)
+        {
             return false;
         }
     }
 
     int state = radio->transmit(const_cast<uint8_t *>(buffer), len);
-
-    if (state == RADIOLIB_ERR_NONE)
-    {
-        vTaskDelay(pdMS_TO_TICKS(10));
-        radio->startReceive();
-    }
-    else
-    {
-        LOG_ERROR("LoRaSComm", "[TX] Transmission failed with error: %d\n", state);
-        radio->startReceive();
-    }
-
+    vTaskDelay(pdMS_TO_TICKS(10));
+    radio->startReceive();
     xSemaphoreGive(radioMutex);
     return (state == RADIOLIB_ERR_NONE);
 }

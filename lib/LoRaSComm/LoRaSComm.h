@@ -33,8 +33,6 @@
 #define LORASCOMM_DEFAULT_ACK_TIMEOUT 2000  // ms
 
 // Listen Before Talk (LBT)
-#define LORASCOMM_LBT_RSSI_THRESHOLD   -80  // dBm, channel considered busy above this
-#define LORASCOMM_LBT_SAMPLE_TIME_MS   100    // ms to listen before sampling RSSI
 #define LORASCOMM_LBT_MAX_BACKOFF_MS   500  // max random backoff window
 #define LORASCOMM_LBT_MIN_BACKOFF_MS    50
 #define LORASCOMM_LBT_MAX_ATTEMPTS     8    // give up after this many attempts
