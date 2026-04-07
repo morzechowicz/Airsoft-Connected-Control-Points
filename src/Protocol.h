@@ -28,6 +28,7 @@ public:
     static String buildPowerResetMsg();
     static String buildAskForGameStats(uint8_t nodeID);
     static String buildNetworkMainLookup(uint8_t nodeID);
+    static String buildDebugTestMessage();
 
     // KOTH Message builders
     static String buildKothConfig(uint8_t maxPoints,uint8_t countdown, uint8_t captureTime, uint8_t maxTime);

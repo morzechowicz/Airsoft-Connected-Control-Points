@@ -80,6 +80,15 @@ String Protocol::buildNetworkMainLookup(uint8_t nodeID)
     return buffer;
 }
 
+String Protocol::buildDebugTestMessage()
+{
+    String buffer;
+    buffer = String(DEBUG) + ";";
+    buffer += String(TEST) + ";";
+    buffer += String(0);
+    return buffer;
+}
+
 String Protocol::buildKothConfigClient(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime)
 {
     String buffer;

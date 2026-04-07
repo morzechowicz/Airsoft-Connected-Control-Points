@@ -22,6 +22,22 @@ void powerResetCallback(Event e)
     hardware.reboot();            // then go down yourself
 }
 
+void testCallback(Event e)
+{
+    if(e.data1 == 1)
+    {
+        LOG_INFO("MAIN", "Received TEST event, broadcasting test message");
+        String msg = Protocol::buildDebugTestMessage();
+        network.broadcast(msg);
+    }
+    if (e.data1 == 0)
+    {
+        LOG_INFO("MAIN", "Received TEST event with data 0, not broadcasting");
+        hardware.handleTestRequest(e);
+    }
+    
+}
+
 void setup()
 {
     LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL);
@@ -42,12 +58,12 @@ void setup()
     vTaskDelay(500);
     ble.BleStart();
     vTaskDelay(500);
-
     LOG.setBLECallback([](const char *msg)
                        { ble.sendMessage(msg); });
     network.begin();
-
+    //callbacks that i dont know what to do with
     eventBus.subscribe(POWER_RESET, powerResetCallback);
+    eventBus.subscribe(TEST, testCallback);
 
     hardware.buzzer.createBeepTask();
     hardware.lcd.clearScreen();

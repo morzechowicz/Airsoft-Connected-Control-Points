@@ -203,9 +203,11 @@ void MessageHandler::handleForwardingMsg(const String &cmd, const String params[
 
 void MessageHandler::handleDebugMessage(const String &cmd, const String params[], int paramCount)
 {
+    uint16_t fromController = Protocol::parseIntParam(params[1], 0);
+
     if(cmd.toInt() == TEST)
     {
         LOG_INFO("HANDLER", "Testing connection with audio response");
-        eventBus.publish(TEST,1);
+        eventBus.publish(TEST,fromController);
     }
 }
