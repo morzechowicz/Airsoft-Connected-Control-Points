@@ -3,8 +3,8 @@
 NetworkManager *NetworkManager::s_instance = nullptr;
 
 // Update constructor
-NetworkManager::NetworkManager(EventBus &eventBus, MessageHandler &confHandler)
-    : eventBus(eventBus), confHandler(confHandler)
+NetworkManager::NetworkManager(EventBus &eventBus, MessageHandler &msgHandler)
+    : eventBus(eventBus), msgHandler(msgHandler)
 {
     role = ROLE_UNDEFINED;
     s_instance = this;
@@ -20,6 +20,8 @@ void NetworkManager::begin()
     SComm.onReceive(NetworkManager::handleReceived);
     eventBus.subscribe(NETWORK_DISCOVER, [this](Event e)
                        { this->networkDiscoverCallback(e); });
+    eventBus.subscribe(FORWARD, [this](Event e) 
+    { this->forwardMsgCallback(e);});
 }
 
 void NetworkManager::setAsServer()
@@ -161,6 +163,17 @@ void NetworkManager::networkDiscoverCallback(Event e)
     }
 }
 
+void NetworkManager::forwardMsgCallback(Event e)
+{
+    int forwardTo = e.data1;
+    if(forwardTo == 0)
+    {
+        LOG_ERROR("NETWORK","Forwarding was called with id 0");
+        return;
+    }
+    sendTo(e.data1,e.message);
+}
+
 void NetworkManager::broadcastReset()
 {
     String msg = Protocol::buildPowerResetMsg();
@@ -172,7 +185,7 @@ void NetworkManager::onPacketReceived(const ReceivedPacket &packet)
     Message msg;
     msg = Protocol::parse((const char *)packet.data, packet.dataLen);
     LOG_INFO("NETWORK", "Received message: %s", (const char *)packet.data);
-    bool result = confHandler.handleCommand(msg);
+    bool result = msgHandler.handleCommand(msg, (const char *)packet.data);
     if (!result)
     {
         LOG_ERROR("NETWORK", "Something went wrong at Configuration handler");

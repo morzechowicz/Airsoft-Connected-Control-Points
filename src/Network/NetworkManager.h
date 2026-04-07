@@ -33,7 +33,7 @@ enum NetworkRole {
 
 class NetworkManager {
 public:
-    NetworkManager(EventBus& eventBus, MessageHandler& confHandler);
+    NetworkManager(EventBus& eventBus, MessageHandler& msgHandler);
     
     void begin();
     void setAsServer();
@@ -58,6 +58,7 @@ public:
     // Handlers
     static void handleReceived(const ReceivedPacket& packet);  
     void networkDiscoverCallback(Event e);
+    void forwardMsgCallback(Event e);
     void broadcastReset();
 
 private:
@@ -68,7 +69,7 @@ private:
     SX1278 radio = SX1278(new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1));
     LoRaSComm SComm = LoRaSComm(&radio);
     EventBus& eventBus;
-    MessageHandler& confHandler;
+    MessageHandler& msgHandler;
     
     static NetworkManager* s_instance;
     NetworkRole role;

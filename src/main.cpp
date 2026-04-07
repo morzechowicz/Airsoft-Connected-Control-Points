@@ -8,10 +8,10 @@
 #include "../lib/Logging/LogManager.h"
 
 EventBus eventBus;
-MessageHandler confHandler(eventBus);
+MessageHandler msgHandler(eventBus);
 HardwareManager hardware(&eventBus);
-NetworkManager network(eventBus, confHandler);
-BleSetup ble(eventBus, confHandler);
+NetworkManager network(eventBus, msgHandler);
+BleSetup ble(eventBus, msgHandler);
 
 GameManager gameManager(&eventBus, &hardware, &network);
 

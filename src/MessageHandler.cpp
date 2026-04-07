@@ -5,8 +5,11 @@ MessageHandler::MessageHandler(EventBus &eb)
 {
 }
 
-bool MessageHandler::handleCommand(const Message &command)
+bool MessageHandler::handleCommand(const Message &command, String rasMsg)
 {
+    if (command.type == FORWARD)
+    {
+    }
 
     if (command.type == SYS)
     {
@@ -49,8 +52,6 @@ bool MessageHandler::handleCommand(const Message &command)
     return false;
 }
 
-
-
 void MessageHandler::handleSystemMessage(const String &cmd, const String params[], int paramCount)
 {
     if (cmd.toInt() == NETWORK_DISCOVER)
@@ -58,7 +59,8 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
         LOG_INFO("HANDLER", "Received discovery request from master at address %s", params[1].c_str());
         uint8_t masterAddress = params[1].toInt();
         // If this is an information node, we do not want to respond to discovery messages
-        if(informationNode){
+        if (informationNode)
+        {
             LOG_DEBUG("HANDLER", "Not sending response because this is an information node");
             return;
         }
@@ -70,7 +72,8 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     }
     if (cmd.toInt() == NETWORK_MAIN_LOOKUP)
     {
-        if(informationNode){
+        if (informationNode)
+        {
             LOG_ERROR("HANDLER", "Received main lookup request but this is an information node");
             return;
         }
@@ -78,9 +81,8 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     }
     if (cmd.toInt() == POWER_RESET)
     {
-        eventBus.publish(POWER_RESET,params[1].toInt());
+        eventBus.publish(POWER_RESET, params[1].toInt());
     }
-    
 }
 
 void MessageHandler::handleConfigurationMessage(const String &cmd, const String params[], int paramCount)
@@ -148,14 +150,14 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
         {
             nodeState[i].nodeId = Protocol::parseIntParam(params[5 + i * 2], 0);
             nodeState[i].controllingTeam = (Team)Protocol::parseIntParam(params[5 + i * 2 + 1], 0);
-        }        
+        }
 
         eventBus.publish(KOTH_SCORE_UPDATE, time, teamYPoints, teamBPoints, pairs, nodeState);
         break;
     }
     case GAME_OVER_INTERUPT:
     {
-        eventBus.publish(GAME_OVER_INTERUPT,(uint16_t)Protocol::parseIntParam(params[1], 0));
+        eventBus.publish(GAME_OVER_INTERUPT, (uint16_t)Protocol::parseIntParam(params[1], 0));
         break;
     }
     case GAME_REQUEST_START_CONF:
@@ -167,4 +169,27 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
     default:
         break;
     }
+}
+
+void MessageHandler::handleForwardingMsg(const String &cmd, const String params[], int paramCount, String rawMsg)
+{
+    uint16_t targetNode = Protocol::parseIntParam(params[1], 0);
+
+    if (targetNode == 0)
+    {
+        LOG_ERROR("MESSAGE_HANDLER", "node id 0 is not correct, id must be positive integer");
+        return;
+    }
+    // remove first 2 parameters from rawMsg(Forward id and target node id)
+    for (size_t i = 0; i < 2; i++)
+    {
+        int firstSemi = rawMsg.indexOf(';');
+        if (firstSemi != -1)
+        {
+            rawMsg = rawMsg.substring(firstSemi + 1);
+        }
+    }
+
+    LOG_DEBUG("HANDLER", "Forwarding message to node %d: %s", targetNode, rawMsg.c_str());
+    eventBus.publish(FORWARD, targetNode, rawMsg);
 }
