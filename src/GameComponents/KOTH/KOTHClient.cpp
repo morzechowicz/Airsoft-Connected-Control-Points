@@ -7,6 +7,7 @@ KOTHClient::KOTHClient(EventBus *eb, HardwareManager *hw, NetworkManager *net,
       hardware(hw),
       network(net),
       myNodeId(nodeId),
+      maxGameTime(config.gameDurationMinutes),
       captureTimeMs(config.captureTime),
       currentController(Team::NONE),
       capturingTeam(Team::NONE),
@@ -65,6 +66,7 @@ void KOTHClient::start()
     // Subscribe to score updates
     eventBus->subscribe(KOTH_SCORE_UPDATE, [this](Event e)
                         {
+        timeElapsedSinceStart = e.data1;
         lastKnownScore.yellowPoints = e.data2;
         lastKnownScore.bluePoints = e.data3;
         updateDisplay(); });
@@ -106,9 +108,34 @@ void KOTHClient::update()
         if (millis() > locatingBeepSpacingUpdate)
         {
             hardware->buzzer.beepOnce(100);
-            locatingBeepSpacingUpdate = locatingBeepSpacingUpdate + LOCALIZER_BEEP;
+            locatingBeepSpacingUpdate = locatingBeepSpacingUpdate + calculateGameQuater(maxGameTime, timeElapsedSinceStart);
         }
     }
+}
+
+u_int64_t KOTHClient::calculateGameQuater(int maxTime, int elapsedTime)
+{
+    float quarter = (float)elapsedTime / (float)maxTime;
+    if (quarter < 0.25f)
+    {
+        return LOCALIZER_BEEP_FULL;
+    }
+    else if (quarter < 0.5f)
+    {
+        return LOCALIZER_BEEP_THREE_FOURTH;
+    }
+    else if (quarter < 0.75f)
+    {
+        return LOCALIZER_BEEP_ONE_HALF;
+    }
+    else if (quarter < 0.95f)
+    {
+        return LOCALIZER_BEEP_ONE_FOURTH;
+    }else
+    {
+        return LOCALIZER_BEEP_LAST_MINUTE;
+    }
+    return 3000UL;
 }
 
 void KOTHClient::onButtonPressed(Event e)

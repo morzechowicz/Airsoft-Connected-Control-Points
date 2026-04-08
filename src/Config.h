@@ -43,9 +43,12 @@
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
 //others
-#define LOCALIZER_BEEP 3000UL
+#define LOCALIZER_BEEP_LAST_MINUTE 1000UL
+#define LOCALIZER_BEEP_ONE_FOURTH 2000UL
+#define LOCALIZER_BEEP_ONE_HALF 4000UL
+#define LOCALIZER_BEEP_THREE_FOURTH 6000UL
+#define LOCALIZER_BEEP_FULL 9000UL
 #define SCORING_INTERVAL_MS 60000UL
-
 
 #ifdef LORA_ADDRESS
 extern uint8_t myNodeId;  
@@ -54,9 +57,6 @@ extern uint8_t myNodeId;
 #pragma message "Compiling for unknown"
 #endif
 
-#endif // CONFIG_H
-#define LOCALIZER_BEEP 3000UL
-#define SCORING_INTERVAL_MS 60000UL
-
-
 extern bool informationNode;// This node is used to display information about the game and is not a player
+
+#endif // CONFIG_H
