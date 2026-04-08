@@ -40,8 +40,7 @@
 
 #define BUZZER_PIN 14
 
-#define SDA_PIN 21
-#define SCL_PIN 22
+
 
 // Pin definitions (adjust for your wiring!)
 #if SX_CHIP_TYPE == HELTECSX1262
@@ -52,6 +51,9 @@
 #define LORA_BUSY 13 
 #define LORA_RST 12
 #define LORA_DIO1 14
+
+#define SDA_PIN 19
+#define SCL_PIN 20
 #elif SX_CHIP_TYPE == RA_02_SX1278
 #define LORA_SCK 5
 #define LORA_MISO 19
@@ -60,6 +62,9 @@
 #define LORA_DIO0 26
 #define LORA_RST 23
 #define LORA_DIO1 32
+
+#define SDA_PIN 21
+#define SCL_PIN 22
 #else
 #error "Unknown SX_CHIP_TYPE, please define it as HELTECSX1262 or RA_02_SX1278"
 #endif
