@@ -15,7 +15,7 @@ BleSetup ble(eventBus, msgHandler);
 
 extern uint8_t myNodeId;
 
-#if NODE_TYPE != FORWARDER
+#if NODE_TYPE != BLEToLoRa
 GameManager gameManager(&eventBus, &hardware, &network);
 #endif
 
@@ -86,7 +86,7 @@ void loop()
     hardware.update();
     eventBus.processEvents();
 
-#if NODE_TYPE != FORWARDER
+#if NODE_TYPE != BLEToLoRa
     gameManager.update();
 #endif
 

@@ -4,7 +4,7 @@
 
 //define ini values
 //NODE TYPE
-#define FORWARDER 1
+#define BLEToLoRa 1
 #define INFORMATION 2
 #define CAPTURE_POINT 3
 
