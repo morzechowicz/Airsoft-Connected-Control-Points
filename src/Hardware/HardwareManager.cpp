@@ -33,7 +33,7 @@ void HardwareManager::handleTestRequest(Event e)
     lcd.clearScreen();
     lcd.displayText("TESTING", 0);
     lcd.displayText("CONNECTION OK", 1);
-    int waitBeforeBeep = 1000 * myNodeId;
+    int waitBeforeBeep = 1000 * LORA_ADDRESS;
     LOG_INFO("HARDWARE_MANAGER", "beeping in %d ms", waitBeforeBeep);
     vTaskDelay(waitBeforeBeep);
     buzzer.beep(200, 3, 200);

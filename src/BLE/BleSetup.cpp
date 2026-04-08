@@ -4,7 +4,15 @@ void BleSetup::BleStart()
 {
     // Initialize BLE
     LOG_INFO("BLE", "Initializing BLE...");
-    String deviceName = "LoRaCP_" + String(myNodeId);
+    #if NODE_TYPE == CAPTURE_POINT
+    String deviceName = "SPAS_CP_" + String(LORA_ADDRESS);
+    #elif NODE_TYPE == INFORMATION
+    String deviceName = "SPAS_Info_" + String(LORA_ADDRESS);
+    #elif NODE_TYPE == FORWARDER
+    String deviceName = "SPAS_Fwd_" + String(LORA_ADDRESS);  
+    #else
+    #error "Unknown NODE_TYPE, please define it as CAPTURE_POINT, INFORMATION or FORWARDER"
+    #endif
     NimBLEDevice::init(deviceName.c_str());
     pServer = NimBLEDevice::createServer();
     bleServer = new BleServer();

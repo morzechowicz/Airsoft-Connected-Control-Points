@@ -1,6 +1,6 @@
-#include "LED.h"
+#include "LEDLight.h"
 
-LED::LED(int ledPin)
+LEDLight::LEDLight(int ledPin)
 {
     pin = ledPin;
     state = false;
@@ -8,24 +8,24 @@ LED::LED(int ledPin)
     digitalWrite(pin, LOW);
 }
 
-bool LED::getState()
+bool LEDLight::getState()
 {
     return state;
 }
 
-void LED::on()
+void LEDLight::on()
 {
     state = true;
     digitalWrite(pin, HIGH);
 }
 
-void LED::off()
+void LEDLight::off()
 {
     state = false;
     digitalWrite(pin, LOW);
 }
 
-void LED::toggle()
+void LEDLight::toggle()
 {
     state = !state;
     digitalWrite(pin, state ? HIGH : LOW);

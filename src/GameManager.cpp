@@ -142,7 +142,7 @@ void GameManager::afterCountdownTask(int time)
     }
     LOG_INFO("GAME_MANAGER", "After countdown ended, client didnt start");
 
-    String msg = Protocol::buildAskForGameStats(myNodeId);
+    String msg = Protocol::buildAskForGameStats(LORA_ADDRESS);
     networkManager->sendToMain(msg);
     while (responseWait > 0)
     {
@@ -191,31 +191,36 @@ void GameManager::countdownTask(int time)
             break;
         }
     }
-    if (!isMain && !informationNode)
+    if (!isMain)
     {
-        startAfterCountdownTask(10);
+        #if NODE_TYPE == CAPTURE_POINT
+            LOG_INFO("GAME_MANAGER", "Starting as CAPTURE POINT");
+            startAfterCountdownTask(10);
+        #else
+            LOG_INFO("GAME_MANAGER", "Not starting client because this is an information node");
+        #endif
     }
 }
 
 void GameManager::onGameStarted(Event e)
 {
-    if (informationNode)
-    {
+#if NODE_TYPE == INFORMATION
         LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
         infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
         infoNode->start();
         return;
     }
+#endif
     switch (selectedConfig)
     {
     case KOTH_CONFIG:
         LOG_INFO("GAME_MANAGER", "Starting as CLIENT");
-        kothClient = new KOTHClient(eventBus, hardwareManager, networkManager, myNodeId, kothConfig);
+        kothClient = new KOTHClient(eventBus, hardwareManager, networkManager, LORA_ADDRESS, kothConfig);
         kothClient->start();
         break;
     case FLAG_CONFIG:
         LOG_INFO("GAME_MANAGER", "Starting as CLIENT");
-        flagClient = new FLAGClient(eventBus, hardwareManager, networkManager, myNodeId, flagConfig);
+        flagClient = new FLAGClient(eventBus, hardwareManager, networkManager, LORA_ADDRESS, flagConfig);
         flagClient->start();
     default:
         LOG_INFO("GAME_MANAGER", "Nothing was selected aborting");
@@ -284,12 +289,18 @@ void GameManager::onDiscovered(Event e)
 
 void GameManager::onGameStartconfRequest(Event e)
 {
-    if (!isMain && !informationNode)
+    if (!isMain)
     {
+        #if NODE_TYPE == INFORMATION
+            LOG_INFO("GAME_MANAGER", "Received game start request but this is an information node, ignoring");
+            return;
+        #else
+            LOG_INFO("GAME_MANAGER", "Trying to connect to existing game");
+        #endif
         if(e.data1 < 0x02)
         {
             LOG_ERROR("GAME_MANAGER", "Connecting to existing game");
-            String msg = Protocol::buildNetworkMainLookup(myNodeId);
+            String msg = Protocol::buildNetworkMainLookup(LORA_ADDRESS);
             networkManager->broadcast(msg);
         }else{
             LOG_INFO("GAME_MANAGER", "Received game start request from node %d", e.data1);

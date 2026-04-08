@@ -3,14 +3,14 @@
 
 #include <Arduino.h>
 
-class LED
+class LEDLight
 {
 private:
     int pin;
     bool state;
 
 public:
-    LED(int ledPin);
+    LEDLight(int ledPin);
 
     void on();
     void off();

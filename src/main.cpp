@@ -13,7 +13,11 @@ HardwareManager hardware(&eventBus);
 NetworkManager network(eventBus, msgHandler);
 BleSetup ble(eventBus, msgHandler);
 
+extern uint8_t myNodeId;
+
+#if NODE_TYPE != FORWARDER
 GameManager gameManager(&eventBus, &hardware, &network);
+#endif
 
 void powerResetCallback(Event e)
 {
@@ -24,7 +28,7 @@ void powerResetCallback(Event e)
 
 void testCallback(Event e)
 {
-    if(e.data1 == 1)
+    if (e.data1 == 1)
     {
         LOG_INFO("MAIN", "Received TEST event, broadcasting test message");
         String msg = Protocol::buildDebugTestMessage();
@@ -35,7 +39,6 @@ void testCallback(Event e)
         LOG_INFO("MAIN", "Received TEST event with data 0, not broadcasting");
         hardware.handleTestRequest(e);
     }
-    
 }
 
 void setup()
@@ -47,10 +50,14 @@ void setup()
     LOG_INFO("MAIN", "System starting...");
 
     vTaskDelay(200); // Wait for LOG to initialize
-#ifdef BIG_SCREEN
+#if SCREEN_TYPE == CHONKY_SCREEN
     hardware.lcd.begin(0x27, 20, 4);
-#else
+#elif SCREEN_TYPE == SMOLL_SCREEN
     hardware.lcd.begin(0x27, 16, 2);
+#elif SCREEN_TYPE == NONE_SCREEN
+    // Do nothing
+#else
+#error "Unknown SCREEN_TYPE, please define it as CHONKY_SCREEN or SMOLL_SCREEN"
 #endif
 
     hardware.lcd.displayText("      SPAS", 0);
@@ -61,7 +68,7 @@ void setup()
     LOG.setBLECallback([](const char *msg)
                        { ble.sendMessage(msg); });
     network.begin();
-    //callbacks that i dont know what to do with
+    // callbacks that i dont know what to do with
     eventBus.subscribe(POWER_RESET, powerResetCallback);
     eventBus.subscribe(TEST, testCallback);
 
@@ -69,7 +76,7 @@ void setup()
     hardware.lcd.clearScreen();
     hardware.lcd.displayText("WAITING", 0);
 
-#ifdef INFORMATION_NODE
+#if NODE_TYPE == INFORMATION
     hardware.lcd.displayText("INF MODE", 1);
 #endif
 }
@@ -78,7 +85,10 @@ void loop()
 {
     hardware.update();
     eventBus.processEvents();
+
+#if NODE_TYPE != FORWARDER
     gameManager.update();
+#endif
 
     vTaskDelay(10);
 }

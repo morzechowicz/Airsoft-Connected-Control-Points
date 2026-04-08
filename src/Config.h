@@ -2,6 +2,33 @@
 #define CONFIG_H
 #include <Arduino.h>
 
+//define ini values
+//NODE TYPE
+#define FORWARDER 1
+#define INFORMATION 2
+#define CAPTURE_POINT 3
+
+//CHIP TYPE
+#define HELTECSX1262 1
+#define RA_02_SX1278 2
+
+//SCREEN TYPE
+#define SMOLL_SCREEN 1
+#define CHONKY_SCREEN 2
+#define NONE_SCREEN 0
+
+//BUZZER GENERATOR
+#define BUZZER_ON 1
+#define BUZZER_OFF 0
+
+//Node address
+
+#ifdef LORA_ADDRESS
+
+#else
+#error "LORA_ADDRESS is not defined, please define it in the build configuration"
+#endif
+
 //hardware configuration
 #define BUTTON_BLUE_PIN 4
 #define BUTTON_YELLOW_PIN 0
@@ -12,16 +39,20 @@
 #define LED_YELLOW_PIN 12
 
 #define BUZZER_PIN 14
-#ifndef BG
-#define BUZZER_GENERATOR false
-#else 
-#define BUZZER_GENERATOR true
-#endif
 
 #define SDA_PIN 21
 #define SCL_PIN 22
 
 // Pin definitions (adjust for your wiring!)
+#if SX_CHIP_TYPE == HELTECSX1262
+#define LORA_SCK 9
+#define LORA_MISO 11
+#define LORA_MOSI 10
+#define LORA_NSS 8
+#define LORA_BUSY 13 
+#define LORA_RST 12
+#define LORA_DIO1 14
+#elif SX_CHIP_TYPE == RA_02_SX1278
 #define LORA_SCK 5
 #define LORA_MISO 19
 #define LORA_MOSI 27
@@ -29,6 +60,9 @@
 #define LORA_DIO0 26
 #define LORA_RST 23
 #define LORA_DIO1 32
+#else
+#error "Unknown SX_CHIP_TYPE, please define it as HELTECSX1262 or RA_02_SX1278"
+#endif
 
 // Radio parameters
 // #define LORA_ADDRESS 0x02
@@ -49,14 +83,5 @@
 #define LOCALIZER_BEEP_THREE_FOURTH 6000UL
 #define LOCALIZER_BEEP_FULL 9000UL
 #define SCORING_INTERVAL_MS 60000UL
-
-#ifdef LORA_ADDRESS
-extern uint8_t myNodeId;  
-#else
-#define LORA_ADDRESS 0x09
-#pragma message "Compiling for unknown"
-#endif
-
-extern bool informationNode;// This node is used to display information about the game and is not a player
 
 #endif // CONFIG_H

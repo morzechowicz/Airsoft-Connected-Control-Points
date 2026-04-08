@@ -5,7 +5,7 @@
 #include "LoRaSComm.h"
 
 // Constructor
-LoRaSComm::LoRaSComm(SX1278 *radioModule)
+LoRaSComm::LoRaSComm(LoRaSRadio *radioModule)
     : radio(radioModule),
       myAddress(0),
       currentSequence(0),

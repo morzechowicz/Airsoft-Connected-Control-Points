@@ -65,12 +65,11 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     {
         LOG_INFO("HANDLER", "Received discovery request from master at address %s", params[1].c_str());
         uint8_t masterAddress = params[1].toInt();
-        // If this is an information node, we do not want to respond to discovery messages
-        if (informationNode)
-        {
-            LOG_DEBUG("HANDLER", "Not sending response because this is an information node");
-            return;
-        }
+// If this is an information node, we do not want to respond to discovery messages
+#if NODE_TYPE == INFORMATION
+        LOG_DEBUG("HANDLER", "Not sending response because this is an information node");
+        return;
+#endif
         eventBus.publish(NETWORK_DISCOVER, masterAddress);
     }
     if (cmd.toInt() == NETWROK_REPORT)
@@ -79,11 +78,10 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     }
     if (cmd.toInt() == NETWORK_MAIN_LOOKUP)
     {
-        if (informationNode)
-        {
-            LOG_ERROR("HANDLER", "Received main lookup request but this is an information node");
-            return;
-        }
+#if NODE_TYPE == INFORMATION
+        LOG_ERROR("HANDLER", "Received main lookup request but this is an information node");
+        return;
+#endif
         eventBus.publish(NETWORK_MAIN_LOOKUP, params[1].toInt());
     }
     if (cmd.toInt() == POWER_RESET)
@@ -205,9 +203,9 @@ void MessageHandler::handleDebugMessage(const String &cmd, const String params[]
 {
     uint16_t fromController = Protocol::parseIntParam(params[1], 0);
 
-    if(cmd.toInt() == TEST)
+    if (cmd.toInt() == TEST)
     {
         LOG_INFO("HANDLER", "Testing connection with audio response");
-        eventBus.publish(TEST,fromController);
+        eventBus.publish(TEST, fromController);
     }
 }

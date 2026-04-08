@@ -14,6 +14,7 @@
 #include <freertos/semphr.h>
 #include "LoRaSCommPacket.h"
 #include "../Logging/LogManager.h"
+#include "LoRaSRadio.h"
 
 // FreeRTOS Configuration
 #define LORASCOMM_RX_QUEUE_SIZE 10
@@ -105,7 +106,7 @@ struct RepeaterSeenEntry {
 
 class LoRaSComm {
 public:
-    LoRaSComm(SX1278* radioModule);
+    LoRaSComm(LoRaSRadio* radioModule);
     ~LoRaSComm();
     
     // Initialization - starts FreeRTOS tasks
@@ -168,7 +169,7 @@ private:
     void repeaterMarkSeen(uint8_t src, uint8_t seq);
     
     // Radio instance
-    SX1278* radio;
+    LoRaSRadio* radio;
     
     // State
     uint8_t myAddress;
