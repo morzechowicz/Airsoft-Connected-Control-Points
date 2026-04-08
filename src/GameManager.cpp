@@ -204,13 +204,12 @@ void GameManager::countdownTask(int time)
 
 void GameManager::onGameStarted(Event e)
 {
-#if NODE_TYPE == INFORMATION
-        LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
-        infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
-        infoNode->start();
-        return;
-    }
-#endif
+    #if NODE_TYPE == INFORMATION
+            LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
+            infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
+            infoNode->start();
+            return;
+    #endif
     switch (selectedConfig)
     {
     case KOTH_CONFIG:
