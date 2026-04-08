@@ -16,8 +16,6 @@ void BleSetup::BleStart()
         #error "Unknown NODE_TYPE"
     #endif
     LOG_INFO("BLE", "Device Name: %s", deviceName);
-    Serial.printf("LORA_ADDRESS raw value: %d\n", LORA_ADDRESS);
-    Serial.printf("deviceName: '%s'\n", deviceName);
 
     vTaskDelay(200); // Small delay to ensure BLE stack is ready after deinit
     NimBLEDevice::init(deviceName);
