@@ -7,6 +7,7 @@
 #define BLEToLoRa 1
 #define INFORMATION 2
 #define CAPTURE_POINT 3
+#define FORWARDER 4
 
 //CHIP TYPE
 #define HELTECSX1262 1

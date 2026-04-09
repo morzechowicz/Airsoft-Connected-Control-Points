@@ -24,6 +24,8 @@ public:
     virtual float getSNR() = 0;
     virtual int getPacketLength() = 0;
     virtual int16_t scanChannel() = 0;
+    virtual bool isRxDone() = 0;
+    virtual void clearRxDone() = 0;
 };
 
 // --- SX1278 wrapper ---
@@ -49,6 +51,15 @@ public:
     float getSNR() override { return module->getSNR(); }
     int getPacketLength() override { return module->getPacketLength(); }
     int16_t scanChannel() override { return module->scanChannel(); }
+    bool isRxDone() override
+    {
+        return module->getIRQFlags() & RADIOLIB_SX127X_CLEAR_IRQ_FLAG_RX_DONE;
+    }
+    void clearRxDone() override
+    {
+        uint16_t flags = module->getIRQFlags();
+        module->clearIrqFlags(flags);
+    }
 
 private:
     SX1278 *module;
@@ -78,6 +89,15 @@ public:
     float getSNR() override { return module->getSNR(); }
     int getPacketLength() override { return module->getPacketLength(); }
     int16_t scanChannel() override { return module->scanChannel(); }
+    bool isRxDone() override
+    {
+        return module->getIrqFlags() & RADIOLIB_SX126X_IRQ_RX_DONE;
+    }
+    void clearRxDone() override
+    {
+        uint16_t flags = module->getIrqFlags();
+        module->clearIrqFlags(flags);
+    }
 
 private:
     SX1262 *module;

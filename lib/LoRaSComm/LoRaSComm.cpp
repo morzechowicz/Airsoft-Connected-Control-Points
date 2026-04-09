@@ -419,9 +419,8 @@ void LoRaSComm::rxTask(void *params)
 
             // Check if a packet is available (non-blocking)
             // We check the IRQ flags to see if RX is done
-            uint16_t irqFlags = instance->radio->getIRQFlags();
 
-            if (irqFlags & RADIOLIB_SX127X_CLEAR_IRQ_FLAG_RX_DONE)
+            if (instance->radio->isRxDone())
             {
                 // Packet received! Read it
                 size_t len = instance->radio->getPacketLength();
@@ -462,7 +461,7 @@ void LoRaSComm::rxTask(void *params)
                 }
 
                 // Clear IRQ flags and restart receive while we still have the radio mutex
-                instance->radio->clearIrqFlags(irqFlags);
+                instance->radio->clearRxDone();
                 instance->radio->startReceive();
 
                 // Release radio mutex BEFORE handling the packet (so handleReceivedPacket can transmit ACK)
@@ -1001,9 +1000,9 @@ void LoRaSComm::processAckTimeout()
 bool LoRaSComm::alreadyDelivered(uint8_t src, uint8_t seq)
 {
     uint32_t now = millis();
-    for (const auto& entry : deliveredTable)
+    for (const auto &entry : deliveredTable)
     {
-        if (entry.srcAddr == src && 
+        if (entry.srcAddr == src &&
             entry.sequence == seq &&
             (now - entry.timestamp) < LORASCOMM_DELIVERED_EXPIRY_MS)
         {
