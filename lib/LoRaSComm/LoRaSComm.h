@@ -38,6 +38,10 @@
 #define LORASCOMM_LBT_MIN_BACKOFF_MS    50
 #define LORASCOMM_LBT_MAX_ATTEMPTS     8    // give up after this many attempts
 
+// Delivery table
+#define LORASCOMM_DELIVERED_TABLE_SIZE 64
+#define LORASCOMM_DELIVERED_EXPIRY_MS  (LORASCOMM_DEFAULT_ACK_TIMEOUT * LORASCOMM_DEFAULT_MAX_RETRIES * 2)
+
 // Repeater
 #define LORASCOMM_REPEATER_SEEN_TABLE_SIZE  16
 #define LORASCOMM_REPEATER_SEEN_EXPIRY_MS   10000  // forget seen packets after 10s
@@ -96,12 +100,12 @@ struct TxQueueItem {
 };
 
 // Repeater deduplication table entry
-struct RepeaterSeenEntry {
+struct RepeaterSeenNDuplicationEntry {
     uint8_t srcAddr;
     uint8_t sequence;
     uint32_t timestamp;
 
-    RepeaterSeenEntry() : srcAddr(0), sequence(0), timestamp(0) {}
+    RepeaterSeenNDuplicationEntry() : srcAddr(0), sequence(0), timestamp(0) {}
 };
 
 class LoRaSComm {
@@ -163,6 +167,10 @@ private:
     void handleReceivedPacket(const LoRaSCommPacket& packet);
     void processAckTimeout();
 
+    // Delivery tracking
+    bool alreadyDelivered(uint8_t src, uint8_t seq);
+    void markDelivered(uint8_t src, uint8_t seq);
+
     // Repeater internals
     void forwardPacket(const LoRaSCommPacket& packet);
     bool repeaterAlreadySeen(uint8_t src, uint8_t seq);
@@ -193,10 +201,12 @@ private:
     uint32_t failedTxCount;
     int16_t lastRssi;
     float lastSnr;
-    
+    // duplication table
+    RepeaterSeenNDuplicationEntry deliveredTable[LORASCOMM_DELIVERED_TABLE_SIZE];
+    uint8_t deliveredHead;
     // Repeater state
     bool repeaterMode;
-    RepeaterSeenEntry seenTable[LORASCOMM_REPEATER_SEEN_TABLE_SIZE];
+    RepeaterSeenNDuplicationEntry seenTable[LORASCOMM_REPEATER_SEEN_TABLE_SIZE];
     uint8_t seenHead;
     uint32_t repeaterForwardCount;
     
