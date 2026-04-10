@@ -9,6 +9,7 @@ HardwareManager::HardwareManager(EventBus *eventBus) : buttonBlue(eventBus, BUTT
                                                        buzzer(BUZZER_PIN, BUZZER_GENERATOR),
                                                        lcd()
 {
+    Wire.begin(SDA_PIN, SCL_PIN);
 }
 
 void HardwareManager::update()

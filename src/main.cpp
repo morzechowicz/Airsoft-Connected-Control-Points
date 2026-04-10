@@ -50,14 +50,14 @@ void setup()
     LOG_INFO("MAIN", "System starting...");
 
     vTaskDelay(200); // Wait for LOG to initialize
-#if SCREEN_TYPE == CHONKY_SCREEN
+#if SCREEN_TYPE == LCD_CHONKY_SCREEN
     hardware.lcd.begin(0x27, 20, 4);
-#elif SCREEN_TYPE == SMOLL_SCREEN
+#elif SCREEN_TYPE == LCD_SMOLL_SCREEN
     hardware.lcd.begin(0x27, 16, 2);
 #elif SCREEN_TYPE == NONE_SCREEN
     // Do nothing
 #else
-#error "Unknown SCREEN_TYPE, please define it as CHONKY_SCREEN or SMOLL_SCREEN"
+#error "Unknown SCREEN_TYPE, please define it as LCD_CHONKY_SCREEN or LCD_SMOLL_SCREEN"
 #endif
 
     hardware.lcd.displayText("      SPAS", 0);
@@ -83,10 +83,10 @@ void setup()
 
 void loop()
 {
-    hardware.update();
     eventBus.processEvents();
+    hardware.update();
 
-#if NODE_TYPE != BLEToLoRa
+#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
     gameManager.update();
 #endif
 

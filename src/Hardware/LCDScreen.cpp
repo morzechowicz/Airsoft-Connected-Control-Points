@@ -9,7 +9,6 @@ LCDScreen::LCDScreen()
 void LCDScreen::begin(int id,int width,int height)
 {
     lcd = LiquidCrystal_I2C(id,width,height);
-    Wire.begin(SDA_PIN, SCL_PIN);
     lcd.init();
     lcd.backlight();
 }
