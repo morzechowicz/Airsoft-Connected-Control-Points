@@ -170,7 +170,7 @@ Message Protocol::parse(const char *data, size_t length)
     int paramEnd;
     int paramIndex = 0;
 
-    while (paramIndex < 10)
+    while (paramIndex < MAX_MESSAGE_PARAMS)
     {
         paramEnd = dataStr.indexOf(';', paramStart);
         if (paramEnd == -1)

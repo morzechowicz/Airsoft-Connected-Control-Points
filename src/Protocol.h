@@ -5,13 +5,14 @@
 #include <Arduino.h>
 #include "EventType.h"
 #include "GameComponents/KOTH/KOTHTypes.h"
+#include "Config.h"
 
 // message structure
 //  TYPE;PARAM;PARAM;...;
 struct Message
 {
     EventType type;
-    String params[10];
+    String params[MAX_MESSAGE_PARAMS];
     int paramCount;
 };
 

@@ -82,6 +82,9 @@
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
+// max message param array size
+#define MAX_MESSAGE_PARAMS 20
+
 //others
 #define LOCALIZER_BEEP_LAST_MINUTE 1000UL
 #define LOCALIZER_BEEP_ONE_FOURTH 2000UL

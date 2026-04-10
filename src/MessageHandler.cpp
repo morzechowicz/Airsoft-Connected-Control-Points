@@ -66,8 +66,8 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
         LOG_INFO("HANDLER", "Received discovery request from master at address %s", params[1].c_str());
         uint8_t masterAddress = params[1].toInt();
 // If this is an information node, we do not want to respond to discovery messages
-#if NODE_TYPE == INFORMATION
-        LOG_DEBUG("HANDLER", "Not sending response because this is an information node");
+#if NODE_TYPE == INFORMATION || NODE_TYPE == BLEToLoRa
+        LOG_DEBUG("HANDLER", "Not sending response because this is an information node or BLEToLoRa node");
         return;
 #endif
         eventBus.publish(NETWORK_DISCOVER, masterAddress);
@@ -78,8 +78,8 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     }
     if (cmd.toInt() == NETWORK_MAIN_LOOKUP)
     {
-#if NODE_TYPE == INFORMATION
-        LOG_ERROR("HANDLER", "Received main lookup request but this is an information node");
+#if NODE_TYPE == INFORMATION || NODE_TYPE == BLEToLoRa
+        LOG_ERROR("HANDLER", "Received main lookup request but this is an information node or BLEToLoRa node");
         return;
 #endif
         eventBus.publish(NETWORK_MAIN_LOOKUP, params[1].toInt());
@@ -155,6 +155,7 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
         {
             nodeState[i].nodeId = Protocol::parseIntParam(params[5 + i * 2], 0);
             nodeState[i].controllingTeam = (Team)Protocol::parseIntParam(params[5 + i * 2 + 1], 0);
+            LOG_DEBUG("HANDLER", "Updating node state: nodeId=%d, controllingTeam=%d", nodeState[i].nodeId, nodeState[i].controllingTeam);
         }
 
         eventBus.publish(KOTH_SCORE_UPDATE, time, teamYPoints, teamBPoints, pairs, nodeState);
