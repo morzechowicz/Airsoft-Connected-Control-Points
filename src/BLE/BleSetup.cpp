@@ -21,7 +21,6 @@ void BleSetup::BleStart()
     pCharacteristic->setCallbacks(new BleCallback(eventBus, configHandler));
 
     // Start the service
-    pService->start();
     LOG_INFO("BLE", "BLE Service started");
     vTaskDelay(200);
     // Start advertising

@@ -211,7 +211,7 @@ void KOTHClient::completeCapture()
     if (network)
     {
         LOG_INFO("KOTH_CLIENT", "Sending capture message to server");
-        network->sendToMaster(msg);
+        network->sendToMain(msg);
     }
 
     // Local event

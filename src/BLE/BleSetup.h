@@ -6,7 +6,7 @@
 #include <NimBLEDevice.h>
 #include <Config.h>
 #include <EventBus.h>
-#include <ConfigurationHandler.h>
+#include <MessageHandler.h>
 #include "BleServer.h"
 #include "BleCallback.h"
 #include "LogManager.h"
@@ -15,13 +15,13 @@ class BleSetup
 {
     private:
     EventBus &eventBus;
-    ConfigurationHandler &configHandler;
+    MessageHandler &configHandler;
     
     BLEServer *pServer;
     BLECharacteristic *pCharacteristic;
     BleServer *bleServer;
 public:
-    BleSetup(EventBus &eb, ConfigurationHandler &ch):
+    BleSetup(EventBus &eb, MessageHandler &ch):
         eventBus(eb), configHandler(ch), bleServer(nullptr) {};
     void BleStart();
     BleServer* getBleServer() const { return bleServer; }

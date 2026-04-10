@@ -12,7 +12,11 @@
 #define LED_YELLOW_PIN 12
 
 #define BUZZER_PIN 14
+#ifndef BG
 #define BUZZER_GENERATOR false
+#else 
+#define BUZZER_GENERATOR true
+#endif
 
 #define SDA_PIN 21
 #define SCL_PIN 22

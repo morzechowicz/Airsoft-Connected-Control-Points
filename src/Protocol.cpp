@@ -62,7 +62,34 @@ String Protocol::buildPowerResetMsg()
     return buffer;
 }
 
-String Protocol::buildKothConfigUpdated(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime)
+String Protocol::buildAskForGameStats(uint8_t nodeID)
+{
+    String buffer;
+    buffer = String(GAME) + ";";
+    buffer += String(GAME_REQUEST_START_CONF) + ";";
+    buffer += String(nodeID);
+    return buffer;
+}
+
+String Protocol::buildNetworkMainLookup(uint8_t nodeID)
+{
+    String buffer;
+    buffer = String(SYS) + ";";
+    buffer += String(NETWORK_MAIN_LOOKUP) + ";";
+    buffer += String(nodeID);
+    return buffer;
+}
+
+String Protocol::buildDebugTestMessage()
+{
+    String buffer;
+    buffer = String(DEBUG) + ";";
+    buffer += String(TEST) + ";";
+    buffer += String(0);
+    return buffer;
+}
+
+String Protocol::buildKothConfigClient(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime)
 {
     String buffer;
     buffer = String(CONF) + ";";

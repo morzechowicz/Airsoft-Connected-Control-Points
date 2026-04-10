@@ -26,6 +26,7 @@ enum EventType
     NETWORK_MESSAGE_RECEIVED,
     NETWORK_DISCOVER,
     NETWROK_REPORT,
+    NETWORK_MAIN_LOOKUP,
 
     // Game universal
     GAME_STARTED,
@@ -33,6 +34,7 @@ enum EventType
     GAME_COUNTDOWN,
     GAME_PAUSE,
     GAME_OVER_INTERUPT,
+    GAME_REQUEST_START_CONF,
 
     // KOTH specific
     KOTH_CONFIG,
@@ -51,6 +53,8 @@ enum EventType
     CONF,
     DEBUG,
     UNKNOWN,
+    FORWARD,
+    TEST,
 
     // FLAG specific
     FLAG_CAPTURED,

@@ -11,7 +11,7 @@
 #include "EventBus.h"
 #include "Hardware/HardwareManager.h"
 #include "Network/NetworkManager.h"
-#include "ConfigurationHandler.h"
+#include "MessageHandler.h"
 #include "../lib/Logging/LogManager.h"
 
 class GameManager
@@ -33,14 +33,14 @@ private:
 
     InformationModeComp *infoNode = nullptr;
 
-    bool isMaster = false;
+    bool isMain = false;
 
     EventType selectedConfig = CONF;
     TaskHandle_t countdownHandler = nullptr;
+    TaskHandle_t afterCountdownHandler = nullptr;
 
 public:
-    GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net)
-        : eventBus(eb), hardwareManager(hw), networkManager(net) {};
+    GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net);
     ~GameManager();
 
     static GameManager* instance;
@@ -50,11 +50,15 @@ public:
     void onConfigKothFromMaster(Event e);
     void onConfKoth(Event e);
     void onConfigureFlag(Event e);
-    void onDiscover(Event e);
+    void onDiscoverRequest(Event e);
+    void onDiscovered(Event e);
+    void onGameStartconfRequest(Event e);
     void update();
 
-    void countdownTask(int time);
     void startCountdownTask(int countdown);
+    void countdownTask(int time);
+    void startAfterCountdownTask(int waitTime);
+    void afterCountdownTask(int time);
 };
 
 #endif // GameManager_h

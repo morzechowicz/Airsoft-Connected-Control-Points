@@ -14,7 +14,7 @@ void GameManager::onConfigureFlag(Event e)
     Event newNode;
     newNode.data1 = LORA_ADDRESS;
 
-    isMaster = true;
+    isMain = true;
     int countdown = e.data1;
     selectedConfig = FLAG_CONFIG;
     LOG_INFO("GAME_MANAGER", "Received FLAG configuration: maxPoints=%d, maxTime=%d, captureTime=%d, scoreIntervalMs=%d, initTeamCount=%d",
@@ -34,7 +34,7 @@ void GameManager::onConfKoth(Event e)
     newNode.data1 = LORA_ADDRESS;
     // add itself to the table
     onNewNode(newNode);
-    isMaster = true;
+    isMain = true;
     int countdown = e.data1;
     selectedConfig = KOTH_CONFIG;
 
@@ -44,7 +44,7 @@ void GameManager::onConfKoth(Event e)
 
     if (!kothConfig.singleNodeMode)
     {
-        String configBroadcast = Protocol::buildKothConfigUpdated(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
+        String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
         networkManager->broadcast(configBroadcast);
     }
 
@@ -79,14 +79,18 @@ void GameManager::startCountdownTask(int countdown)
     }
 
     // Heap-allocate so each invocation gets its own params
-    struct TaskParams { GameManager* mgr; int countdown; };
-    auto* params = new TaskParams{ this, countdown };
+    struct TaskParams
+    {
+        GameManager *mgr;
+        int countdown;
+    };
+    auto *params = new TaskParams{this, countdown};
 
     xTaskCreate(
-        [](void* param)
+        [](void *param)
         {
-            auto* p = static_cast<TaskParams*>(param);
-            GameManager* mgr = p->mgr;
+            auto *p = static_cast<TaskParams *>(param);
+            GameManager *mgr = p->mgr;
             int cd = p->countdown;
 
             delete p; // free immediately, before doing any work
@@ -99,7 +103,61 @@ void GameManager::startCountdownTask(int countdown)
         },
         "CountdownTask", 2048, params, 1, &countdownHandler);
 
-    LOG_DEBUG("GAME_MANAGER", "Created countdown task: %p", (void*)countdownHandler);
+    LOG_DEBUG("GAME_MANAGER", "Created countdown task: %p", (void *)countdownHandler);
+}
+
+void GameManager::startAfterCountdownTask(int waitTime)
+{
+    LOG_DEBUG("GAME_MANAGER", "Starting after countdown task");
+    xTaskCreate(
+        [](void *param)
+        {
+            auto *p = static_cast<std::pair<GameManager *, int> *>(param);
+            GameManager *mgr = p->first;
+            int wt = p->second;
+
+            delete p; // free immediately, before doing any work
+
+            mgr->afterCountdownTask(wt);
+
+            // Clear the handle on the manager before self-deleting
+            mgr->afterCountdownHandler = nullptr;
+            vTaskDelete(NULL);
+        },
+        "AfterCountdownTask", 2048, new std::pair<GameManager *, int>{this, waitTime}, 1, &afterCountdownHandler);
+}
+
+void GameManager::afterCountdownTask(int time)
+{
+    int responseWait = time;
+    while (time > 0)
+    {
+        if (kothClient)
+        {
+            LOG_DEBUG("GAME_MANAGER", "AfterCountdownTask: KOTH client already running, aborting");
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        time--;
+    }
+    LOG_INFO("GAME_MANAGER", "After countdown ended, client didnt start");
+
+    String msg = Protocol::buildAskForGameStats(myNodeId);
+    networkManager->sendToMain(msg);
+    while (responseWait > 0)
+    {
+        if (kothClient)
+        {
+            LOG_DEBUG("GAME_MANAGER", "AfterCountdownTask: KOTH client started after request");
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        responseWait--;
+    }
+    LOG_INFO("GAME_MANAGER", "No response received PANIC MODE");
+    hardwareManager->lcd.clearScreen();
+    hardwareManager->lcd.displayText("NET ERROR", 0);
+    hardwareManager->lcd.displayText("CALL GAME ORG", 1);
 }
 
 void GameManager::countdownTask(int time)
@@ -115,7 +173,7 @@ void GameManager::countdownTask(int time)
         hardwareManager->lcd.displayText(String(countdown).c_str(), 1);
     }
     LOG_INFO("GAME_MANAGER", "Countdown ended");
-    if (isMaster)
+    if (isMain)
     {
         switch (selectedConfig)
         {
@@ -132,6 +190,10 @@ void GameManager::countdownTask(int time)
             LOG_INFO("GAME_MANAGER", "Nothing was selected aborting");
             break;
         }
+    }
+    if (!isMain && !informationNode)
+    {
+        startAfterCountdownTask(10);
     }
 }
 
@@ -161,6 +223,28 @@ void GameManager::onGameStarted(Event e)
     }
 }
 
+GameManager::GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net)
+    : eventBus(eb), hardwareManager(hw), networkManager(net)
+{
+    eventBus->subscribe(NETWORK_DISCOVER, [this](Event e)
+                    { onDiscovered(e); });
+    eventBus->subscribe(SEARCH, [this](Event e)
+                       { onDiscoverRequest(e); });
+    eventBus->subscribe(NETWROK_REPORT, [this](Event e)
+                       { onNewNode(e); });
+    eventBus->subscribe(GAME_STARTED, [this](Event e)
+                       { onGameStarted(e); });
+    eventBus->subscribe(KOTH_CONF_UPDATED, [this](Event e)
+                       { onConfigKothFromMaster(e); });
+    eventBus->subscribe(KOTH_CONFIG, [this](Event e)
+                       { onConfKoth(e); });
+    eventBus->subscribe(FLAG_CONFIG, [this](Event e)
+                       { onConfigureFlag(e); });
+    eventBus->subscribe(GAME_REQUEST_START_CONF, [this](Event e)
+                       { onGameStartconfRequest(e); });
+
+}
+
 GameManager::~GameManager()
 {
 }
@@ -171,6 +255,12 @@ void GameManager::onNewNode(Event e)
     {
         kothConfig.addNode(e.data1);
         eventBus->publish(DEBUG, SEARCH, "Node" + String(e.data1) + " added \n");
+        String nodes = "";
+        for (int i = 0; i < kothConfig.nodeCount; i++)
+        {
+            nodes += "N" + String(kothConfig.nodeIds[i]);
+        }
+        hardwareManager->lcd.displayText(nodes.c_str(), 1);
     }
     else
     {
@@ -178,10 +268,34 @@ void GameManager::onNewNode(Event e)
     }
 }
 
-void GameManager::onDiscover(Event e)
+void GameManager::onDiscoverRequest(Event e)
 {
     String msg = Protocol::buildDiscoverRequest();
     networkManager->broadcast(msg);
+}
+
+void GameManager::onDiscovered(Event e)
+{
+    String msg = "CONNECTED: " + String(e.data1);
+    hardwareManager->buzzer.beep(200, 2, 200);
+    hardwareManager->lcd.clearScreen();
+    hardwareManager->lcd.displayText(msg.c_str(), 1);
+}
+
+void GameManager::onGameStartconfRequest(Event e)
+{
+    if (!isMain && !informationNode)
+    {
+        if(e.data1 < 0x02)
+        {
+            LOG_ERROR("GAME_MANAGER", "Connecting to existing game");
+            String msg = Protocol::buildNetworkMainLookup(myNodeId);
+            networkManager->broadcast(msg);
+        }else{
+            LOG_INFO("GAME_MANAGER", "Received game start request from node %d", e.data1);
+            startAfterCountdownTask(10);
+        }
+    }
 }
 
 void GameManager::update()

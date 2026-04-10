@@ -5,19 +5,19 @@
 #include <config.h>
 #include <EventBus.h>
 #include <Protocol.h>
-#include "ConfigurationHandler.h"
+#include "MessageHandler.h"
 
 
 // Example BLE Server Callback class
 class BleCallback : public BLECharacteristicCallbacks
 {
 public:
-    BleCallback(EventBus &ev,ConfigurationHandler &handler);
+    BleCallback(EventBus &ev,MessageHandler &handler);
     void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override;
     void onRead(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override;
 private:
     EventBus& eventBus;
-    ConfigurationHandler& handler;
+    MessageHandler& handler;
 };
 
 #endif // BLE_CALLBACK_H

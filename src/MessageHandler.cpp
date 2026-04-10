@@ -1,13 +1,18 @@
-#include "ConfigurationHandler.h"
+#include "MessageHandler.h"
 
-ConfigurationHandler::ConfigurationHandler(EventBus &eb)
+MessageHandler::MessageHandler(EventBus &eb)
     : eventBus(eb), lastSuccess(false)
 {
 }
 
-bool ConfigurationHandler::handleCommand(const Message &command)
+bool MessageHandler::handleCommand(const Message &command, String rasMsg)
 {
-
+    if (command.type == FORWARD)
+    {
+        LOG_DEBUG("HANDLER", "Handling forwarding message");
+        handleForwardingMsg(command.params[0], command.params, command.paramCount, rasMsg);
+        return true;
+    }
     if (command.type == SYS)
     {
         LOG_DEBUG("HANDLER", "Handling system message");
@@ -46,19 +51,23 @@ bool ConfigurationHandler::handleCommand(const Message &command)
     {
         LOG_DEBUG("HANDLER", "Received UNKNOWN message");
     }
+    if (command.type == DEBUG)
+    {
+        handleDebugMessage(command.params[0], command.params, command.paramCount);
+        LOG_DEBUG("HANDLER", "Received DEBUG message");
+    }
     return false;
 }
 
-
-
-void ConfigurationHandler::handleSystemMessage(const String &cmd, const String params[], int paramCount)
+void MessageHandler::handleSystemMessage(const String &cmd, const String params[], int paramCount)
 {
     if (cmd.toInt() == NETWORK_DISCOVER)
     {
         LOG_INFO("HANDLER", "Received discovery request from master at address %s", params[1].c_str());
         uint8_t masterAddress = params[1].toInt();
         // If this is an information node, we do not want to respond to discovery messages
-        if(informationNode){
+        if (informationNode)
+        {
             LOG_DEBUG("HANDLER", "Not sending response because this is an information node");
             return;
         }
@@ -68,14 +77,22 @@ void ConfigurationHandler::handleSystemMessage(const String &cmd, const String p
     {
         eventBus.publish(NETWROK_REPORT, params[1].toInt());
     }
+    if (cmd.toInt() == NETWORK_MAIN_LOOKUP)
+    {
+        if (informationNode)
+        {
+            LOG_ERROR("HANDLER", "Received main lookup request but this is an information node");
+            return;
+        }
+        eventBus.publish(NETWORK_MAIN_LOOKUP, params[1].toInt());
+    }
     if (cmd.toInt() == POWER_RESET)
     {
-        eventBus.publish(POWER_RESET,params[1].toInt());
+        eventBus.publish(POWER_RESET, params[1].toInt());
     }
-    
 }
 
-void ConfigurationHandler::handleConfigurationMessage(const String &cmd, const String params[], int paramCount)
+void MessageHandler::handleConfigurationMessage(const String &cmd, const String params[], int paramCount)
 {
     uint16_t countdown = Protocol::parseIntParam(params[1], 0);
     uint16_t gameDurationMinutes = Protocol::parseIntParam(params[2], 0);
@@ -97,7 +114,7 @@ void ConfigurationHandler::handleConfigurationMessage(const String &cmd, const S
     }
 }
 
-void ConfigurationHandler::handleGameMessage(const String &cmd, const String params[], int paramCount)
+void MessageHandler::handleGameMessage(const String &cmd, const String params[], int paramCount)
 {
     switch (cmd.toInt())
     {
@@ -140,17 +157,57 @@ void ConfigurationHandler::handleGameMessage(const String &cmd, const String par
         {
             nodeState[i].nodeId = Protocol::parseIntParam(params[5 + i * 2], 0);
             nodeState[i].controllingTeam = (Team)Protocol::parseIntParam(params[5 + i * 2 + 1], 0);
-        }        
+        }
 
         eventBus.publish(KOTH_SCORE_UPDATE, time, teamYPoints, teamBPoints, pairs, nodeState);
         break;
     }
     case GAME_OVER_INTERUPT:
     {
-        eventBus.publish(GAME_OVER_INTERUPT,(uint16_t)Protocol::parseIntParam(params[1], 0));
+        eventBus.publish(GAME_OVER_INTERUPT, (uint16_t)Protocol::parseIntParam(params[1], 0));
+        break;
+    }
+    case GAME_REQUEST_START_CONF:
+    {
+        int nodeID = Protocol::parseIntParam(params[1], 0);
+        eventBus.publish(GAME_REQUEST_START_CONF, nodeID);
         break;
     }
     default:
         break;
+    }
+}
+
+void MessageHandler::handleForwardingMsg(const String &cmd, const String params[], int paramCount, String rawMsg)
+{
+    uint8_t targetNode = Protocol::parseIntParam(params[0], 0);
+
+    if (targetNode == 0)
+    {
+        LOG_ERROR("MESSAGE_HANDLER", "node id 0 is not correct, id must be positive integer");
+        return;
+    }
+    // remove first 2 parameters from rawMsg(Forward id and target node id)
+    for (size_t i = 0; i < 2; i++)
+    {
+        int firstSemi = rawMsg.indexOf(';');
+        if (firstSemi != -1)
+        {
+            rawMsg = rawMsg.substring(firstSemi + 1);
+        }
+    }
+
+    LOG_DEBUG("HANDLER", "Forwarding message to node %d: %s", targetNode, rawMsg.c_str());
+    eventBus.publish(FORWARD, targetNode, rawMsg);
+}
+
+void MessageHandler::handleDebugMessage(const String &cmd, const String params[], int paramCount)
+{
+    uint16_t fromController = Protocol::parseIntParam(params[1], 0);
+
+    if(cmd.toInt() == TEST)
+    {
+        LOG_INFO("HANDLER", "Testing connection with audio response");
+        eventBus.publish(TEST,fromController);
     }
 }
