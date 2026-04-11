@@ -25,19 +25,3 @@ void HardwareManager::reboot()
     vTaskDelay(2000);
     ESP.restart();
 }
-
-void HardwareManager::handleTestRequest(Event e)
-{
-    // Audio visual connection test
-    // Tests if node have connection by beeping.
-
-    lcd.clearScreen();
-    lcd.displayText("TESTING", 0);
-    lcd.displayText("CONNECTION OK", 1);
-    int waitBeforeBeep = 1000 * LORA_ADDRESS;
-    LOG_INFO("HARDWARE_MANAGER", "beeping in %d ms", waitBeforeBeep);
-    vTaskDelay(waitBeforeBeep);
-    buzzer.beep(200, 3, 200);
-    LOG_INFO("HARDWARE_MANAGER", "beeped");
-    vTaskDelay(2000);
-}

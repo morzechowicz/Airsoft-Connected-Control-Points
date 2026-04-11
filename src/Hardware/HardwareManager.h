@@ -26,7 +26,6 @@ public:
     HardwareManager(EventBus *eventBus);
     void update();
     void reboot();
-    void handleTestRequest(Event e);
 };
 
 #endif // HARDWAREMANAGER_H

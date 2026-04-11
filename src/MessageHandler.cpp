@@ -202,11 +202,16 @@ void MessageHandler::handleForwardingMsg(const String &cmd, const String params[
 
 void MessageHandler::handleDebugMessage(const String &cmd, const String params[], int paramCount)
 {
-    uint16_t fromController = Protocol::parseIntParam(params[1], 0);
-
+    uint16_t fromNode = Protocol::parseIntParam(params[1], 0);
+    uint16_t fromController = Protocol::parseIntParam(params[2], 0);
     if (cmd.toInt() == TEST)
     {
         LOG_INFO("HANDLER", "Testing connection with audio response");
-        eventBus.publish(TEST, fromController);
+        eventBus.publish(TEST, fromNode, fromController);
+    }
+    if(cmd.toInt() == SEARCH)
+    {
+        LOG_INFO("HANDLER", "Received SEARCH message from controller, publishing SEARCH event");
+        // eventBus.publish(TEST, fromNode, fromController);
     }
 }

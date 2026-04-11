@@ -25,20 +25,57 @@ void powerResetCallback(Event e)
         network.broadcastReset(); // tell the network first
     hardware.reboot();            // then go down yourself
 }
+\
+void testRequestTask(void *pvParameters);
 
 void testCallback(Event e)
 {
-    if (e.data1 == 1)
+    int fromNode = e.data1;
+    if (e.data2 == 1)
     {
         LOG_INFO("MAIN", "Received TEST event, broadcasting test message");
         String msg = Protocol::buildDebugTestMessage();
         network.broadcast(msg);
     }
-    if (e.data1 == 0)
+    if (e.data2 == 0)
     {
         LOG_INFO("MAIN", "Received TEST event with data 0, not broadcasting");
-        hardware.handleTestRequest(e);
+        //create test task
+        xTaskCreate(
+            testRequestTask,   // Task function
+            "TestRequestTask", // Name of the task (for debugging)
+            4096,             // Stack size in bytes
+            (void *)(intptr_t)fromNode,             // Parameter to pass to the task
+            1,                // Task priority
+            NULL              // Task handle (not used)
+        );
     }
+}
+
+void testRequestTask(void *pvParameters)
+{
+    // Audio visual connection test
+    // Tests if node have connection by beeping.
+    int responseId = (int)(intptr_t)pvParameters;
+    hardware.lcd.clearScreen();
+    hardware.lcd.displayText("TESTING", 0);
+    hardware.lcd.displayText("CONNECTION OK", 1);
+    int waitBeforeBeep = 1000 * LORA_ADDRESS;
+    LOG_INFO("HARDWARE_MANAGER", "beeping in %d ms", waitBeforeBeep);
+    vTaskDelay(waitBeforeBeep);
+    // String msg = Protocol::buildDebugResponseMessage();
+    // network.sendTo(responseId,msg);
+    hardware.buzzer.beep(200, 3, 200);
+    hardware.ledBlueButton.on();
+    vTaskDelay(200);
+    hardware.ledBlueButton.off();
+    vTaskDelay(200);
+    hardware.ledYellowButton.on();
+    vTaskDelay(200);
+    hardware.ledYellowButton.off();
+
+    LOG_INFO("HARDWARE_MANAGER", "beeped");
+    vTaskDelete(NULL); // Delete the task when done
 }
 
 void setup()

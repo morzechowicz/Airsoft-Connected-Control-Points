@@ -85,6 +85,17 @@ String Protocol::buildDebugTestMessage()
     String buffer;
     buffer = String(DEBUG) + ";";
     buffer += String(TEST) + ";";
+    buffer += String(LORA_ADDRESS) + ";";
+    buffer += String(0);
+    return buffer;
+}
+
+String Protocol::buildDebugResponseMessage()
+{
+    String buffer;
+    buffer = String(DEBUG) + ";";
+    buffer += String(SEARCH) + ";";
+    buffer += String(LORA_ADDRESS) + ";";
     buffer += String(0);
     return buffer;
 }
