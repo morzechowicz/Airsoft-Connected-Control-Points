@@ -65,9 +65,16 @@ private:
     void onPacketReceived(const ReceivedPacket& packet);
     void handlePollRequest(const ReceivedPacket& packet);
     void updateNodeInfo(uint8_t address, int16_t rssi, float snr);
-    
+    #if SX_CHIP_TYPE == RA_02_SX1278
     SX1278 radio = SX1278(new Module(LORA_NSS, LORA_DIO0, LORA_RST, LORA_DIO1));
-    LoRaSComm SComm = LoRaSComm(&radio);
+    LoRaSRadioSX1278 radioWrapper = LoRaSRadioSX1278(&radio);
+    #elif SX_CHIP_TYPE == HELTECSX1262
+    SX1262 radio = SX1262(new Module(LORA_NSS, LORA_DIO1, LORA_RST, LORA_BUSY));
+    LoRaSRadioSX1262 radioWrapper = LoRaSRadioSX1262(&radio);
+    #else
+    #error "Unknown SX_CHIP_TYPE, please define it as RA_02_SX"
+    #endif
+    LoRaSComm SComm = LoRaSComm(&radioWrapper);
     EventBus& eventBus;
     MessageHandler& msgHandler;
     

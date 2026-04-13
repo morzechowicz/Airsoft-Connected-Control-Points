@@ -135,6 +135,7 @@ void InformationModeComp::resumeGame(Event e)
 
 String InformationModeComp::buildRow(int startIdx, int count, int totalNodes)
 {
+    LOG_DEBUG("INFO_MODE", "buildRow: startIdx=%d, count=%d, totalNodes=%d", startIdx, count, totalNodes);
     String row = "";
     for (int i = startIdx; i < startIdx + count && i < totalNodes; i++)
     {
@@ -142,5 +143,6 @@ String InformationModeComp::buildRow(int startIdx, int count, int totalNodes)
             row += " ";
         row += "P" + String(lastKnownNodeStates[i].nodeId) + ":" + teamChar(lastKnownNodeStates[i].controllingTeam);
     }
+    LOG_DEBUG("INFO_MODE", "buildRow result: %s", row.c_str());
     return row;
 }

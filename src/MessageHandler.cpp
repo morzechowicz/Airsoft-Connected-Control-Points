@@ -65,12 +65,11 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     {
         LOG_INFO("HANDLER", "Received discovery request from master at address %s", params[1].c_str());
         uint8_t masterAddress = params[1].toInt();
-        // If this is an information node, we do not want to respond to discovery messages
-        if (informationNode)
-        {
-            LOG_DEBUG("HANDLER", "Not sending response because this is an information node");
-            return;
-        }
+// If this is an information node, we do not want to respond to discovery messages
+#if NODE_TYPE == INFORMATION || NODE_TYPE == BLEToLoRa
+        LOG_DEBUG("HANDLER", "Not sending response because this is an information node or BLEToLoRa node");
+        return;
+#endif
         eventBus.publish(NETWORK_DISCOVER, masterAddress);
     }
     if (cmd.toInt() == NETWROK_REPORT)
@@ -79,11 +78,10 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     }
     if (cmd.toInt() == NETWORK_MAIN_LOOKUP)
     {
-        if (informationNode)
-        {
-            LOG_ERROR("HANDLER", "Received main lookup request but this is an information node");
-            return;
-        }
+#if NODE_TYPE == INFORMATION || NODE_TYPE == BLEToLoRa
+        LOG_ERROR("HANDLER", "Received main lookup request but this is an information node or BLEToLoRa node");
+        return;
+#endif
         eventBus.publish(NETWORK_MAIN_LOOKUP, params[1].toInt());
     }
     if (cmd.toInt() == POWER_RESET)
@@ -157,6 +155,7 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
         {
             nodeState[i].nodeId = Protocol::parseIntParam(params[5 + i * 2], 0);
             nodeState[i].controllingTeam = (Team)Protocol::parseIntParam(params[5 + i * 2 + 1], 0);
+            LOG_DEBUG("HANDLER", "Updating node state: nodeId=%d, controllingTeam=%d", nodeState[i].nodeId, nodeState[i].controllingTeam);
         }
 
         eventBus.publish(KOTH_SCORE_UPDATE, time, teamYPoints, teamBPoints, pairs, nodeState);
@@ -203,11 +202,16 @@ void MessageHandler::handleForwardingMsg(const String &cmd, const String params[
 
 void MessageHandler::handleDebugMessage(const String &cmd, const String params[], int paramCount)
 {
-    uint16_t fromController = Protocol::parseIntParam(params[1], 0);
-
-    if(cmd.toInt() == TEST)
+    uint16_t fromNode = Protocol::parseIntParam(params[1], 0);
+    uint16_t fromController = Protocol::parseIntParam(params[2], 0);
+    if (cmd.toInt() == TEST)
     {
         LOG_INFO("HANDLER", "Testing connection with audio response");
-        eventBus.publish(TEST,fromController);
+        eventBus.publish(TEST, fromNode, fromController);
+    }
+    if(cmd.toInt() == SEARCH)
+    {
+        LOG_INFO("HANDLER", "Received SEARCH message from controller, publishing SEARCH event");
+        // eventBus.publish(TEST, fromNode, fromController);
     }
 }

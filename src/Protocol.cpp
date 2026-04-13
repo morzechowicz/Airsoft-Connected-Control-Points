@@ -85,6 +85,17 @@ String Protocol::buildDebugTestMessage()
     String buffer;
     buffer = String(DEBUG) + ";";
     buffer += String(TEST) + ";";
+    buffer += String(LORA_ADDRESS) + ";";
+    buffer += String(0);
+    return buffer;
+}
+
+String Protocol::buildDebugResponseMessage()
+{
+    String buffer;
+    buffer = String(DEBUG) + ";";
+    buffer += String(SEARCH) + ";";
+    buffer += String(LORA_ADDRESS) + ";";
     buffer += String(0);
     return buffer;
 }
@@ -170,7 +181,7 @@ Message Protocol::parse(const char *data, size_t length)
     int paramEnd;
     int paramIndex = 0;
 
-    while (paramIndex < 10)
+    while (paramIndex < MAX_MESSAGE_PARAMS)
     {
         paramEnd = dataStr.indexOf(';', paramStart);
         if (paramEnd == -1)

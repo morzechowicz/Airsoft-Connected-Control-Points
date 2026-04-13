@@ -5,7 +5,7 @@
 #include "LoRaSComm.h"
 
 // Constructor
-LoRaSComm::LoRaSComm(SX1278 *radioModule)
+LoRaSComm::LoRaSComm(LoRaSRadio *radioModule)
     : radio(radioModule),
       myAddress(0),
       currentSequence(0),
@@ -419,9 +419,8 @@ void LoRaSComm::rxTask(void *params)
 
             // Check if a packet is available (non-blocking)
             // We check the IRQ flags to see if RX is done
-            uint16_t irqFlags = instance->radio->getIRQFlags();
 
-            if (irqFlags & RADIOLIB_SX127X_CLEAR_IRQ_FLAG_RX_DONE)
+            if (instance->radio->isRxDone())
             {
                 // Packet received! Read it
                 size_t len = instance->radio->getPacketLength();
@@ -462,7 +461,7 @@ void LoRaSComm::rxTask(void *params)
                 }
 
                 // Clear IRQ flags and restart receive while we still have the radio mutex
-                instance->radio->clearIrqFlags(irqFlags);
+                instance->radio->clearRxDone();
                 instance->radio->startReceive();
 
                 // Release radio mutex BEFORE handling the packet (so handleReceivedPacket can transmit ACK)
@@ -663,19 +662,33 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
     // Ignore packets we ourselves sent (own echo, or repeated copy coming back)
     if (packet.header.srcAddr == myAddress)
     {
+        LOG_DEBUG("LoRaSComm", "[RX] Ignoring own packet, seq=%d", packet.header.sequence);
         return;
     }
 
     // Not addressed to us — repeater mode handles forwarding, otherwise drop
     if (packet.header.destAddr != myAddress && packet.header.destAddr != LORASCOMM_BROADCAST_ADDR)
     {
+        LOG_DEBUG("LoRaSComm", "[RX] Packet not addressed to us, seq=%d", packet.header.sequence);
         if (repeaterMode)
         {
+            LOG_DEBUG("LoRaSComm", "[RX] Forwarding packet, seq=%d", packet.header.sequence);
             forwardPacket(packet);
         }
         return;
     }
-
+    if (packet.header.packetType == PACKET_DATA_RELIABLE)
+    {
+        if (alreadyDelivered(packet.header.srcAddr, packet.header.sequence))
+        {
+            // Still send ACK — sender clearly didn't get it last time
+            enqueueAck(packet.header.srcAddr, packet.header.sequence);
+            LOG_INFO("LoRaSComm", "[RX] Duplicate seq=%d from 0x%02X, ACK resent, discarded",
+                     packet.header.sequence, packet.header.srcAddr);
+            return;
+        }
+        markDelivered(packet.header.srcAddr, packet.header.sequence);
+    }
     rxPacketCount++;
 
     switch (packet.header.packetType)
@@ -982,4 +995,27 @@ void LoRaSComm::processAckTimeout()
             }
         }
     }
+}
+
+bool LoRaSComm::alreadyDelivered(uint8_t src, uint8_t seq)
+{
+    uint32_t now = millis();
+    for (const auto &entry : deliveredTable)
+    {
+        if (entry.srcAddr == src &&
+            entry.sequence == seq &&
+            (now - entry.timestamp) < LORASCOMM_DELIVERED_EXPIRY_MS)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void LoRaSComm::markDelivered(uint8_t src, uint8_t seq)
+{
+    deliveredTable[deliveredHead].srcAddr = src;
+    deliveredTable[deliveredHead].sequence = seq;
+    deliveredTable[deliveredHead].timestamp = millis();
+    deliveredHead = (deliveredHead + 1) % LORASCOMM_DELIVERED_TABLE_SIZE;
 }

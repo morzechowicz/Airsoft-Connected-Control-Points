@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include "Button.h"
-#include "LED.h"
+#include "LEDLight.h"
 #include "Buzzer.h"
 #include "EventBus.h"
 #include "../Config.h"
@@ -17,8 +17,8 @@ public:
     Button buttonSelect;
     Button buttonEnter;
 
-    LED ledBlueButton;
-    LED ledYellowButton;
+    LEDLight ledBlueButton;
+    LEDLight ledYellowButton;
     
     Buzzer buzzer;
     LCDScreen lcd;
@@ -26,7 +26,6 @@ public:
     HardwareManager(EventBus *eventBus);
     void update();
     void reboot();
-    void handleTestRequest(Event e);
 };
 
 #endif // HARDWAREMANAGER_H

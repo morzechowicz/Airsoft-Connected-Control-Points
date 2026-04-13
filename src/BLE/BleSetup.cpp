@@ -2,10 +2,23 @@
 
 void BleSetup::BleStart()
 {
+    NimBLEDevice::deinit(true);
     // Initialize BLE
     LOG_INFO("BLE", "Initializing BLE...");
-    String deviceName = "LoRaCP_" + String(myNodeId);
-    NimBLEDevice::init(deviceName.c_str());
+    char deviceName[32];
+    #if NODE_TYPE == CAPTURE_POINT
+        snprintf(deviceName, sizeof(deviceName), "SPAS_CP_%d", LORA_ADDRESS);
+    #elif NODE_TYPE == INFORMATION
+        snprintf(deviceName, sizeof(deviceName), "SPAS_Info_%d", LORA_ADDRESS);
+    #elif NODE_TYPE == BLEToLoRa
+        snprintf(deviceName, sizeof(deviceName), "SPAS_Fwd_%d", LORA_ADDRESS);
+    #else
+        #error "Unknown NODE_TYPE"
+    #endif
+    LOG_INFO("BLE", "Device Name: %s", deviceName);
+
+    vTaskDelay(200); // Small delay to ensure BLE stack is ready after deinit
+    NimBLEDevice::init(deviceName);
     pServer = NimBLEDevice::createServer();
     bleServer = new BleServer();
     pServer->setCallbacks(bleServer);
@@ -25,8 +38,10 @@ void BleSetup::BleStart()
     vTaskDelay(200);
     // Start advertising
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+    NimBLEAdvertisementData advertisementData;
+    advertisementData.setName(deviceName);
     pAdvertising->addServiceUUID(SERVICE_UUID);
-    pAdvertising->setName(deviceName.c_str());
+    pAdvertising->setScanResponseData(advertisementData);
     pAdvertising->start();
     LOG_INFO("BLE", "BLE Ready! Waiting for connections...");
 }

@@ -84,7 +84,7 @@ void FLAGClient::update()
         if (millis() > locatingBeepSpacingUpdate)
         {
             hardware->buzzer.beepOnce(100);
-            locatingBeepSpacingUpdate = locatingBeepSpacingUpdate + LOCALIZER_BEEP;
+            locatingBeepSpacingUpdate = locatingBeepSpacingUpdate + LOCALIZER_BEEP_ONE_HALF;
         }
     }
 }

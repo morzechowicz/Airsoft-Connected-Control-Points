@@ -5,13 +5,14 @@
 #include <Arduino.h>
 #include "EventType.h"
 #include "GameComponents/KOTH/KOTHTypes.h"
+#include "Config.h"
 
 // message structure
 //  TYPE;PARAM;PARAM;...;
 struct Message
 {
     EventType type;
-    String params[10];
+    String params[MAX_MESSAGE_PARAMS];
     int paramCount;
 };
 
@@ -29,6 +30,7 @@ public:
     static String buildAskForGameStats(uint8_t nodeID);
     static String buildNetworkMainLookup(uint8_t nodeID);
     static String buildDebugTestMessage();
+    static String buildDebugResponseMessage();;
 
     // KOTH Message builders
     static String buildKothConfig(uint8_t maxPoints,uint8_t countdown, uint8_t captureTime, uint8_t maxTime);

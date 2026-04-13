@@ -40,7 +40,9 @@ private:
     bool capturing;
     unsigned long captureStartTime;
     uint16_t captureTimeMs;
-    
+    int maxGameTime = 0;
+    int timeElapsedSinceStart = 0;
+
     bool gracePeriod;
     unsigned long graceStartTime;
     uint16_t gracePeriodMs;
@@ -49,6 +51,8 @@ private:
 
     KOTHGameScore lastKnownScore;
     
+    u_int64_t calculateGameQuater(int maxTime,int elapsedTime);
+
     // Event handlers
     void onButtonPressed(Event e);
     void onButtonReleased(Event e);
