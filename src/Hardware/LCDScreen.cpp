@@ -82,8 +82,8 @@ void LCDScreen::kothDisplayEnd(Team winner, int yellowScore, int blueScore, bool
     lcd.setCursor(0, 1);
     lcd.print("Y: ");
     lcd.print(yellowScore);
-    lcd.print("|");
-    lcd.print(" B: ");
+    lcd.print(" | ");
+    lcd.print("B: ");
     lcd.print(blueScore);
 }
 
