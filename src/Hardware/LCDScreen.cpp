@@ -57,7 +57,7 @@ void LCDScreen::displayPause()
     lcd.print("  GAME  PAUSED  ");
     lcd.setCursor(0, 1);
     lcd.print("  GAME  PAUSED  ");
-    #ifdef BIG_SCREEN
+    #ifdef LCD_CHONKY_SCREEN
     lcd.setCursor(0, 2);
     lcd.print("  GAME  PAUSED  ");
     lcd.setCursor(0, 3);
