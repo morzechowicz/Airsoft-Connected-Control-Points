@@ -266,7 +266,7 @@ void GameManager::onNewNode(Event e)
         }
 
         hardwareManager->lcd.clearScreen();
-        hardwareManager->lcd.displayText("NODES :", 0);
+        hardwareManager->lcd.displayText("REMOTE NODES :", 0);
         hardwareManager->lcd.displayText(nodes.c_str(), 1);
     }
     else
