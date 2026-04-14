@@ -19,8 +19,8 @@ void LCDScreen::kothDisplayScore(int yellowScore, int blueScore)
     lcd.setCursor(0, 0);
     lcd.print("Y: ");
     lcd.print(yellowScore);
-    lcd.print("|");
-    lcd.print(" B: ");
+    lcd.print(" | ");
+    lcd.print("B: ");
     lcd.print(blueScore);
 }
 
