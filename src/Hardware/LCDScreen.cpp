@@ -19,8 +19,8 @@ void LCDScreen::kothDisplayScore(int yellowScore, int blueScore)
     lcd.setCursor(0, 0);
     lcd.print("Y: ");
     lcd.print(yellowScore);
-    lcd.print("|");
-    lcd.print(" B: ");
+    lcd.print(" | ");
+    lcd.print("B: ");
     lcd.print(blueScore);
 }
 
@@ -57,7 +57,7 @@ void LCDScreen::displayPause()
     lcd.print("  GAME  PAUSED  ");
     lcd.setCursor(0, 1);
     lcd.print("  GAME  PAUSED  ");
-    #ifdef BIG_SCREEN
+    #ifdef LCD_CHONKY_SCREEN
     lcd.setCursor(0, 2);
     lcd.print("  GAME  PAUSED  ");
     lcd.setCursor(0, 3);
@@ -82,8 +82,8 @@ void LCDScreen::kothDisplayEnd(Team winner, int yellowScore, int blueScore, bool
     lcd.setCursor(0, 1);
     lcd.print("Y: ");
     lcd.print(yellowScore);
-    lcd.print("|");
-    lcd.print(" B: ");
+    lcd.print(" | ");
+    lcd.print("B: ");
     lcd.print(blueScore);
 }
 
