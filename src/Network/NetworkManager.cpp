@@ -18,6 +18,10 @@ void NetworkManager::begin()
     SComm.begin(LORA_ADDRESS, LORA_FREQUENCY, LORA_TX_POWER,
                 LORA_SPREADING_FACTOR, LORA_SIGNAL_BANDWIDTH, LORA_CODING_RATE);
     SComm.onReceive(NetworkManager::handleReceived);
+    #if NODE_TYPE == FORWARDER
+        LOG_INFO("NETWORK", "Enabling repeater mode");
+        SComm.setRepeaterMode(true);
+    #endif
     eventBus.subscribe(NETWORK_DISCOVER, [this](Event e)
                        { this->networkDiscoverCallback(e); });
     eventBus.subscribe(FORWARD, [this](Event e) 

@@ -667,7 +667,7 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
     }
 
     // Not addressed to us — repeater mode handles forwarding, otherwise drop
-    if (packet.header.destAddr != myAddress && packet.header.destAddr != LORASCOMM_BROADCAST_ADDR)
+    if (packet.header.destAddr != myAddress)
     {
         LOG_DEBUG("LoRaSComm", "[RX] Packet not addressed to us, seq=%d", packet.header.sequence);
         if (repeaterMode)

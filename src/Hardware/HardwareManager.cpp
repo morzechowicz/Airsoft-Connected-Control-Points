@@ -9,6 +9,18 @@ HardwareManager::HardwareManager(EventBus *eventBus) : buttonBlue(eventBus, BUTT
                                                        buzzer(BUZZER_PIN, BUZZER_GENERATOR),
                                                        lcd()
 {
+#if SCREEN_TYPE == OLED_128x36_SCREEN
+    pinMode(PWR_OLED, OUTPUT);
+    digitalWrite(PWR_OLED, LOW);
+    vTaskDelay(1000);
+
+    pinMode(RST_OLED, OUTPUT);
+    digitalWrite(RST_OLED, LOW);
+    vTaskDelay(100);
+    digitalWrite(RST_OLED, HIGH);
+    vTaskDelay(100);
+
+#endif
     Wire.begin(SDA_PIN, SCL_PIN);
 }
 

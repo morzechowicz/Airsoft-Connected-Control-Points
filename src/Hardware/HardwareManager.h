@@ -8,6 +8,7 @@
 #include "EventBus.h"
 #include "../Config.h"
 #include "LCDScreen.h"
+#include "OLEDLight.h"
 
 class HardwareManager
 {
@@ -22,6 +23,7 @@ public:
     
     Buzzer buzzer;
     LCDScreen lcd;
+    OLEDLight oled;
 
     HardwareManager(EventBus *eventBus);
     void update();

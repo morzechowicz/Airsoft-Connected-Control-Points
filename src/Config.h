@@ -54,8 +54,10 @@
 #define LORA_RST 12
 #define LORA_DIO1 14
 
-#define SDA_PIN 19
-#define SCL_PIN 20
+#define SDA_PIN 17
+#define SCL_PIN 18
+#define RST_OLED 21
+#define PWR_OLED 36
 #elif SX_CHIP_TYPE == RA_02_SX1278
 #define LORA_SCK 5
 #define LORA_MISO 19
