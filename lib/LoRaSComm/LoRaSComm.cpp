@@ -666,15 +666,16 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
         return;
     }
 
+    if (repeaterMode)
+    {
+        LOG_DEBUG("LoRaSComm", "[RX] Forwarding packet, seq=%d", packet.header.sequence);
+        forwardPacket(packet);
+    }
+    
     // Not addressed to us — repeater mode handles forwarding, otherwise drop
     if (packet.header.destAddr != myAddress && packet.header.destAddr != LORASCOMM_BROADCAST_ADDR)
     {
         LOG_DEBUG("LoRaSComm", "[RX] Packet not addressed to us, seq=%d", packet.header.sequence);
-        if (repeaterMode)
-        {
-            LOG_DEBUG("LoRaSComm", "[RX] Forwarding packet, seq=%d", packet.header.sequence);
-            forwardPacket(packet);
-        }
         return;
     }
     if (packet.header.packetType == PACKET_DATA_RELIABLE)
