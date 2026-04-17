@@ -11,6 +11,8 @@ void BleSetup::BleStart()
     #elif NODE_TYPE == INFORMATION
         snprintf(deviceName, sizeof(deviceName), "SPAS_Info_%d", LORA_ADDRESS);
     #elif NODE_TYPE == BLEToLoRa
+        snprintf(deviceName, sizeof(deviceName), "SPAS_BTLR_%d", LORA_ADDRESS);
+    #elif NODE_TYPE == FORWARDER
         snprintf(deviceName, sizeof(deviceName), "SPAS_Fwd_%d", LORA_ADDRESS);
     #else
         #error "Unknown NODE_TYPE"

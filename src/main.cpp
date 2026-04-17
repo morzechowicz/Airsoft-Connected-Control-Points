@@ -15,8 +15,8 @@ BleSetup ble(eventBus, msgHandler);
 
 extern uint8_t myNodeId;
 
-#if NODE_TYPE != BLEToLoRa
-GameManager gameManager(&eventBus, &hardware, &network);
+#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
+    GameManager gameManager(&eventBus, &hardware, &network);
 #endif
 
 void powerResetCallback(Event e)
@@ -91,6 +91,10 @@ void setup()
     hardware.lcd.begin(0x27, 20, 4);
 #elif SCREEN_TYPE == LCD_SMOLL_SCREEN
     hardware.lcd.begin(0x27, 16, 2);
+#elif SCREEN_TYPE == LCD_SMOLL_SCREEN
+    hardware.lcd.begin(0x27, 16, 2);
+#elif SCREEN_TYPE == OLED_128x36_SCREEN
+    hardware.oled.begin();
 #elif SCREEN_TYPE == NONE_SCREEN
     // Do nothing
 #else
