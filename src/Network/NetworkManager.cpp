@@ -160,6 +160,10 @@ void NetworkManager::networkDiscoverCallback(Event e)
 {
     if (s_instance)
     {
+        #if NODE_TYPE == FORWARDER
+            LOG_ERROR("NETWORK", "Received discovery event but this is a forwarder node");
+            return;
+        #endif
         s_instance->setAsClient(e.data1);
         String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
         LOG_INFO("NETWORK", "Responding with: %s", response.c_str());
