@@ -16,7 +16,7 @@ BleSetup ble(eventBus, msgHandler);
 extern uint8_t myNodeId;
 
 #if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
-    GameManager gameManager(&eventBus, &hardware, &network);
+GameManager gameManager(&eventBus, &hardware, &network);
 #endif
 
 void powerResetCallback(Event e)
@@ -25,7 +25,7 @@ void powerResetCallback(Event e)
         network.broadcastReset(); // tell the network first
     hardware.reboot();            // then go down yourself
 }
-\
+
 void testRequestTask(void *pvParameters);
 
 void testCallback(Event e)
@@ -40,14 +40,14 @@ void testCallback(Event e)
     if (e.data2 == 0)
     {
         LOG_INFO("MAIN", "Received TEST event with data 0, not broadcasting");
-        //create test task
+        // create test task
         xTaskCreate(
-            testRequestTask,   // Task function
-            "TestRequestTask", // Name of the task (for debugging)
-            4096,             // Stack size in bytes
-            (void *)(intptr_t)fromNode,             // Parameter to pass to the task
-            1,                // Task priority
-            NULL              // Task handle (not used)
+            testRequestTask,            // Task function
+            "TestRequestTask",          // Name of the task (for debugging)
+            4096,                       // Stack size in bytes
+            (void *)(intptr_t)fromNode, // Parameter to pass to the task
+            1,                          // Task priority
+            NULL                        // Task handle (not used)
         );
     }
 }
@@ -78,6 +78,38 @@ void testRequestTask(void *pvParameters)
     vTaskDelete(NULL); // Delete the task when done
 }
 
+void batVoltageTask(void *pvParameters);
+
+void batVoltStart()
+{
+    LOG_INFO("MAIN", "Starting battery voltage task for ");
+    // create test task
+    xTaskCreate(
+        batVoltageTask,             // Task function
+        "batVoltageTask",           // Name of the task (for debugging)
+        4096,                       // Stack size in bytes
+        (void *)nullptr,            // Parameter to pass to the task
+        1,                          // Task priority
+        NULL                        // Task handle (not used)
+    );
+}
+
+void batVoltageTask(void *pvParameters)
+{
+    while (true)
+    {
+        uint32_t raw = analogRead(VBAT_PIN);
+
+        float voltage = (raw / 4095.0) * 3.3 * 5.19; 
+        LOG_DEBUG("MAIN", "Raw ADC: %d, Voltage: %.2f V", raw, voltage);
+        vTaskDelay(pdMS_TO_TICKS(5000));
+        hardware.oled.clear();
+        hardware.oled.writeln("Battery:");
+        hardware.oled.writeln((String(voltage, 2) + " V").c_str());
+        hardware.oled.display();
+    }
+}
+
 void setup()
 {
     LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL);
@@ -85,6 +117,12 @@ void setup()
     LOG.setTimestamps(false);
 
     LOG_INFO("MAIN", "System starting...");
+
+#if SX_CHIP_TYPE == HELTECSX1262
+    pinMode(ADC_CTRL_PIN, OUTPUT);
+    digitalWrite(ADC_CTRL_PIN, LOW);
+    batVoltStart();
+#endif
 
     vTaskDelay(200); // Wait for LOG to initialize
 #if SCREEN_TYPE == LCD_CHONKY_SCREEN
