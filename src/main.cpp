@@ -85,12 +85,12 @@ void batVoltStart()
     LOG_INFO("MAIN", "Starting battery voltage task for ");
     // create test task
     xTaskCreate(
-        batVoltageTask,             // Task function
-        "batVoltageTask",           // Name of the task (for debugging)
-        4096,                       // Stack size in bytes
-        (void *)nullptr,            // Parameter to pass to the task
-        1,                          // Task priority
-        NULL                        // Task handle (not used)
+        batVoltageTask,   // Task function
+        "batVoltageTask", // Name of the task (for debugging)
+        4096,             // Stack size in bytes
+        (void *)nullptr,  // Parameter to pass to the task
+        1,                // Task priority
+        NULL              // Task handle (not used)
     );
 }
 
@@ -100,13 +100,20 @@ void batVoltageTask(void *pvParameters)
     {
         uint32_t raw = analogRead(VBAT_PIN);
 
-        float voltage = (raw / 4095.0) * 3.3 * 5.19; 
+        float voltage = (raw / 4095.0) * 3.3 * 5.19;
         LOG_DEBUG("MAIN", "Raw ADC: %d, Voltage: %.2f V", raw, voltage);
         vTaskDelay(pdMS_TO_TICKS(5000));
         hardware.oled.clear();
         hardware.oled.writeln("Battery:");
         hardware.oled.writeln((String(voltage, 2) + " V").c_str());
         hardware.oled.display();
+        // Also pulse diode here why not
+        if (digitalRead(STATUS_LED_PIN) == LOW)
+        {
+            digitalWrite(STATUS_LED_PIN, HIGH);
+        }else{
+            digitalWrite(STATUS_LED_PIN, LOW);
+        }
     }
 }
 
@@ -121,6 +128,10 @@ void setup()
 #if SX_CHIP_TYPE == HELTECSX1262
     pinMode(ADC_CTRL_PIN, OUTPUT);
     digitalWrite(ADC_CTRL_PIN, LOW);
+
+    pinMode(STATUS_LED_PIN, OUTPUT);
+    digitalWrite(STATUS_LED_PIN, LOW);
+
     batVoltStart();
 #endif
 
