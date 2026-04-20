@@ -93,7 +93,7 @@ void batVoltStart()
         NULL              // Task handle (not used)
     );
 }
-
+#if SX_CHIP_TYPE == HELTECSX1262
 void batVoltageTask(void *pvParameters)
 {
     while (true)
@@ -116,7 +116,7 @@ void batVoltageTask(void *pvParameters)
         }
     }
 }
-
+#endif
 void setup()
 {
     LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL);
