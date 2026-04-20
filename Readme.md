@@ -1,82 +1,107 @@
 # SPAS-GS (SPAS Game System)
 
-ESP32-based LoRa/BLE multiplayer game station framework for laser tag / capture-the-flag style games. Project is built with PlatformIO and targets `ttgo-lora32-v21` board.
+ESP32-based system for outdoor games.
 
-## 🚀 Features
+Currently supports "capture the point" style gameplay with automatic LoRa communication between nodes and simple configuration via Android app *([linked here](https://github.com/morzechowicz/ACCP-android-app))*.
 
-- ESP32 + LoRa (RadioLib) mesh game network
+## Features
+
+- ESP32 + LoRa (RadioLib) point-to-point network
 - BLE status/control interface
 - LCD display (LiquidCrystal_I2C) and buzzer feedback
-- Modular game modes (names are placeholders):
-  - KOTH (King of the Hill)
-  - FLAG (Capture the Flag)
-- Master/client role management via `GameManager`
-- Event-driven architecture (`EventBus`)
-- Runtime configuration via `ConfigurationHandler`
-- Optional information node mode (`INFORMATION_NODE`)
+- Modular architecture supporting multiple game modes *(currently one game mode; more coming soon)*
+- Server-client architecture
 
-## 📦 Requirements
+## Node Roles
 
-- Board: `ttgo-lora32-v21` (ESP32 + SX1276 LoRa)
-- PlatformIO (recommended latest)
-- Arduino framework
+**Capture Point** — Core gameplay node. Acts as the contested point players fight over. Can serve as both server and client simultaneously. Required for all games.
 
-## 📁 Repository Structure
+**Information** — Displays current game state and score information.
 
-- `src/` core application code
-  - `GameComponents/` game modes and base components
-  - `Hardware/` button, LED, buzzer, lcd, manager
-  - `Network/` message builder/parser and network manager
-  - `BLE/` BLE setup and callbacks
-  - `GameManager.{cpp,h}` orchestrates mode behavior
-- `include/` project headers
-- `lib/Logging/` custom logging utility
-- `test/` unit tests (Protocol parser coverage)
+**Repeater** — Extends network range by retransmitting all received messages. Capture nodes handle deduplication of repeated messages.
 
-## 🛠️ Build and Upload
+**BLE-to-LoRa** — Carried by the game organizer. Translates BLE messages to LoRa and forwards them to targeted nodes, enabling remote configuration of capture nodes from a distance.
 
-1. Install PlatformIO and dependencies.
-2. Set up `platformio.ini` profiles:
-   - `env:device3` .. `env:device6` preset for Linux serial ports and addresses
-   - `LORA_ADDRESS` must be unique for each node.
-3. Build and upload:
+## example usage:
 
-\`\`\`bash
-pio run -e device3 -t upload
-\`\`\`
+Lets say you have 2 control points(CP), one repeater and 2 information nodes(IN).
 
-4. Monitor logs:
+you need to place them is such a way that point you designate as server will see all nodes or in a way that it sees some points and repeater and repeater sees remaining points. repeater will send server commands to the points server does not see.
 
-\`\`\`bash
-pio device monitor -e device3
-\`\`\`
+Now you need to make sure that server knows about other cp and then you can start game *([see app instructions - not ready](https://github.com/morzechowicz/ACCP-android-app))*.
 
-## ⚙️ Compile-time Flags
+game will start after countdown and end on achiving point limit or time limit or on command.
 
-- `-D LORA_ADDRESS=0xXX` (required unique node ID)
-- `-D BIG_SCREEN` (4x20 LCD layout)
-- `-D INFORMATION_NODE` (operation as information-only node)
+## Supported Boards
 
-## 🧠 Runtime Behavior
+For capture point and information nodes:
+- ESP32 WROOM + RA-02 SX1278 433MHz LoRa module
+- TTGO LoRa32
 
-- `main.cpp` initializes subsystems
-- `NetworkManager` discovery, sync, broadcast events
-- `GameManager` handles config, score, game states
-- `HardwareManager` poll buttons, update buzzer/LCD
-- `EventBus` dispatches events between modules
+For repeater and BLE-to-LoRa nodes:
+- Heltec Wireless Stick v3
 
-## 🧪 Testing
+## Required Materials — Single Control Node
 
-- Unit tests in `/test` (PlatformIO + Unity)
-- Run tests:
+- ESP32
+- 4×16 or 4×20 LCD screen with I2C
+- 2 buttons with LEDs
+- Buck converter to 5V
+- MOSFET IRLZ44N
+- Buzzer with built-in oscillator
+- Cables, resistors, etc.
 
-\`\`\`bash
-pio test
-\`\`\`
+Depending on board:
+- RA-02 SX1278 433MHz LoRa module
+- 433 MHz antenna
 
-## 📌 Notes
+## Repository Structure
 
-- Logging includes serial + BLE outputs from `LogManager`.
-- `BLE` uses `NimBLE-Arduino`.
-- `LoRa` communication via `RadioLib`.
-- Require additional apk for android to function properly
+```
+src/
+├── GameComponents/     game modes and base components
+├── Hardware/           button, LED, buzzer, LCD manager
+├── Network/            message builder/parser, network manager
+├── BLE/                BLE setup and callbacks
+└── GameManager.{cpp,h} orchestrates mode behavior
+
+lib/
+└── Logging/            custom logging utility
+```
+
+## Build
+
+Built with PlatformIO. See `platformio.ini` for environment configuration.
+
+Everything can also be changed in configuration file Config.h. You can also find there pins outputs.
+
+## Compile-time Flags
+
+Example configuration for a standard capture point node:
+
+```ini
+[env:controlpoint]
+extends = env
+board = ttgo-lora32-v21
+upload_port = /dev/ttyACM1
+build_flags =
+    -D LORA_ADDRESS=0x03
+    -D NODE_TYPE=CAPTURE_POINT
+    -D SX_CHIP_TYPE=RA_02_SX1278
+    -D SCREEN_TYPE=LCD_SMOLL_SCREEN
+    -D BUZZER_GENERATOR=BUZZER_OFF
+```
+
+## Runtime Behavior
+
+- `main.cpp` — initializes all subsystems
+- `NetworkManager` — handles discovery, sync, and broadcast events
+- `GameManager` — manages config, score, and game states
+- `HardwareManager` — polls buttons, updates buzzer and LCD
+- `EventBus` — dispatches events between modules
+
+## Notes
+
+- If something is in the code but not documented here, it probably doesn't work yet.
+- This project is in early development — everything is subject to change.
+- Use this code at your own risk.
