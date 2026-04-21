@@ -193,7 +193,7 @@ void NetworkManager::onPacketReceived(const ReceivedPacket &packet)
     Message msg;
     msg = Protocol::parse((const char *)packet.data, packet.dataLen);
     LOG_INFO("NETWORK", "Received message: %s", (const char *)packet.data);
-    bool result = msgHandler.handleCommand(msg, (const char *)packet.data);
+    bool result = msgHandler.handleCommand(msg, (const char *)packet.data, packet.rssi, packet.snr);
     if (!result)
     {
         LOG_ERROR("NETWORK", "Something went wrong at Configuration handler");

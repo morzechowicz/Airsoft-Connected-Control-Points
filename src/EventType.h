@@ -56,6 +56,12 @@ enum EventType
     FORWARD,
     TEST,
 
+    //tests 
+    TEST_BROADCAST,
+    TEST_BR_RESPONSE,
+    TEST_DIRECT,
+    TEST_DR_RESPONSE,
+
     // FLAG specific
     FLAG_CAPTURED,
     FLAG_CONFIG,
