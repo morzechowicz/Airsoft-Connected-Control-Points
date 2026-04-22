@@ -250,7 +250,11 @@ void KOTHServer::endGame(Team winner)
                 LOG_ERROR("KOTH_SERVER", "Skipping myself");
                 continue;
             }
-            networkManager->sendTo(nodes[i].nodeId, msg);
+            EventGroupHandle_t ackEvents = xEventGroupCreate();
+            EventBits_t expectedBits = (1 << nodes[i].nodeId);
+            networkManager->sendToAndWait(nodes[i].nodeId, msg, ackEvents, expectedBits); 
+            // networkManager->sendTo(nodes[i].nodeId, msg);
+            vTaskDelay(500);
         }
         vTaskDelay(1000);// assume thats enough and then broadcast fin to everyone else
         networkManager->broadcast(msg);
