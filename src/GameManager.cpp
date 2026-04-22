@@ -231,11 +231,11 @@ GameManager::GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net)
     : eventBus(eb), hardwareManager(hw), networkManager(net)
 {
     eventBus->subscribe(NETWORK_DISCOVER, [this](Event e)
-                    { onDiscovered(e); });
+                    { onDiscovered(e); }); //show who we are connected to
     eventBus->subscribe(SEARCH, [this](Event e)
-                       { onDiscoverRequest(e); });
+                       { onDiscoverRequest(e); }); // broadcast discover request 
     eventBus->subscribe(NETWROK_REPORT, [this](Event e)
-                       { onNewNode(e); });
+                       { onNewNode(e); }); // add new node to the list when discovered
     eventBus->subscribe(GAME_STARTED, [this](Event e)
                        { onGameStarted(e); });
     eventBus->subscribe(KOTH_CONF_UPDATED, [this](Event e)
