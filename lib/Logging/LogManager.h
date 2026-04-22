@@ -6,8 +6,9 @@
 #include <freertos/semphr.h>
 #include <vector>
 #include <functional>
+#include <stdarg.h>
 
-QueueHandle_t bleLogQueue;
+extern QueueHandle_t bleLogQueue;
 
 // Log levels
 enum LogLevel
@@ -44,7 +45,7 @@ public:
     void begin(LogLevel level = LOG_INFO, uint8_t outputs = LOG_OUTPUT_SERIAL);
 
     // ble queue task
-    void bleLogTask(void *pvParameters);
+    static void bleLogTask(void *pvParameters);
     void createBleLogTask();
 
     // Configuration

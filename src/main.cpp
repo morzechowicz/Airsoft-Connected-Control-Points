@@ -16,7 +16,7 @@ BleSetup ble(eventBus, msgHandler);
 extern uint8_t myNodeId;
 
 #if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
-    GameManager gameManager(&eventBus, &hardware, &network);
+GameManager gameManager(&eventBus, &hardware, &network);
 #endif
 
 void powerResetCallback(Event e)
@@ -25,7 +25,7 @@ void powerResetCallback(Event e)
         network.broadcastReset(); // tell the network first
     hardware.reboot();            // then go down yourself
 }
-\
+
 void testRequestTask(void *pvParameters);
 
 void testCallback(Event e)
@@ -40,14 +40,14 @@ void testCallback(Event e)
     if (e.data2 == 0)
     {
         LOG_INFO("MAIN", "Received TEST event with data 0, not broadcasting");
-        //create test task
+        // create test task
         xTaskCreate(
-            testRequestTask,   // Task function
-            "TestRequestTask", // Name of the task (for debugging)
-            4096,             // Stack size in bytes
-            (void *)(intptr_t)fromNode,             // Parameter to pass to the task
-            1,                // Task priority
-            NULL              // Task handle (not used)
+            testRequestTask,            // Task function
+            "TestRequestTask",          // Name of the task (for debugging)
+            4096,                       // Stack size in bytes
+            (void *)(intptr_t)fromNode, // Parameter to pass to the task
+            1,                          // Task priority
+            NULL                        // Task handle (not used)
         );
     }
 }
@@ -80,7 +80,7 @@ void testRequestTask(void *pvParameters)
 
 void setup()
 {
-    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL);
+    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
     LOG.enableColors(false);
     LOG.setTimestamps(false);
 
@@ -108,6 +108,7 @@ void setup()
     vTaskDelay(500);
     LOG.setBLECallback([](const char *msg)
                        { ble.sendMessage(msg); });
+    LOG.createBleLogTask();
     network.begin();
     // callbacks that i dont know what to do with
     eventBus.subscribe(POWER_RESET, powerResetCallback);

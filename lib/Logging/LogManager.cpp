@@ -3,7 +3,8 @@
  */
 
 #include "LogManager.h"
-#include <stdarg.h>
+
+QueueHandle_t bleLogQueue; 
 
 LogManager::LogManager()
     : currentLevel(LOG_INFO),
@@ -37,19 +38,17 @@ void LogManager::begin(LogLevel level, uint8_t outputs)
     }
 }
 
-void LogManager::bleLogTask(void *pvParameters)
-{
-    String *msg;
-    while (1)
-    {
-        if (xQueueReceive(bleLogQueue, &msg, portMAX_DELAY))
-        {
-            if (bleCallback && BLEConnected)
-            {
-                bleCallback(msg->c_str());
+void LogManager::bleLogTask(void *pvParameters) {
+    LogManager* self = static_cast<LogManager*>(pvParameters);
+
+    String* msg;
+    while(1) {
+        if(xQueueReceive(bleLogQueue, &msg, portMAX_DELAY)) {
+            if(self->bleCallback && self->BLEConnected) {
+                self->bleCallback(msg->c_str());
             }
-            delete msg;                    // free heap memory after sending
-            vTaskDelay(pdMS_TO_TICKS(50)); // breathing room between notifies
+            delete msg;
+            vTaskDelay(pdMS_TO_TICKS(200));
         }
     }
 }
@@ -57,17 +56,8 @@ void LogManager::bleLogTask(void *pvParameters)
 void LogManager::createBleLogTask()
 {
     bleLogQueue = xQueueCreate(10, sizeof(String *));
-    xTaskCreate(
-        [](void *pvParameters)
-        {
-            LogManager *logger = static_cast<LogManager *>(pvParameters);
-            logger->bleLogTask(pvParameters);
-        },
-        "BLELogTask",
-        8192,
-        this,
-        1,
-        nullptr);
+    LogManager* instance = &getInstance();
+    xTaskCreate(bleLogTask, "bleLog", 4096, instance, 1, NULL);
 }
 
 void LogManager::setLogLevel(LogLevel level)
