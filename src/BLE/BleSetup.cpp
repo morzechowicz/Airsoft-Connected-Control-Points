@@ -31,7 +31,7 @@ void BleSetup::BleStart()
     // Create BLE Characteristic (read/write)
     pCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID,
-        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE);
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::NOTIFY);
     pCharacteristic->setValue("Hello from ESP32 (NimBLE)");
     pCharacteristic->setCallbacks(new BleCallback(eventBus, configHandler));
 

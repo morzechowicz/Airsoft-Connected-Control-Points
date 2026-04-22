@@ -224,7 +224,7 @@ void NetworkManager::addKnownNode(uint8_t address)
         info.isAlive = false;
 
         knownNodes.push_back(info);
-        Serial.printf("[NETWORK] Added node 0x%02X to known list\n", address);
+        LOG_INFO("NETWORK", "Added node 0x%02X to known list", address);
 
         xSemaphoreGive(nodeListMutex);
     }
@@ -338,7 +338,7 @@ void NetworkManager::handlePollRequest(const ReceivedPacket &packet)
         {
             // Found my slot! Wait and respond
             uint32_t myDelay = pos * slotMs;
-            Serial.printf("[NETWORK] TDMA poll: responding in slot %d (%dms)\n", pos, myDelay);
+            LOG_INFO("NETWORK", "TDMA poll: responding in slot %d (%dms)", pos, myDelay);
 
             vTaskDelay(pdMS_TO_TICKS(myDelay));
 
