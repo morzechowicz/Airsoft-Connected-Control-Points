@@ -41,10 +41,10 @@ void NetworkManager::setAsClient(uint8_t addres)
 
 void NetworkManager::sendToMain(const String &message)
 {
-    LOG_INFO("NETWORK", "Sending message to master (0x%02X)", masterAddress);
-
+    
     if (networkReady && role == ROLE_CLIENT)
     {
+        LOG_INFO("NETWORK", "Sending message to master (0x%02X)", masterAddress);
         sendTo(masterAddress, message);
     }
 }

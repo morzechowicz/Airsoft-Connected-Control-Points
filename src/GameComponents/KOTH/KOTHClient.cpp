@@ -89,6 +89,7 @@ void KOTHClient::stop()
 
 void KOTHClient::update()
 {
+    uint32_t now = millis();
     if (capturing)
     {
         updateCapture();
@@ -97,7 +98,7 @@ void KOTHClient::update()
     // Handle grace period
     if (gracePeriod)
     {
-        if (millis() - graceStartTime >= gracePeriodMs)
+        if (now - graceStartTime >= gracePeriodMs)
         {
             cancelCapture();
             gracePeriod = false;
@@ -107,7 +108,7 @@ void KOTHClient::update()
     // beep when working
     if (gameActive)
     {
-        if (millis() > locatingBeepSpacingUpdate)
+        if (now > locatingBeepSpacingUpdate)
         {
             hardware->buzzer.beepOnce(100);
             locatingBeepSpacingUpdate = locatingBeepSpacingUpdate + calculateGameQuater(maxGameTime, timeElapsedSinceStart);
@@ -119,15 +120,15 @@ void KOTHClient::update()
     // maybe they prefer other better clients? maybe they are just busy? maybe they are dead? who knows
     // such is life in client-server architecture, you are at the mercy of the server, you can only hope it treats you well and doesn't forget about you
     // remember to not spam it just send it once
-    if (gameActive && millis() - lastScoreUpdateTime > SCORING_INTERVAL_MS * 2)
+    if (gameActive && (now - lastScoreUpdateTime) > SCORING_INTERVAL_MS * 2)
     {
-        LOG_WARN("KOTH_CLIENT", "Haven't received score update in 10 seconds, requesting update from server");
+        LOG_WARN("KOTH_CLIENT", "Haven't received score update in some time, requesting update from server");
         String msg = Protocol::buildAskForGameStats(myNodeId);
         if (network)
         {
             network->sendToMain(msg);
         }
-        lastScoreUpdateTime = millis(); // reset timer to avoid spamming
+        lastScoreUpdateTime = now; // reset timer to avoid spamming
     }
 }
 
