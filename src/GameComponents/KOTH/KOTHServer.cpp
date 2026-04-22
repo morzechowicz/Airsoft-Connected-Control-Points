@@ -242,10 +242,14 @@ void KOTHServer::endGame(Team winner)
     String msg = Protocol::buildGameOver((uint8_t)winner);
     if (!config.singleNodeMode)
     {
-        if (networkManager)
+        //Iterate through nodes and send them the game over message
+        for (uint8_t i = 0; i < nodeCount; i++)
         {
-            networkManager->broadcast(msg);
+            networkManager->sendTo(nodes[i].nodeId, msg);
         }
+        vTaskDelay(1000);// assume thats enough and then broadcast fin to everyone else
+        networkManager->broadcast(msg);
+        // spamming netwrok a little arent we?
     }
 
     // Publish local event
