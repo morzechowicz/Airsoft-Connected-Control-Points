@@ -167,6 +167,7 @@ void NetworkManager::networkDiscoverCallback(Event e)
         s_instance->setAsClient(e.data1);
         String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
         LOG_INFO("NETWORK", "Responding with: %s", response.c_str());
+        vTaskDelay(pdMS_TO_TICKS(200) * LORA_ADDRESS); // small delay times node id to avoid collisons
         s_instance->sendToMain(response);
     }
 }
