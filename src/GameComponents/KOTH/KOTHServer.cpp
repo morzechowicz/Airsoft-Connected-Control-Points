@@ -245,6 +245,11 @@ void KOTHServer::endGame(Team winner)
         //Iterate through nodes and send them the game over message
         for (uint8_t i = 0; i < nodeCount; i++)
         {
+            if(nodes[i].nodeId == LORA_ADDRESS) //skip this node
+            {
+                LOG_ERROR("KOTH_SERVER", "Skipping myself");
+                continue;
+            }
             networkManager->sendTo(nodes[i].nodeId, msg);
         }
         vTaskDelay(1000);// assume thats enough and then broadcast fin to everyone else
