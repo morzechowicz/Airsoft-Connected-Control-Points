@@ -42,6 +42,7 @@ private:
     uint16_t captureTimeMs;
     int maxGameTime = 0;
     int timeElapsedSinceStart = 0;
+    uint16_t lastScoreUpdateTime = 0;
 
     bool gracePeriod;
     unsigned long graceStartTime;

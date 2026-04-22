@@ -283,6 +283,7 @@ void KOTHServer::resumeGame(Event e)
 void KOTHServer::gameConfRequest(Event e)
 {
     uint8_t nodeId = e.data1;
+    bool alreadyIn = false;
     // add new node if it doesn't exist
     if (findNode(nodeId) == nullptr && nodeCount < 10)
     {
@@ -290,8 +291,18 @@ void KOTHServer::gameConfRequest(Event e)
         nodes[nodeCount].controllingTeam = Team::NONE;
         nodes[nodeCount].capturedAt = 0;
         nodeCount++;
+        alreadyIn = true;
     }
-    addingNodeAfterStart(nodeId, e);
+    if(alreadyIn)
+    {
+        LOG_INFO("KOTH_SERVER", "Node %d already in game, sending score update", nodeId);
+        String configMsg = Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes);
+        networkManager->sendTo(nodeId, configMsg);
+    }else
+    {
+        LOG_INFO("KOTH_SERVER", "Adding new node %d to game after start", nodeId);
+        addingNodeAfterStart(nodeId, e);
+    }
 }
 
 void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
