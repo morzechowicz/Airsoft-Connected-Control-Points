@@ -242,10 +242,23 @@ void KOTHServer::endGame(Team winner)
     String msg = Protocol::buildGameOver((uint8_t)winner);
     if (!config.singleNodeMode)
     {
-        if (networkManager)
+        //Iterate through nodes and send them the game over message
+        for (uint8_t i = 0; i < nodeCount; i++)
         {
-            networkManager->broadcast(msg);
+            if(nodes[i].nodeId == LORA_ADDRESS) //skip this node
+            {
+                LOG_ERROR("KOTH_SERVER", "Skipping myself");
+                continue;
+            }
+            EventGroupHandle_t ackEvents = xEventGroupCreate();
+            EventBits_t expectedBits = (1 << nodes[i].nodeId);
+            networkManager->sendToAndWait(nodes[i].nodeId, msg, ackEvents, expectedBits); 
+            // networkManager->sendTo(nodes[i].nodeId, msg);
+            vTaskDelay(500);
         }
+        vTaskDelay(1000);// assume thats enough and then broadcast fin to everyone else
+        networkManager->broadcast(msg);
+        // spamming netwrok a little arent we?
     }
 
     // Publish local event
@@ -279,6 +292,7 @@ void KOTHServer::resumeGame(Event e)
 void KOTHServer::gameConfRequest(Event e)
 {
     uint8_t nodeId = e.data1;
+    bool alreadyIn = false;
     // add new node if it doesn't exist
     if (findNode(nodeId) == nullptr && nodeCount < 10)
     {
@@ -286,8 +300,18 @@ void KOTHServer::gameConfRequest(Event e)
         nodes[nodeCount].controllingTeam = Team::NONE;
         nodes[nodeCount].capturedAt = 0;
         nodeCount++;
+        alreadyIn = true;
     }
-    addingNodeAfterStart(nodeId, e);
+    if(alreadyIn)
+    {
+        LOG_INFO("KOTH_SERVER", "Node %d already in game, sending score update", nodeId);
+        String configMsg = Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes);
+        networkManager->sendTo(nodeId, configMsg);
+    }else
+    {
+        LOG_INFO("KOTH_SERVER", "Adding new node %d to game after start", nodeId);
+        addingNodeAfterStart(nodeId, e);
+    }
 }
 
 void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
