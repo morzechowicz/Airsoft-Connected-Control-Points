@@ -41,10 +41,10 @@ void NetworkManager::setAsClient(uint8_t addres)
 
 void NetworkManager::sendToMain(const String &message)
 {
-    LOG_INFO("NETWORK", "Sending message to master (0x%02X)", masterAddress);
-
+    
     if (networkReady && role == ROLE_CLIENT)
     {
+        LOG_INFO("NETWORK", "Sending message to master (0x%02X)", masterAddress);
         sendTo(masterAddress, message);
     }
 }
@@ -167,6 +167,7 @@ void NetworkManager::networkDiscoverCallback(Event e)
         s_instance->setAsClient(e.data1);
         String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
         LOG_INFO("NETWORK", "Responding with: %s", response.c_str());
+        vTaskDelay(pdMS_TO_TICKS(200) * LORA_ADDRESS); // small delay times node id to avoid collisons
         s_instance->sendToMain(response);
     }
 }
@@ -224,7 +225,7 @@ void NetworkManager::addKnownNode(uint8_t address)
         info.isAlive = false;
 
         knownNodes.push_back(info);
-        Serial.printf("[NETWORK] Added node 0x%02X to known list\n", address);
+        LOG_INFO("NETWORK", "Added node 0x%02X to known list", address);
 
         xSemaphoreGive(nodeListMutex);
     }
@@ -338,7 +339,7 @@ void NetworkManager::handlePollRequest(const ReceivedPacket &packet)
         {
             // Found my slot! Wait and respond
             uint32_t myDelay = pos * slotMs;
-            Serial.printf("[NETWORK] TDMA poll: responding in slot %d (%dms)\n", pos, myDelay);
+            LOG_INFO("NETWORK", "TDMA poll: responding in slot %d (%dms)", pos, myDelay);
 
             vTaskDelay(pdMS_TO_TICKS(myDelay));
 

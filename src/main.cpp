@@ -18,7 +18,7 @@ BleSetup ble(eventBus, msgHandler);
 extern uint8_t myNodeId;
 
 #if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
-    GameManager gameManager(&eventBus, &hardware, &network);
+GameManager gameManager(&eventBus, &hardware, &network);
 #endif
 
 void powerResetCallback(Event e)
@@ -37,7 +37,7 @@ void testCallback(Event e)
 
 void setup()
 {
-    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL);
+    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
     LOG.enableColors(false);
     LOG.setTimestamps(false);
 
@@ -65,6 +65,7 @@ void setup()
     vTaskDelay(500);
     LOG.setBLECallback([](const char *msg)
                        { ble.sendMessage(msg); });
+    LOG.createBleLogTask();
     network.begin();
     // callbacks that i dont know what to do with
     eventBus.subscribe(POWER_RESET, powerResetCallback);
