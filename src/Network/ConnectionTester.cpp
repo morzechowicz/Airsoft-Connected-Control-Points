@@ -90,7 +90,7 @@ void ConnectionTester::handleBroadcast(Event e)
     uint8_t from = e.data1;
     LOG_INFO("ConnectionTester", "Received broadcast message from node %d", from);
     // Respond to broadcast with our own info with little delay to avoid collisions
-    vTaskDelay(100 * LORA_ADDRESS / portTICK_PERIOD_MS);
+    vTaskDelay(150 * LORA_ADDRESS / portTICK_PERIOD_MS);
     String response = Protocol::buildTestBrResponseMsg(LORA_ADDRESS);
     networkManager->sendTo(from, response);
 }
