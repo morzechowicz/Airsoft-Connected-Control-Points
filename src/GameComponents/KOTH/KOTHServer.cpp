@@ -351,7 +351,7 @@ void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
     }
     EventGroupHandle_t ackforConfig = xEventGroupCreate();
     LOG_INFO("KOTH_SERVER", "Received game config request, sending current config");
-    String configMsg = Protocol::buildKothConfigClient(config.maxPoints, config.gameDurationMinutes, config.captureTime, config.gameDurationMinutes);
+    String configMsg = Protocol::buildKothConfigClient(config.maxPoints, 10, config.captureTime, config.gameDurationMinutes);
     networkManager->sendToAndWait(e.data1, configMsg, ackforConfig, expectedBits);
 
     LOG_DEBUG("KOTH_SERVER", "Waiting for ACK from node %d", nodeId);
