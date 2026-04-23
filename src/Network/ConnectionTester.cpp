@@ -134,7 +134,7 @@ void ConnectionTester::handleDirect(Event e)
 
 void ConnectionTester::createTestTask()
 {
-    LOG_INFO("ConnectionTester", "Creating connection test task...");
+    LOG_DEBUG("ConnectionTester", "Creating connection test task...");
     xTaskCreate(
         [](void *pvParameters)
         {
@@ -153,7 +153,7 @@ void ConnectionTester::testTask(void *pvParameters)
     bool broadcastLoop = true;
     bool directTestLoop = true;
 
-    LOG_INFO("ConnectionTester", "Entering broadcast loop");
+    LOG_DEBUG("ConnectionTester", "Entering broadcast loop");
     while (broadcastLoop)
     {
         broadcastTestSearch();
@@ -173,7 +173,13 @@ void ConnectionTester::testTask(void *pvParameters)
         LOG_INFO("ConnectionTester", "Broadcast loop ended, found %d out of %d nodes", nodesFound, nodeCount);
     }
 
-    LOG_INFO("ConnectionTester", "broadcast done, switching to direct test mode  ");
+    for (size_t i = 0; i < nodesFound; i++)
+    {
+        LOG_INFO("ConnectionTester", "Node %d: Address=%d, RSSI=%d, SNR=%.2f", i, Nodes[i].address, Nodes[i].rssi, Nodes[i].snr);
+    }
+    
+
+    LOG_DEBUG("ConnectionTester", "broadcast done, switching to direct test mode  ");
     while (directTestLoop)
     {
         LOG_INFO("ConnectionTester", "Starting direct test loop with %d nodes", nodesFound);
@@ -186,7 +192,7 @@ void ConnectionTester::testTask(void *pvParameters)
         }
     }
 
-    LOG_INFO("ConnectionTester", "Direct test loop completed, printing results:");
+    LOG_DEBUG("ConnectionTester", "Direct test loop completed, printing results:");
     for (int i = 0; i < nodesFound; i++)
     {
         LOG_INFO("ConnectionTester", "Node %d at address %d received %d responses out of %d:", i, Nodes[i].address, Nodes[i].lastresponse, Nodes[i].generatedPackets);
