@@ -69,7 +69,6 @@ void KOTHServer::enterMode()
     eventBus->subscribe(NETWORK_MAIN_LOOKUP, [this](Event e)
                         { onMainLookup(e); });
 
-
     eventBus->publish(GAME_STARTED, 0);
     // Broadcast game start
     if (!config.singleNodeMode)
@@ -242,21 +241,21 @@ void KOTHServer::endGame(Team winner)
     String msg = Protocol::buildGameOver((uint8_t)winner);
     if (!config.singleNodeMode)
     {
-        //Iterate through nodes and send them the game over message
+        // Iterate through nodes and send them the game over message
         for (uint8_t i = 0; i < nodeCount; i++)
         {
-            if(nodes[i].nodeId == LORA_ADDRESS) //skip this node
+            if (nodes[i].nodeId == LORA_ADDRESS) // skip this node
             {
                 LOG_ERROR("KOTH_SERVER", "Skipping myself");
                 continue;
             }
             EventGroupHandle_t ackEvents = xEventGroupCreate();
             EventBits_t expectedBits = (1 << nodes[i].nodeId);
-            networkManager->sendToAndWait(nodes[i].nodeId, msg, ackEvents, expectedBits); 
+            networkManager->sendToAndWait(nodes[i].nodeId, msg, ackEvents, expectedBits);
             // networkManager->sendTo(nodes[i].nodeId, msg);
             vTaskDelay(500);
         }
-        vTaskDelay(1000);// assume thats enough and then broadcast fin to everyone else
+        vTaskDelay(1000); // assume thats enough and then broadcast fin to everyone else
         networkManager->broadcast(msg);
         // spamming netwrok a little arent we?
     }
@@ -302,12 +301,29 @@ void KOTHServer::gameConfRequest(Event e)
         nodeCount++;
         alreadyIn = true;
     }
-    if(alreadyIn)
+    if (alreadyIn)
     {
-        LOG_INFO("KOTH_SERVER", "Node %d already in game, sending score update", nodeId);
-        String configMsg = Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes);
-        networkManager->sendTo(nodeId, configMsg);
-    }else
+        EventGroupHandle_t ackEvents = xEventGroupCreate();
+        EventBits_t expectedBits = 0x01;
+        LOG_INFO("KOTH_SERVER", "Node %d already in game, reviving that node", nodeId);
+        String configMsg = Protocol::buildKothConfigClient(config.maxPoints, 10, config.captureTime, config.gameDurationMinutes);
+        networkManager->sendToAndWait(e.data1, configMsg, ackEvents, expectedBits);
+
+        EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
+        if (result & expectedBits)
+        {
+            LOG_INFO("KOTH_SERVER", "Node %d revived successfully", nodeId);
+            String startMsg = Protocol::buildGameStart();
+            networkManager->sendTo(e.data1, startMsg);
+            vTaskDelay(10000);
+            networkManager->sendTo(e.data1, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
+        }
+        else
+        {
+            LOG_ERROR("KOTH_SERVER", "Failed to revive node %d", nodeId);
+        }
+    }
+    else
     {
         LOG_INFO("KOTH_SERVER", "Adding new node %d to game after start", nodeId);
         addingNodeAfterStart(nodeId, e);
@@ -316,31 +332,44 @@ void KOTHServer::gameConfRequest(Event e)
 
 void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
 {
-    EventGroupHandle_t ackEvents = xEventGroupCreate();
+    EventGroupHandle_t ackforDiscover = xEventGroupCreate();
     EventBits_t expectedBits = (1 << nodeId);
 
-    //send discover message to new node
+    // send discover message to new node
     String discoverMsg = Protocol::buildDiscoverRequest();
-    networkManager->sendTo(e.data1, discoverMsg);
-    vTaskDelay(pdMS_TO_TICKS(200)); // Small delay to ensure discover message is sent before waiting for ACK
-
+    networkManager->sendToAndWait(e.data1, discoverMsg, ackforDiscover, expectedBits);
+    EventBits_t resultDsc = xEventGroupWaitBits(ackforDiscover, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
+    vEventGroupDelete(ackforDiscover);
+    if (resultDsc & expectedBits)
+    {
+        LOG_INFO("KOTH_SERVER", "Node %d responded to discover, sending game config", nodeId);
+    }
+    else
+    {
+        LOG_ERROR("KOTH_SERVER", "Node %d did not respond to discover, cannot add to game", nodeId);
+        return;
+    }
+    EventGroupHandle_t ackforConfig = xEventGroupCreate();
     LOG_INFO("KOTH_SERVER", "Received game config request, sending current config");
     String configMsg = Protocol::buildKothConfigClient(config.maxPoints, config.gameDurationMinutes, config.captureTime, config.gameDurationMinutes);
-    networkManager->sendTo(e.data1, configMsg);
+    networkManager->sendToAndWait(e.data1, configMsg, ackforConfig, expectedBits);
 
     LOG_DEBUG("KOTH_SERVER", "Waiting for ACK from node %d", nodeId);
-    EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
-    vEventGroupDelete(ackEvents);
-
-    LOG_DEBUG("KOTH_SERVER", "ACK wait result: 0x%02X", result);
-    vTaskDelay(pdMS_TO_TICKS(100)); // Small delay to ensure ACK processing
-
-    String startMsg = Protocol::buildGameStart();
-    if (networkManager)
+    EventBits_t resultConfig = xEventGroupWaitBits(ackforConfig, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
+    vEventGroupDelete(ackforConfig);
+    if (resultConfig & expectedBits)
     {
-        networkManager->sendTo(e.data1, startMsg);
-        networkManager->sendTo(e.data1, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
+        LOG_INFO("KOTH_SERVER", "Node %d acknowledged config, sending game start", nodeId);
     }
+    else
+    {
+        LOG_ERROR("KOTH_SERVER", "Node %d did not acknowledge config, cannot add to game", nodeId);
+        return;
+    }
+    String startMsg = Protocol::buildGameStart();
+    networkManager->sendTo(e.data1, startMsg);
+    vTaskDelay(2000); // update can be sent even minutes later not gonna affect much
+    networkManager->sendTo(e.data1, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
 }
 
 void KOTHServer::onMainLookup(Event e)
@@ -355,7 +384,7 @@ void KOTHServer::onMainLookup(Event e)
         nodes[nodeCount].capturedAt = 0;
         nodeCount++;
     }
-    //send network discover to node
+    // send network discover to node
     addingNodeAfterStart(nodeId, e);
 }
 
