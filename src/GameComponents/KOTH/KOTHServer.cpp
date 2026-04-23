@@ -62,6 +62,8 @@ void KOTHServer::enterMode()
                         { pauseGame(e); });
     eventBus->subscribe(RESUME, [this](Event e)
                         { resumeGame(e); });
+    eventBus->subscribe(GAME_REQUEST_SCORE_UPDATE, [this](Event e)
+                        { gameScoreRequest(e); });
     eventBus->subscribe(GAME_REQUEST_START_CONF, [this](Event e)
                         { gameConfRequest(e); });
     eventBus->subscribe(GAME_OVER_INTERUPT, [this](Event e)
@@ -386,6 +388,14 @@ void KOTHServer::onMainLookup(Event e)
     }
     // send network discover to node
     addingNodeAfterStart(nodeId, e);
+}
+
+void KOTHServer::gameScoreRequest(Event e)
+{
+    uint8_t nodeId = e.data1;
+    LOG_DEBUG("KOTH_SERVER", "Received game score request from node %d", nodeId);
+    String msg = Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes);
+    networkManager->sendTo(nodeId, msg);
 }
 
 NodeState *KOTHServer::findNode(uint8_t nodeId)

@@ -62,11 +62,11 @@ String Protocol::buildPowerResetMsg()
     return buffer;
 }
 
-String Protocol::buildAskForGameStats(uint8_t nodeID)
+String Protocol::buildReqeustScoreUpdate(uint8_t nodeID)
 {
     String buffer;
     buffer = String(GAME) + ";";
-    buffer += String(GAME_REQUEST_START_CONF) + ";";
+    buffer += String(GAME_REQUEST_SCORE_UPDATE) + ";";
     buffer += String(nodeID);
     return buffer;
 }

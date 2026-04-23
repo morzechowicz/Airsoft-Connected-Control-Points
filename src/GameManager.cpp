@@ -142,7 +142,7 @@ void GameManager::afterCountdownTask(int time)
     }
     LOG_INFO("GAME_MANAGER", "After countdown ended, client didnt start");
 
-    String msg = Protocol::buildAskForGameStats(LORA_ADDRESS);
+    String msg = Protocol::buildReqeustScoreUpdate(LORA_ADDRESS);
     networkManager->sendToMain(msg);
     while (responseWait > 0)
     {

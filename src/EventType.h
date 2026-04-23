@@ -35,6 +35,7 @@ enum EventType
     GAME_PAUSE,
     GAME_OVER_INTERUPT,
     GAME_REQUEST_START_CONF,
+    GAME_REQUEST_SCORE_UPDATE,
 
     // KOTH specific
     KOTH_CONFIG,
