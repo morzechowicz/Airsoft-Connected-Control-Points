@@ -61,6 +61,8 @@ public:
     void forwardMsgCallback(Event e);
     void broadcastReset();
 
+    bool isMainNodeSet() { return masterAddress != 0; }
+
 private:
     void onPacketReceived(const ReceivedPacket& packet);
     void handlePollRequest(const ReceivedPacket& packet);
@@ -81,7 +83,7 @@ private:
     static NetworkManager* s_instance;
     NetworkRole role;
     uint8_t myAddress;
-    uint8_t masterAddress;
+    uint8_t masterAddress = 0;;
     bool networkReady;
     
     // Known nodes tracking
