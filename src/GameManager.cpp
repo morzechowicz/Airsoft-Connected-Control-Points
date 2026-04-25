@@ -201,6 +201,15 @@ void GameManager::countdownTask(int time)
 
 void GameManager::onGameStarted(Event e)
 {
+    // dont start if main node is not set
+    if (networkManager->isMainNodeSet())
+    {LOG_INFO("GAME_MANAGER", "Main node is set, starting client");
+    }
+    else
+    {
+        LOG_ERROR("GAME_MANAGER", "Main node is not set, cannot start client");
+        return;
+    }
 #if NODE_TYPE == INFORMATION
     LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
     infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
