@@ -50,9 +50,10 @@ void GameManager::onConfKoth(Event e)
 
 void GameManager::onConfigKothFromMaster(Event e)
 {
-        // dont start if main node is not set
+    // dont start if main node is not set
     if (networkManager->isMainNodeSet())
-    {LOG_INFO("GAME_MANAGER", "Main node is set, starting client");
+    {
+        LOG_INFO("GAME_MANAGER", "Main node is set, starting client");
     }
     else
     {
