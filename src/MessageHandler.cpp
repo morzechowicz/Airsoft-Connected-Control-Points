@@ -55,11 +55,13 @@ bool MessageHandler::handleCommand(const Message &command, String rasMsg, uint8_
     {
         handleDebugMessage(command.params[0], command.params, command.paramCount);
         LOG_DEBUG("HANDLER", "Received DEBUG message");
+        return true;
     }
     if (command.type == TEST)
     {
         handleTestMessage(command.params[0], command.params, command.paramCount, rssi, snr);
         LOG_DEBUG("HANDLER", "Received TEST message");
+        return true;
     }
     return false;
 }
