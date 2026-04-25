@@ -20,10 +20,6 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
         LOG_INFO("KOTH_SERVER", "Configured node %d with ID %d", i, nodes[i].nodeId);
     }
 
-    if (config.singleNodeMode)
-    {
-        LOG_INFO("KOTH_SERVER", "Single node mode - network messages disabled");
-    }
 }
 
 KOTHServer::~KOTHServer()
@@ -73,15 +69,14 @@ void KOTHServer::enterMode()
 
     eventBus->publish(GAME_STARTED, 0);
     // Broadcast game start
-    if (!config.singleNodeMode)
+
+    String startMsg = Protocol::buildGameStart();
+    if (networkManager)
     {
-        String startMsg = Protocol::buildGameStart();
-        if (networkManager)
-        {
-            networkManager->broadcast(startMsg);
-            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
-        }
+        networkManager->broadcast(startMsg);
+        networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
     }
+
     LOG_INFO("KOTH_SERVER", "KOTH Server ready!");
     eventBus->publish(DEBUG, KOTH_CONFIG, 0, 0, nodeCount, nodes); // change later
 }
@@ -171,13 +166,10 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
     node->capturedAt = millis();
 
     LOG_INFO("KOTH_SERVER", "Node %d captured by %s team", nodeId, team == Team::YELLOW ? "YELLOW" : "BLUE");
-    // Broadcast capture event
-    if (!config.singleNodeMode)
+
+    if (networkManager)
     {
-        if (networkManager)
-        {
-            networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
-        }
+        networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
     }
 }
 
@@ -193,10 +185,9 @@ void KOTHServer::updateScore()
 
     LOG_INFO("KOTH_SERVER", "Score: Yellow %d (%d nodes), Blue %d (%d nodes)", score.yellowPoints, yellowNodes, score.bluePoints, blueNodes);
     // Broadcast score update
-    if (!config.singleNodeMode)
-    {
-        broadcastScoreUpdate();
-    }
+
+    broadcastScoreUpdate();
+
     eventBus->publish(KOTH_SCORE_UPDATE, scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes);
 }
 
@@ -241,26 +232,24 @@ void KOTHServer::endGame(Team winner)
 
     // Broadcast game over
     String msg = Protocol::buildGameOver((uint8_t)winner);
-    if (!config.singleNodeMode)
+
+    // Iterate through nodes and send them the game over message
+    for (uint8_t i = 0; i < nodeCount; i++)
     {
-        // Iterate through nodes and send them the game over message
-        for (uint8_t i = 0; i < nodeCount; i++)
+        if (nodes[i].nodeId == LORA_ADDRESS) // skip this node
         {
-            if (nodes[i].nodeId == LORA_ADDRESS) // skip this node
-            {
-                LOG_ERROR("KOTH_SERVER", "Skipping myself");
-                continue;
-            }
-            EventGroupHandle_t ackEvents = xEventGroupCreate();
-            EventBits_t expectedBits = (1 << nodes[i].nodeId);
-            networkManager->sendToAndWait(nodes[i].nodeId, msg, ackEvents, expectedBits);
-            // networkManager->sendTo(nodes[i].nodeId, msg);
-            vTaskDelay(500);
+            LOG_ERROR("KOTH_SERVER", "Skipping myself");
+            continue;
         }
-        vTaskDelay(1000); // assume thats enough and then broadcast fin to everyone else
-        networkManager->broadcast(msg);
-        // spamming netwrok a little arent we?
+        EventGroupHandle_t ackEvents = xEventGroupCreate();
+        EventBits_t expectedBits = (1 << nodes[i].nodeId);
+        networkManager->sendToAndWait(nodes[i].nodeId, msg, ackEvents, expectedBits);
+        // networkManager->sendTo(nodes[i].nodeId, msg);
+        vTaskDelay(500);
     }
+    vTaskDelay(1000); // assume thats enough and then broadcast fin to everyone else
+    networkManager->broadcast(msg);
+    // spamming netwrok a little arent we?
 
     // Publish local event
     eventBus->publish(GAME_OVER, (int)winner);
