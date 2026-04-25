@@ -298,7 +298,7 @@ void GameManager::onGameStartconfRequest(Event e)
         if (e.data1 < 0x02)
         {
             LOG_ERROR("GAME_MANAGER", "Connecting to existing game");
-            String msg = Protocol::buildNetworkMainLookup(LORA_ADDRESS);
+            String msg = Protocol::buildConfRequest(LORA_ADDRESS);
             networkManager->broadcast(msg);
         }
         else
