@@ -301,26 +301,9 @@ void KOTHServer::gameConfRequest(Event e)
     }
     if (alreadyIn)
     {
-        EventGroupHandle_t ackEvents = xEventGroupCreate();
-        EventBits_t expectedBits = (1 << 0);
-        LOG_INFO("KOTH_SERVER", "Node %d already in game, reviving that node", nodeId);
-        String configMsg = Protocol::buildKothConfigClient(config.maxPoints, 10, config.captureTime, config.gameDurationMinutes);
-        networkManager->sendToAndWait(nodeId, configMsg, ackEvents, expectedBits);
 
-        EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
-        if (result & expectedBits)
-        {
-            LOG_INFO("KOTH_SERVER", "Node %d revived successfully", nodeId);
-            String startMsg = Protocol::buildGameStart();
-            networkManager->sendTo(nodeId, startMsg);
-            vTaskDelay(10000);
-            networkManager->sendTo(nodeId, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
-        }
-        else
-        {
-            LOG_ERROR("KOTH_SERVER", "Failed to revive node %d", nodeId);
-        }
-        vEventGroupDelete(ackEvents);
+        LOG_INFO("KOTH_SERVER", "Node %d already in game, reviving that node", nodeId);
+        addingNodeAfterStart(nodeId, e);
     }
     else
     {
