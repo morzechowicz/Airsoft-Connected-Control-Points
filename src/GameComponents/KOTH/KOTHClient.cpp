@@ -123,7 +123,7 @@ void KOTHClient::update()
     if (gameActive && (now - lastScoreUpdateTime) > SCORING_INTERVAL_MS * 2)
     {
         LOG_WARN("KOTH_CLIENT", "Haven't received score update in some time, requesting update from server");
-        String msg = Protocol::buildAskForGameStats(myNodeId);
+        String msg = Protocol::buildReqeustScoreUpdate(myNodeId);
         if (network)
         {
             network->sendToMain(msg);

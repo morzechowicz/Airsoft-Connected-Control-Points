@@ -38,7 +38,7 @@ void testCallback(Event e)
 void setup()
 {
     LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
-    LOG.enableColors(false);
+    LOG.enableColors(true);
     LOG.setTimestamps(false);
 
     LOG_INFO("MAIN", "System starting...");

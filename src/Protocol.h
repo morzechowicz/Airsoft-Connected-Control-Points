@@ -27,8 +27,8 @@ public:
     static String buildDiscoverRequest();
     static String buildDiscoverResponse(uint8_t nodeID);
     static String buildPowerResetMsg();
-    static String buildAskForGameStats(uint8_t nodeID);
-    static String buildNetworkMainLookup(uint8_t nodeID);
+    static String buildReqeustScoreUpdate(uint8_t nodeID);
+    static String buildConfRequest(uint8_t nodeID);
     static String buildDebugTestMessage();
     static String buildDebugResponseMessage();;
 
