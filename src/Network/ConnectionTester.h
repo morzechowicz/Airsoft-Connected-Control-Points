@@ -44,6 +44,8 @@ private:
     uint8_t currentNodeIndex;
     NodeEntry Nodes[10];
 
+    bool respondedToBroadcast = false;
+
     void broadcastTestSearch();
     void sendTestToNode(int nodeId);
     void handleBroadcastResponse(Event e);

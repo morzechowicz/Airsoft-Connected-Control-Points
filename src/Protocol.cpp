@@ -171,12 +171,12 @@ String Protocol::buildTestBrResponseMsg(uint8_t responderId)
     return buffer;
 }
 
-String Protocol::buildTestDrMsg(uint8_t sourceId, uint8_t targetNodeId, uint8_t packetId)
+String Protocol::buildTestDrMsg(uint8_t sourceNodeid, uint8_t packetId)
 {
     String buffer;
     buffer = String(TEST) + ";";
     buffer += String(TEST_DIRECT) + ";";
-    buffer += String(targetNodeId) + ";";
+    buffer += String(sourceNodeid) + ";";
     buffer += String(packetId) + ";";
 
     return buffer;

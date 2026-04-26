@@ -41,7 +41,7 @@ public:
     // Test message builders
     static String buildTestBrMsg(uint8_t sourceId);
     static String buildTestBrResponseMsg(uint8_t responderId);
-    static String buildTestDrMsg(uint8_t sourceId, uint8_t targetNodeId, uint8_t packetId);
+    static String buildTestDrMsg(uint8_t targetNodeId, uint8_t packetId);
     static String buildTestDrResponseMsg(uint8_t responderId, uint8_t packetsReceived, uint8_t retryCount, int16_t rssi, float snr);
 
     // Message parser

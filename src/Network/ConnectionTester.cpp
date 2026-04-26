@@ -38,6 +38,13 @@ void ConnectionTester::runTest(uint8_t nodeCount)
 
 void ConnectionTester::addNewNode(uint8_t address, int16_t rssi, float snr)
 {
+    //check if node is already in list
+    for (int i = 0; i < nodesFound; i++)
+    {
+        if (Nodes[i].address == address)        {
+            return;
+        }
+    }
     if (nodesFound < nodeCount)
     {
         Nodes[nodesFound].address = address;
@@ -60,7 +67,7 @@ void ConnectionTester::sendTestToNode(int nodeId)
     uint8_t packetid = Nodes[nodeId].generatedPackets++;
 
     LOG_INFO("ConnectionTester", "Sending test message nr %d to node %d at address %d", packetid, nodeId, Nodes[nodeId].address);
-    String msg = Protocol::buildTestDrMsg(LORA_ADDRESS, Nodes[nodeId].address, packetid);
+    String msg = Protocol::buildTestDrMsg(LORA_ADDRESS, packetid);
     EventGroupHandle_t responseEvent = xEventGroupCreate();
     EventBits_t responseBit = 0x01;
     networkManager->sendToAndWait(Nodes[nodeId].address, msg, responseEvent, responseBit);
@@ -87,12 +94,30 @@ void ConnectionTester::handleBroadcastResponse(Event e)
 
 void ConnectionTester::handleBroadcast(Event e)
 {
+    if(respondedToBroadcast)
+    {
+        LOG_DEBUG("ConnectionTester", "Already responded to a broadcast, ignoring this one");
+        return;
+    }
     uint8_t from = e.data1;
     LOG_INFO("ConnectionTester", "Received broadcast message from node %d", from);
     // Respond to broadcast with our own info with little delay to avoid collisions
     vTaskDelay(150 * LORA_ADDRESS / portTICK_PERIOD_MS);
+    EventGroupHandle_t responseEvent = xEventGroupCreate();
+    EventBits_t responseBit = 0x01;
     String response = Protocol::buildTestBrResponseMsg(LORA_ADDRESS);
-    networkManager->sendTo(from, response);
+    networkManager->sendToAndWait(from, response, responseEvent, responseBit);
+    EventBits_t result = xEventGroupWaitBits(responseEvent, responseBit, pdTRUE, pdFALSE, pdMS_TO_TICKS(20000)); // wait for ACK just to prevent task from being deleted before response is sent
+    if(result & responseBit)
+    {
+        respondedToBroadcast = true;
+        LOG_DEBUG("ConnectionTester", "Received ACK for broadcast response to node %d", from);
+    }
+    else
+    {
+        LOG_WARN("ConnectionTester", "No ACK received for broadcast response to node %d within timeout", from);
+    }
+
 }
 
 void ConnectionTester::handleDirectResponse(Event e)
@@ -127,6 +152,8 @@ void ConnectionTester::handleDirect(Event e)
     int16_t rssi = e.data2;
     float snr = *reinterpret_cast<float *>(&e.data3);
     LOG_INFO("ConnectionTester", "Received direct test message from node %d with RSSI %d and SNR %.2f", from, rssi, snr);
+    respondedToBroadcast = false; 
+
     // Respond to direct test with our own info
     String response = Protocol::buildTestDrResponseMsg(LORA_ADDRESS, 1, 0, rssi, snr); // packetId, packetsReceived and retryCount are not needed in response
     networkManager->sendTo(from, response);
@@ -188,7 +215,7 @@ void ConnectionTester::testTask(void *pvParameters)
         {
             LOG_INFO("ConnectionTester", "Testing connection to node %d at address %d", i, Nodes[i].address);
             sendTestToNode(i);
-            vTaskDelay(500 / portTICK_PERIOD_MS);
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
         }
     }
 
