@@ -123,7 +123,7 @@ void ConnectionTester::handleBroadcast(Event e)
 void ConnectionTester::handleDirectResponse(Event e)
 {
     uint8_t from = e.data1;
-    int16_t rssi = e.data2;
+    int rssi = e.data2;
     float snr = *reinterpret_cast<float *>(&e.data3);
     uint8_t packetId = e.data4;
     LOG_INFO("ConnectionTester", "Received direct response from node %d with RSSI %d and SNR %.2f", from, rssi, snr);
@@ -149,7 +149,7 @@ void ConnectionTester::handleDirectResponse(Event e)
 void ConnectionTester::handleDirect(Event e)
 {
     uint8_t from = e.data1;
-    int16_t rssi = e.data2;
+    int rssi = e.data2;
     float snr = *reinterpret_cast<float *>(&e.data3);
     LOG_INFO("ConnectionTester", "Received direct test message from node %d with RSSI %d and SNR %.2f", from, rssi, snr);
     respondedToBroadcast = false; 
@@ -178,7 +178,7 @@ void ConnectionTester::createTestTask()
 void ConnectionTester::testTask(void *pvParameters)
 {
     bool broadcastLoop = true;
-    bool directTestLoop = true;
+    int directTestLoop = 5;
 
     LOG_DEBUG("ConnectionTester", "Entering broadcast loop");
     while (broadcastLoop)
@@ -210,13 +210,13 @@ void ConnectionTester::testTask(void *pvParameters)
     while (directTestLoop)
     {
         LOG_INFO("ConnectionTester", "Starting direct test loop with %d nodes", nodesFound);
-        directTestLoop = false;
         for (int i = 0; i < nodesFound; i++)
         {
             LOG_INFO("ConnectionTester", "Testing connection to node %d at address %d", i, Nodes[i].address);
             sendTestToNode(i);
-            vTaskDelay(5000 / portTICK_PERIOD_MS);
+            vTaskDelay((nodesFound*3000) / portTICK_PERIOD_MS);
         }
+        directTestLoop--;
     }
 
     LOG_DEBUG("ConnectionTester", "Direct test loop completed, printing results:");

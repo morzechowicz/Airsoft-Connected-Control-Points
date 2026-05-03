@@ -11,14 +11,14 @@
 struct TestResponse {
     uint8_t packetId = 0;
     uint8_t retryCount = 0;
-    int16_t rssi = 0;
+    int rssi = 0;
     float snr = 0.0f;
 };
 
 struct NodeEntry {
     uint8_t address = 0;
     bool found = false;
-    int16_t rssi = 0;
+    int rssi = 0;
     float snr = 0.0f;
     uint8_t generatedPackets = 0;
     uint8_t lastresponse = 0;
