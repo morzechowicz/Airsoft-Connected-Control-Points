@@ -48,7 +48,7 @@ void InformationModeComp::start()
             lastKnownNodeStates[i].controllingTeam = e.teamPoints[i].controllingTeam;
         }
         updateDisplay();
-        hardware->buzzer.beep(100,2,100);
+        hardware->buzzer.beepOnce(4000);
     });
     updateDisplay();
 }
