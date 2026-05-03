@@ -13,7 +13,7 @@ public:
     MessageHandler(EventBus& eb);
     
     // Main entry point - handles ANY config command from ANY source
-    bool handleCommand(const Message& command,String msg);
+    bool handleCommand(const Message& command,String msg,uint8_t rssi = 0, float snr = 0);
 
     void handleSystemMessage();
 
@@ -35,6 +35,7 @@ private:
     void handleGameMessage(const String& cmd, const String params[], int paramCount);
     void handleForwardingMsg(const String& cmd, const String params[], int paramCount,String rawMsg);
     void handleDebugMessage(const String& cmd, const String params[], int paramCount);
+    void handleTestMessage(const String& cmd, const String params[], int paramCount, uint8_t rssi, float snr);
 
     // // Helpers
     // void setResult(bool success, const String& message);
