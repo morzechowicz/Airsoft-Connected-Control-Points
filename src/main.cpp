@@ -17,7 +17,7 @@ BleSetup ble(eventBus, msgHandler);
 
 extern uint8_t myNodeId;
 
-#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
+#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION || NODE_TYPE == HEADLESS
 GameManager gameManager(&eventBus, &hardware, &network);
 #endif
 
@@ -34,7 +34,7 @@ void testCallback(Event e)
 {
     uint8_t nodes = e.data1;
     LOG_INFO("MAIN", "Received TEST event, starting connection test");
-    connectionTester.runTest(nodes); 
+    connectionTester.runTest(nodes);
 }
 
 void batVoltageTask(void *pvParameters);
@@ -108,9 +108,10 @@ void setup()
 #else
 #error "Unknown SCREEN_TYPE, please define it as LCD_CHONKY_SCREEN or LCD_SMOLL_SCREEN"
 #endif
-
+#if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
     hardware.lcd.displayText("      SPAS", 0);
     hardware.lcd.displayText("INITIALAZING", 1);
+#endif
     vTaskDelay(500);
     ble.BleStart();
     vTaskDelay(500);
@@ -124,10 +125,15 @@ void setup()
 
     hardware.buzzer.createBeepTask();
     hardware.lcd.clearScreen();
+#if SCREEN_TYPE == OLED_128x36_SCREEN
+    hardware.oled.writeln("STATUS");
+    hardware.oled.writeln("READY");
+#endif
+#if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
     hardware.lcd.displayText("WAITING", 0);
-
 #if NODE_TYPE == INFORMATION
     hardware.lcd.displayText("INF MODE", 1);
+#endif
 #endif
 }
 
@@ -136,7 +142,7 @@ void loop()
     eventBus.processEvents();
     hardware.update();
 
-#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
+#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION || NODE_TYPE == HEADLESS
     gameManager.update();
 #endif
 
