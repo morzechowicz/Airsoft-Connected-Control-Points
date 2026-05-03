@@ -39,8 +39,8 @@ void KOTHClient::start()
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
     updateLEDs();
-    
-    //Subscribe to pause/resume
+
+    // Subscribe to pause/resume
     eventBus->subscribe(PAUSE, [this](Event e)
                         { pauseGame(e); });
     eventBus->subscribe(RESUME, [this](Event e)
@@ -78,6 +78,8 @@ void KOTHClient::start()
 
 void KOTHClient::stop()
 {
+    eventBus->unsubscribe(PAUSE);
+    eventBus->unsubscribe(RESUME);
     eventBus->unsubscribe(GAME_OVER);
     eventBus->unsubscribe(BUTTON_PRESSED);
     eventBus->unsubscribe(BUTTON_RELEASED);
@@ -150,7 +152,8 @@ u_int64_t KOTHClient::calculateGameQuater(int maxTime, int elapsedTime)
     else if (quarter < 0.95f)
     {
         return LOCALIZER_BEEP_ONE_FOURTH;
-    }else
+    }
+    else
     {
         return LOCALIZER_BEEP_LAST_MINUTE;
     }
@@ -159,7 +162,7 @@ u_int64_t KOTHClient::calculateGameQuater(int maxTime, int elapsedTime)
 
 void KOTHClient::onButtonPressed(Event e)
 {
-    if(gamePaused)
+    if (gamePaused)
     {
         return;
     }
@@ -306,7 +309,8 @@ void KOTHClient::onNetworkMessage(Event e)
 
 void KOTHClient::handleGameOver(Team winner)
 {
-    LOG_INFO("KOTH_CLIENT", "Game over! Winner: %s", winner == Team::YELLOW ? "YELLOW" : winner == Team::BLUE ? "BLUE" : "DRAW");
+    LOG_INFO("KOTH_CLIENT", "Game over! Winner: %s", winner == Team::YELLOW ? "YELLOW" : winner == Team::BLUE ? "BLUE"
+                                                                                                              : "DRAW");
     // Victory animation
     if (hardware)
     {
@@ -333,7 +337,7 @@ void KOTHClient::updateDisplay()
         hardware->lcd.kothDisplayController(currentController);
     }
 
-    if(gamePaused)
+    if (gamePaused)
     {
         hardware->lcd.displayPause();
     }
