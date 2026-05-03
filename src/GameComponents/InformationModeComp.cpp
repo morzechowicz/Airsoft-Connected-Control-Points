@@ -96,7 +96,17 @@ void InformationModeComp::handleGameOver(Team winner)
 {
     LOG_INFO("INFO_MODE", "Game Over! Winner: %d", (int)winner);
     hardware->buzzer.beep(2000, 3, 1000);
+
+    eventBus->unsubscribe(PAUSE);
+    eventBus->unsubscribe(RESUME);
+    eventBus->unsubscribe(GAME_OVER);
+    eventBus->unsubscribe(BUTTON_PRESSED);
+    eventBus->unsubscribe(BUTTON_RELEASED);
+    eventBus->unsubscribe(NETWORK_MESSAGE_RECEIVED);
+    eventBus->unsubscribe(KOTH_SCORE_UPDATE);
+    
     gameActive = false;
+    deleteThis = true;
     updateDisplay();
     return;
 }
