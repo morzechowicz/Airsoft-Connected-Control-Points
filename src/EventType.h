@@ -35,6 +35,7 @@ enum EventType
     GAME_PAUSE,
     GAME_OVER_INTERUPT,
     GAME_REQUEST_START_CONF,
+    GAME_REQUEST_SCORE_UPDATE,
 
     // KOTH specific
     KOTH_CONFIG,
@@ -55,6 +56,12 @@ enum EventType
     UNKNOWN,
     FORWARD,
     TEST,
+
+    //tests 
+    TEST_BROADCAST,
+    TEST_BR_RESPONSE,
+    TEST_DIRECT,
+    TEST_DR_RESPONSE,
 
     // FLAG specific
     FLAG_CAPTURED,

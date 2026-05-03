@@ -62,20 +62,20 @@ String Protocol::buildPowerResetMsg()
     return buffer;
 }
 
-String Protocol::buildAskForGameStats(uint8_t nodeID)
+String Protocol::buildReqeustScoreUpdate(uint8_t nodeID)
 {
     String buffer;
     buffer = String(GAME) + ";";
-    buffer += String(GAME_REQUEST_START_CONF) + ";";
+    buffer += String(GAME_REQUEST_SCORE_UPDATE) + ";";
     buffer += String(nodeID);
     return buffer;
 }
 
-String Protocol::buildNetworkMainLookup(uint8_t nodeID)
+String Protocol::buildConfRequest(uint8_t nodeID)
 {
     String buffer;
-    buffer = String(SYS) + ";";
-    buffer += String(NETWORK_MAIN_LOOKUP) + ";";
+    buffer = String(GAME) + ";";
+    buffer += String(GAME_REQUEST_START_CONF) + ";";
     buffer += String(nodeID);
     return buffer;
 }
@@ -149,6 +149,49 @@ String Protocol::buildScoreUpdateMessage(uint16_t time, uint16_t teamYPoints, ui
         buffer += String(teamPoints[i].nodeId) + ";";
         buffer += String((int)teamPoints[i].controllingTeam) + ";";
     }
+
+    return buffer;
+}
+
+String Protocol::buildTestBrMsg(uint8_t sourceId)
+{
+    String buffer;
+    buffer = String(TEST) + ";";
+    buffer += String(TEST_BROADCAST) + ";";
+    buffer += String(sourceId) + ";";
+    return buffer;
+}
+
+String Protocol::buildTestBrResponseMsg(uint8_t responderId)
+{
+    String buffer;
+    buffer = String(TEST) + ";";
+    buffer += String(TEST_BR_RESPONSE) + ";";
+    buffer += String(responderId) + ";";
+    return buffer;
+}
+
+String Protocol::buildTestDrMsg(uint8_t sourceNodeid, uint8_t packetId)
+{
+    String buffer;
+    buffer = String(TEST) + ";";
+    buffer += String(TEST_DIRECT) + ";";
+    buffer += String(sourceNodeid) + ";";
+    buffer += String(packetId) + ";";
+
+    return buffer;
+}
+
+String Protocol::buildTestDrResponseMsg(uint8_t responderId, uint8_t packetsReceived, uint8_t retryCount, int16_t rssi, float snr)
+{
+    String buffer;
+    buffer = String(TEST) + ";";
+    buffer += String(TEST_DR_RESPONSE) + ";";
+    buffer += String(responderId) + ";";
+    buffer += String(packetsReceived) + ";";
+    buffer += String(retryCount) + ";";
+    buffer += String(rssi) + ";";
+    buffer += String(snr);
 
     return buffer;
 }

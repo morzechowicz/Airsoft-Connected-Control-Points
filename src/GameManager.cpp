@@ -42,17 +42,26 @@ void GameManager::onConfKoth(Event e)
              kothConfig.maxPoints, kothConfig.gameDurationMinutes, kothConfig.captureTime, kothConfig.scoreIntervalMs);
     LOG_INFO("GAME_MANAGER", "Countdown started");
 
-    if (!kothConfig.singleNodeMode)
-    {
-        String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
-        networkManager->broadcast(configBroadcast);
-    }
+    String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
+    networkManager->broadcast(configBroadcast);
 
     startCountdownTask(countdown);
 }
 
 void GameManager::onConfigKothFromMaster(Event e)
 {
+    // dont start if main node is not set
+#if NODE_TYPE == CAPTURE_POINT
+    if (networkManager->isMainNodeSet())
+    {
+        LOG_INFO("GAME_MANAGER", "Main node is set, starting client");
+    }
+    else
+    {
+        LOG_ERROR("GAME_MANAGER", "Main node is not set, cannot start client");
+        return;
+    }
+#endif
     kothConfig.maxPoints = e.data3;
     kothConfig.gameDurationMinutes = e.data2;
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
@@ -142,7 +151,7 @@ void GameManager::afterCountdownTask(int time)
     }
     LOG_INFO("GAME_MANAGER", "After countdown ended, client didnt start");
 
-    String msg = Protocol::buildAskForGameStats(LORA_ADDRESS);
+    String msg = Protocol::buildReqeustScoreUpdate(LORA_ADDRESS);
     networkManager->sendToMain(msg);
     while (responseWait > 0)
     {
@@ -193,23 +202,23 @@ void GameManager::countdownTask(int time)
     }
     if (!isMain)
     {
-        #if NODE_TYPE == CAPTURE_POINT
-            LOG_INFO("GAME_MANAGER", "Starting as CAPTURE POINT");
-            startAfterCountdownTask(10);
-        #else
-            LOG_INFO("GAME_MANAGER", "Not starting client because this is an information node");
-        #endif
+#if NODE_TYPE == CAPTURE_POINT
+        LOG_INFO("GAME_MANAGER", "Starting as CAPTURE POINT");
+        startAfterCountdownTask(10);
+#else
+        LOG_INFO("GAME_MANAGER", "Not starting client because this is an information node");
+#endif
     }
 }
 
 void GameManager::onGameStarted(Event e)
 {
-    #if NODE_TYPE == INFORMATION
-            LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
-            infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
-            infoNode->start();
-            return;
-    #endif
+#if NODE_TYPE == INFORMATION
+    LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
+    infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
+    infoNode->start();
+    return;
+#endif
     switch (selectedConfig)
     {
     case KOTH_CONFIG:
@@ -231,22 +240,21 @@ GameManager::GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net)
     : eventBus(eb), hardwareManager(hw), networkManager(net)
 {
     eventBus->subscribe(NETWORK_DISCOVER, [this](Event e)
-                    { onDiscovered(e); });
+                        { onDiscovered(e); }); // show who we are connected to
     eventBus->subscribe(SEARCH, [this](Event e)
-                       { onDiscoverRequest(e); });
+                        { onDiscoverRequest(e); }); // broadcast discover request
     eventBus->subscribe(NETWROK_REPORT, [this](Event e)
-                       { onNewNode(e); });
+                        { onNewNode(e); }); // add new node to the list when discovered
     eventBus->subscribe(GAME_STARTED, [this](Event e)
-                       { onGameStarted(e); });
+                        { onGameStarted(e); });
     eventBus->subscribe(KOTH_CONF_UPDATED, [this](Event e)
-                       { onConfigKothFromMaster(e); });
+                        { onConfigKothFromMaster(e); });
     eventBus->subscribe(KOTH_CONFIG, [this](Event e)
-                       { onConfKoth(e); });
+                        { onConfKoth(e); });
     eventBus->subscribe(FLAG_CONFIG, [this](Event e)
-                       { onConfigureFlag(e); });
+                        { onConfigureFlag(e); });
     eventBus->subscribe(GAME_REQUEST_START_CONF, [this](Event e)
-                       { onGameStartconfRequest(e); });
-
+                        { onGameStartconfRequest(e); });
 }
 
 GameManager::~GameManager()
@@ -293,18 +301,20 @@ void GameManager::onGameStartconfRequest(Event e)
 {
     if (!isMain)
     {
-        #if NODE_TYPE == INFORMATION
-            LOG_INFO("GAME_MANAGER", "Received game start request but this is an information node, ignoring");
-            return;
-        #else
-            LOG_INFO("GAME_MANAGER", "Trying to connect to existing game");
-        #endif
-        if(e.data1 < 0x02)
+#if NODE_TYPE == INFORMATION
+        LOG_INFO("GAME_MANAGER", "Received game start request but this is an information node, ignoring");
+        return;
+#else
+        LOG_INFO("GAME_MANAGER", "Trying to connect to existing game");
+#endif
+        if (e.data1 < 0x02)
         {
             LOG_ERROR("GAME_MANAGER", "Connecting to existing game");
-            String msg = Protocol::buildNetworkMainLookup(LORA_ADDRESS);
+            String msg = Protocol::buildConfRequest(LORA_ADDRESS);
             networkManager->broadcast(msg);
-        }else{
+        }
+        else
+        {
             LOG_INFO("GAME_MANAGER", "Received game start request from node %d", e.data1);
             startAfterCountdownTask(10);
         }
@@ -342,8 +352,6 @@ void GameManager::update()
         {
             delete infoNode;
             infoNode = nullptr;
-            hardwareManager->ledBlueButton.off();
-            hardwareManager->ledYellowButton.off();
         }
     }
 }

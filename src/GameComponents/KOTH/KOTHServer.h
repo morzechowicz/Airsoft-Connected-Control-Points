@@ -46,6 +46,7 @@ private:
     void gameConfRequest(Event e);
     void addingNodeAfterStart(uint8_t nodeId, Event e);
     void onMainLookup(Event e);
+    void gameScoreRequest(Event e);
 
     // Helper functions
     NodeState* findNode(uint8_t nodeId);

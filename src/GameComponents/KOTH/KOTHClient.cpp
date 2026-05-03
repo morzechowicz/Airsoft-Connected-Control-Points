@@ -8,6 +8,7 @@ KOTHClient::KOTHClient(EventBus *eb, HardwareManager *hw, NetworkManager *net,
       network(net),
       myNodeId(nodeId),
       maxGameTime(config.gameDurationMinutes),
+      lastScoreUpdateTime(millis()),
       captureTimeMs(config.captureTime),
       currentController(Team::NONE),
       capturingTeam(Team::NONE),
@@ -38,8 +39,8 @@ void KOTHClient::start()
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
     updateLEDs();
-    
-    //Subscribe to pause/resume
+
+    // Subscribe to pause/resume
     eventBus->subscribe(PAUSE, [this](Event e)
                         { pauseGame(e); });
     eventBus->subscribe(RESUME, [this](Event e)
@@ -66,6 +67,7 @@ void KOTHClient::start()
     // Subscribe to score updates
     eventBus->subscribe(KOTH_SCORE_UPDATE, [this](Event e)
                         {
+        lastScoreUpdateTime = millis();
         timeElapsedSinceStart = e.data1;
         lastKnownScore.yellowPoints = e.data2;
         lastKnownScore.bluePoints = e.data3;
@@ -76,6 +78,8 @@ void KOTHClient::start()
 
 void KOTHClient::stop()
 {
+    eventBus->unsubscribe(PAUSE);
+    eventBus->unsubscribe(RESUME);
     eventBus->unsubscribe(GAME_OVER);
     eventBus->unsubscribe(BUTTON_PRESSED);
     eventBus->unsubscribe(BUTTON_RELEASED);
@@ -87,6 +91,7 @@ void KOTHClient::stop()
 
 void KOTHClient::update()
 {
+    uint32_t now = millis();
     if (capturing)
     {
         updateCapture();
@@ -95,7 +100,7 @@ void KOTHClient::update()
     // Handle grace period
     if (gracePeriod)
     {
-        if (millis() - graceStartTime >= gracePeriodMs)
+        if (now - graceStartTime >= gracePeriodMs)
         {
             cancelCapture();
             gracePeriod = false;
@@ -105,11 +110,27 @@ void KOTHClient::update()
     // beep when working
     if (gameActive)
     {
-        if (millis() > locatingBeepSpacingUpdate)
+        if (now > locatingBeepSpacingUpdate)
         {
             hardware->buzzer.beepOnce(100);
             locatingBeepSpacingUpdate = locatingBeepSpacingUpdate + calculateGameQuater(maxGameTime, timeElapsedSinceStart);
         }
+    }
+
+    // Ask server for update if we haven't heard from it for a while
+    // why it stopped calling us? is it my fualt? maybe they hate me?
+    // maybe they prefer other better clients? maybe they are just busy? maybe they are dead? who knows
+    // such is life in client-server architecture, you are at the mercy of the server, you can only hope it treats you well and doesn't forget about you
+    // remember to not spam it just send it once
+    if (gameActive && (now - lastScoreUpdateTime) > SCORING_INTERVAL_MS * 2)
+    {
+        LOG_WARN("KOTH_CLIENT", "Haven't received score update in some time, requesting update from server");
+        String msg = Protocol::buildReqeustScoreUpdate(myNodeId);
+        if (network)
+        {
+            network->sendToMain(msg);
+        }
+        lastScoreUpdateTime = now; // reset timer to avoid spamming
     }
 }
 
@@ -131,7 +152,8 @@ u_int64_t KOTHClient::calculateGameQuater(int maxTime, int elapsedTime)
     else if (quarter < 0.95f)
     {
         return LOCALIZER_BEEP_ONE_FOURTH;
-    }else
+    }
+    else
     {
         return LOCALIZER_BEEP_LAST_MINUTE;
     }
@@ -140,7 +162,7 @@ u_int64_t KOTHClient::calculateGameQuater(int maxTime, int elapsedTime)
 
 void KOTHClient::onButtonPressed(Event e)
 {
-    if(gamePaused)
+    if (gamePaused)
     {
         return;
     }
@@ -200,8 +222,8 @@ void KOTHClient::updateCapture()
     unsigned long elapsed = millis() - captureStartTime;
     float progress = (float)elapsed / (float)captureTimeMs;
 
-    // Update display with progress every second
-    if (millis() - lastDisplayUpdate >= 1000)
+    // Update display with progress every half second
+    if (millis() - lastDisplayUpdate >= 500)
     {
         updateDisplay();
         lastDisplayUpdate = millis();
@@ -287,7 +309,8 @@ void KOTHClient::onNetworkMessage(Event e)
 
 void KOTHClient::handleGameOver(Team winner)
 {
-    LOG_INFO("KOTH_CLIENT", "Game over! Winner: %s", winner == Team::YELLOW ? "YELLOW" : winner == Team::BLUE ? "BLUE" : "DRAW");
+    LOG_INFO("KOTH_CLIENT", "Game over! Winner: %s", winner == Team::YELLOW ? "YELLOW" : winner == Team::BLUE ? "BLUE"
+                                                                                                              : "DRAW");
     // Victory animation
     if (hardware)
     {
@@ -314,7 +337,7 @@ void KOTHClient::updateDisplay()
         hardware->lcd.kothDisplayController(currentController);
     }
 
-    if(gamePaused)
+    if (gamePaused)
     {
         hardware->lcd.displayPause();
     }

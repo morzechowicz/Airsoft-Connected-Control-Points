@@ -5,7 +5,7 @@ MessageHandler::MessageHandler(EventBus &eb)
 {
 }
 
-bool MessageHandler::handleCommand(const Message &command, String rasMsg)
+bool MessageHandler::handleCommand(const Message &command, String rasMsg, uint8_t rssi, float snr)
 {
     if (command.type == FORWARD)
     {
@@ -55,6 +55,13 @@ bool MessageHandler::handleCommand(const Message &command, String rasMsg)
     {
         handleDebugMessage(command.params[0], command.params, command.paramCount);
         LOG_DEBUG("HANDLER", "Received DEBUG message");
+        return true;
+    }
+    if (command.type == TEST)
+    {
+        handleTestMessage(command.params[0], command.params, command.paramCount, rssi, snr);
+        LOG_DEBUG("HANDLER", "Received TEST message");
+        return true;
     }
     return false;
 }
@@ -75,14 +82,6 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     if (cmd.toInt() == NETWROK_REPORT)
     {
         eventBus.publish(NETWROK_REPORT, params[1].toInt());
-    }
-    if (cmd.toInt() == NETWORK_MAIN_LOOKUP)
-    {
-#if NODE_TYPE == INFORMATION || NODE_TYPE == BLEToLoRa
-        LOG_ERROR("HANDLER", "Received main lookup request but this is an information node or BLEToLoRa node");
-        return;
-#endif
-        eventBus.publish(NETWORK_MAIN_LOOKUP, params[1].toInt());
     }
     if (cmd.toInt() == POWER_RESET)
     {
@@ -202,16 +201,43 @@ void MessageHandler::handleForwardingMsg(const String &cmd, const String params[
 
 void MessageHandler::handleDebugMessage(const String &cmd, const String params[], int paramCount)
 {
-    uint16_t fromNode = Protocol::parseIntParam(params[1], 0);
-    uint16_t fromController = Protocol::parseIntParam(params[2], 0);
+    uint16_t nodeCount = Protocol::parseIntParam(params[1], 0);
     if (cmd.toInt() == TEST)
     {
         LOG_INFO("HANDLER", "Testing connection with audio response");
-        eventBus.publish(TEST, fromNode, fromController);
+        eventBus.publish(TEST, nodeCount);
     }
-    if(cmd.toInt() == SEARCH)
+    if (cmd.toInt() == SEARCH)
     {
         LOG_INFO("HANDLER", "Received SEARCH message from controller, publishing SEARCH event");
         // eventBus.publish(TEST, fromNode, fromController);
+    }
+}
+
+void MessageHandler::handleTestMessage(const String &cmd, const String params[], int paramCount, uint8_t rssi, float snr)
+{
+    uint16_t fromNode = Protocol::parseIntParam(params[1], 0);
+    uint8_t packetId = Protocol::parseIntParam(params[2], 0);
+    if (cmd.toInt() == TEST_BROADCAST)
+    {
+        LOG_INFO("HANDLER", "Received TEST_BROADCAST message");
+        eventBus.publish(TEST_BROADCAST, fromNode, rssi, snr);
+    }
+    if (cmd.toInt() == TEST_BR_RESPONSE)
+    {
+        LOG_INFO("HANDLER", "Received TEST_BR_RESPONSE message");
+        eventBus.publish(TEST_BR_RESPONSE, fromNode, rssi, snr);
+    }
+    if (cmd.toInt() == TEST_DIRECT)
+    {
+        LOG_INFO("HANDLER", "Received TEST_DIRECT message");
+        eventBus.publish(TEST_DIRECT, fromNode, rssi, snr);
+    }
+    if (cmd.toInt() == TEST_DR_RESPONSE)
+    {
+        uint8_t packetsReceived = Protocol::parseIntParam(params[2], 0);
+        uint8_t retryCount = Protocol::parseIntParam(params[3], 0);
+        LOG_INFO("HANDLER", "Received TEST_DR_RESPONSE message");
+        eventBus.publish(TEST_DR_RESPONSE, fromNode, rssi, snr, packetId);
     }
 }

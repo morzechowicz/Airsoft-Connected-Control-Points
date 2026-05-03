@@ -671,7 +671,7 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
         LOG_DEBUG("LoRaSComm", "[RX] Forwarding packet, seq=%d", packet.header.sequence);
         forwardPacket(packet);
     }
-    
+
     // Not addressed to us — repeater mode handles forwarding, otherwise drop
     if (packet.header.destAddr != myAddress && packet.header.destAddr != LORASCOMM_BROADCAST_ADDR)
     {
@@ -742,6 +742,11 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
                              packet.header.packetType == PACKET_ACK ? "ACK" : "NACK",
                              packet.header.srcAddr, packet.header.sequence);
                     // Match — don't put back, effectively removes it from queue
+                    // Who would have thought that actually setting the bit would be usefull when im waiting for that bit
+                    if (pending.eventGroup != nullptr)
+                    {
+                        xEventGroupSetBits(pending.eventGroup, pending.eventBit);
+                    }
                 }
                 else
                 {

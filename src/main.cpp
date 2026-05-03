@@ -6,11 +6,13 @@
 #include "GameManager.h"
 #include "Config.h"
 #include "../lib/Logging/LogManager.h"
+#include "Network/ConnectionTester.h"
 
 EventBus eventBus;
 MessageHandler msgHandler(eventBus);
 HardwareManager hardware(&eventBus);
 NetworkManager network(eventBus, msgHandler);
+ConnectionTester connectionTester(&network, &hardware, &eventBus);
 BleSetup ble(eventBus, msgHandler);
 
 extern uint8_t myNodeId;
@@ -30,52 +32,9 @@ void testRequestTask(void *pvParameters);
 
 void testCallback(Event e)
 {
-    int fromNode = e.data1;
-    if (e.data2 == 1)
-    {
-        LOG_INFO("MAIN", "Received TEST event, broadcasting test message");
-        String msg = Protocol::buildDebugTestMessage();
-        network.broadcast(msg);
-    }
-    if (e.data2 == 0)
-    {
-        LOG_INFO("MAIN", "Received TEST event with data 0, not broadcasting");
-        // create test task
-        xTaskCreate(
-            testRequestTask,            // Task function
-            "TestRequestTask",          // Name of the task (for debugging)
-            4096,                       // Stack size in bytes
-            (void *)(intptr_t)fromNode, // Parameter to pass to the task
-            1,                          // Task priority
-            NULL                        // Task handle (not used)
-        );
-    }
-}
-
-void testRequestTask(void *pvParameters)
-{
-    // Audio visual connection test
-    // Tests if node have connection by beeping.
-    int responseId = (int)(intptr_t)pvParameters;
-    hardware.lcd.clearScreen();
-    hardware.lcd.displayText("TESTING", 0);
-    hardware.lcd.displayText("CONNECTION OK", 1);
-    int waitBeforeBeep = 1000 * LORA_ADDRESS;
-    LOG_INFO("HARDWARE_MANAGER", "beeping in %d ms", waitBeforeBeep);
-    vTaskDelay(waitBeforeBeep);
-    // String msg = Protocol::buildDebugResponseMessage();
-    // network.sendTo(responseId,msg);
-    hardware.buzzer.beep(200, 3, 200);
-    hardware.ledBlueButton.on();
-    vTaskDelay(200);
-    hardware.ledBlueButton.off();
-    vTaskDelay(200);
-    hardware.ledYellowButton.on();
-    vTaskDelay(200);
-    hardware.ledYellowButton.off();
-
-    LOG_INFO("HARDWARE_MANAGER", "beeped");
-    vTaskDelete(NULL); // Delete the task when done
+    uint8_t nodes = e.data1;
+    LOG_INFO("MAIN", "Received TEST event, starting connection test");
+    connectionTester.runTest(nodes); 
 }
 
 void batVoltageTask(void *pvParameters);
@@ -119,8 +78,8 @@ void batVoltageTask(void *pvParameters)
 #endif
 void setup()
 {
-    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL);
-    LOG.enableColors(false);
+    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
+    LOG.enableColors(true);
     LOG.setTimestamps(false);
 
     LOG_INFO("MAIN", "System starting...");
@@ -157,6 +116,7 @@ void setup()
     vTaskDelay(500);
     LOG.setBLECallback([](const char *msg)
                        { ble.sendMessage(msg); });
+    LOG.createBleLogTask();
     network.begin();
     // callbacks that i dont know what to do with
     eventBus.subscribe(POWER_RESET, powerResetCallback);
