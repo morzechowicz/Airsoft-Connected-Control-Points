@@ -142,7 +142,7 @@ void loop()
     eventBus.processEvents();
     hardware.update();
 
-#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION || NODE_TYPE == HEADLESS
+#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
     gameManager.update();
 #endif
 

@@ -30,10 +30,12 @@ void GameManager::onConfKoth(Event e)
     kothConfig.gameDurationMinutes = e.data2;
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
     kothConfig.captureTime = e.data4;
+#if NODE_TYPE != HEADLESS
     Event newNode;
     newNode.data1 = LORA_ADDRESS;
     // add itself to the table
     onNewNode(newNode);
+#endif
     isMain = true;
     int countdown = e.data1;
     selectedConfig = KOTH_CONFIG;
@@ -50,6 +52,10 @@ void GameManager::onConfKoth(Event e)
 
 void GameManager::onConfigKothFromMaster(Event e)
 {
+#if NODE_TYPE == HEADLESS
+    LOG_INFO("GAME_MANAGER", "Received KOTH configuration from master but this is a headless node, ignoring");
+    return;
+#endif
     // dont start if main node is not set
 #if NODE_TYPE == CAPTURE_POINT
     if (networkManager->isMainNodeSet())
@@ -206,13 +212,17 @@ void GameManager::countdownTask(int time)
         LOG_INFO("GAME_MANAGER", "Starting as CAPTURE POINT");
         startAfterCountdownTask(10);
 #else
-        LOG_INFO("GAME_MANAGER", "Not starting client because this is an information node");
+        LOG_INFO("GAME_MANAGER", "Not starting client because this is not a capture point node and not main");
 #endif
     }
 }
 
 void GameManager::onGameStarted(Event e)
 {
+#if NODE_TYPE == HEADLESS
+    LOG_INFO("GAME_MANAGER", "Received game start event but this is a headless node, ignoring");
+    return;
+#endif
 #if NODE_TYPE == INFORMATION
     LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
     infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
@@ -299,6 +309,9 @@ void GameManager::onDiscovered(Event e)
 
 void GameManager::onGameStartconfRequest(Event e)
 {
+#if NODE_TYPE == HEADLESS
+    return;
+#endif
     if (!isMain)
     {
 #if NODE_TYPE == INFORMATION
