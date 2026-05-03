@@ -325,7 +325,6 @@ void GameManager::update()
 {
     if (kothClient)
     {
-        LOG_DEBUG("GAME_MANAGER", "Updating KOTH client");
         kothClient->update();
         if (kothClient->getDeleteThis())
         {
@@ -337,7 +336,6 @@ void GameManager::update()
     }
     if (flagClient)
     {
-        LOG_DEBUG("GAME_MANAGER", "Updating FLAG client");
         flagClient->update();
         if (flagClient->getDeleteThis())
         {
@@ -349,11 +347,9 @@ void GameManager::update()
     }
     if (infoNode)
     {
-        LOG_DEBUG("GAME_MANAGER", "Updating INFO node");
         infoNode->update();
         if (infoNode->getDeleteThis())
         {
-            LOG_DEBUG("GAME_MANAGER", "Deleting INFO node");
             delete infoNode;
             infoNode = nullptr;
         }
