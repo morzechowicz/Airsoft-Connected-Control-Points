@@ -20,11 +20,7 @@ void InformationModeComp::start()
 
     // Subscribe to game events
     eventBus->subscribe(GAME_OVER, [this](Event e)
-                        {
-        handleGameOver(lastKnownScore.getWinner());
-        gameActive = false;
-        updateDisplay();
-        return; });
+                        { handleGameOver(lastKnownScore.getWinner()); });
     // Subscribe to button events
     eventBus->subscribe(BUTTON_PRESSED, [this](Event e)
                         { this->onButtonPressed(e); });
@@ -47,9 +43,8 @@ void InformationModeComp::start()
             lastKnownNodeStates[i].nodeId = e.teamPoints[i].nodeId;
             lastKnownNodeStates[i].controllingTeam = e.teamPoints[i].controllingTeam;
         }
-        updateDisplay();
-        hardware->buzzer.beep(100,2,100);
-    });
+        updateDisplay(); });
+    hardware->buzzer.beepOnce(4000);
     updateDisplay();
 }
 
@@ -100,7 +95,20 @@ void InformationModeComp::updateDisplay()
 void InformationModeComp::handleGameOver(Team winner)
 {
     LOG_INFO("INFO_MODE", "Game Over! Winner: %d", (int)winner);
-    // Here you can add code to update the display with the winner information
+    hardware->buzzer.beep(2000, 3, 1000);
+
+    eventBus->unsubscribe(PAUSE);
+    eventBus->unsubscribe(RESUME);
+    eventBus->unsubscribe(GAME_OVER);
+    eventBus->unsubscribe(BUTTON_PRESSED);
+    eventBus->unsubscribe(BUTTON_RELEASED);
+    eventBus->unsubscribe(NETWORK_MESSAGE_RECEIVED);
+    eventBus->unsubscribe(KOTH_SCORE_UPDATE);
+    
+    gameActive = false;
+    deleteThis = true;
+    updateDisplay();
+    return;
 }
 
 void InformationModeComp::onButtonPressed(Event e)

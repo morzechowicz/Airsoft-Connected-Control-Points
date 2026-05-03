@@ -51,6 +51,7 @@ void GameManager::onConfKoth(Event e)
 void GameManager::onConfigKothFromMaster(Event e)
 {
     // dont start if main node is not set
+#if NODE_TYPE == CAPTURE_POINT
     if (networkManager->isMainNodeSet())
     {
         LOG_INFO("GAME_MANAGER", "Main node is set, starting client");
@@ -60,6 +61,7 @@ void GameManager::onConfigKothFromMaster(Event e)
         LOG_ERROR("GAME_MANAGER", "Main node is not set, cannot start client");
         return;
     }
+#endif
     kothConfig.maxPoints = e.data3;
     kothConfig.gameDurationMinutes = e.data2;
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
@@ -350,8 +352,6 @@ void GameManager::update()
         {
             delete infoNode;
             infoNode = nullptr;
-            hardwareManager->ledBlueButton.off();
-            hardwareManager->ledYellowButton.off();
         }
     }
 }
