@@ -17,7 +17,7 @@ BleSetup ble(eventBus, msgHandler);
 
 extern uint8_t myNodeId;
 
-#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
+#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION || NODE_TYPE == HEADLESS
 GameManager gameManager(&eventBus, &hardware, &network);
 #endif
 
@@ -28,13 +28,54 @@ void powerResetCallback(Event e)
     hardware.reboot();            // then go down yourself
 }
 
+void testRequestTask(void *pvParameters);
+
 void testCallback(Event e)
 {
     uint8_t nodes = e.data1;
     LOG_INFO("MAIN", "Received TEST event, starting connection test");
-    connectionTester.runTest(nodes); 
+    connectionTester.runTest(nodes);
 }
 
+void batVoltageTask(void *pvParameters);
+
+void batVoltStart()
+{
+    LOG_INFO("MAIN", "Starting battery voltage task for ");
+    // create test task
+    xTaskCreate(
+        batVoltageTask,   // Task function
+        "batVoltageTask", // Name of the task (for debugging)
+        4096,             // Stack size in bytes
+        (void *)nullptr,  // Parameter to pass to the task
+        1,                // Task priority
+        NULL              // Task handle (not used)
+    );
+}
+#if SX_CHIP_TYPE == HELTECSX1262
+void batVoltageTask(void *pvParameters)
+{
+    while (true)
+    {
+        uint32_t raw = analogRead(VBAT_PIN);
+
+        float voltage = (raw / 4095.0) * 3.3 * 5.19;
+        LOG_DEBUG("MAIN", "Raw ADC: %d, Voltage: %.2f V", raw, voltage);
+        vTaskDelay(pdMS_TO_TICKS(5000));
+        hardware.oled.clear();
+        hardware.oled.writeln("Battery:");
+        hardware.oled.writeln((String(voltage, 2) + " V").c_str());
+        hardware.oled.display();
+        // Also pulse diode here why not
+        if (digitalRead(STATUS_LED_PIN) == LOW)
+        {
+            digitalWrite(STATUS_LED_PIN, HIGH);
+        }else{
+            digitalWrite(STATUS_LED_PIN, LOW);
+        }
+    }
+}
+#endif
 void setup()
 {
     LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
@@ -42,6 +83,16 @@ void setup()
     LOG.setTimestamps(false);
 
     LOG_INFO("MAIN", "System starting...");
+
+#if SX_CHIP_TYPE == HELTECSX1262
+    pinMode(ADC_CTRL_PIN, OUTPUT);
+    digitalWrite(ADC_CTRL_PIN, LOW);
+
+    pinMode(STATUS_LED_PIN, OUTPUT);
+    digitalWrite(STATUS_LED_PIN, LOW);
+
+    batVoltStart();
+#endif
 
     vTaskDelay(200); // Wait for LOG to initialize
 #if SCREEN_TYPE == LCD_CHONKY_SCREEN
@@ -57,9 +108,10 @@ void setup()
 #else
 #error "Unknown SCREEN_TYPE, please define it as LCD_CHONKY_SCREEN or LCD_SMOLL_SCREEN"
 #endif
-
+#if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
     hardware.lcd.displayText("      SPAS", 0);
     hardware.lcd.displayText("INITIALAZING", 1);
+#endif
     vTaskDelay(500);
     ble.BleStart();
     vTaskDelay(500);
@@ -73,10 +125,15 @@ void setup()
 
     hardware.buzzer.createBeepTask();
     hardware.lcd.clearScreen();
+#if SCREEN_TYPE == OLED_128x36_SCREEN
+    hardware.oled.writeln("STATUS");
+    hardware.oled.writeln("READY");
+#endif
+#if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
     hardware.lcd.displayText("WAITING", 0);
-
 #if NODE_TYPE == INFORMATION
     hardware.lcd.displayText("INF MODE", 1);
+#endif
 #endif
 }
 

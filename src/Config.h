@@ -8,6 +8,7 @@
 #define INFORMATION 2
 #define CAPTURE_POINT 3
 #define FORWARDER 4
+#define HEADLESS 5
 
 //CHIP TYPE
 #define HELTECSX1262 1
@@ -58,6 +59,11 @@
 #define SCL_PIN 18
 #define RST_OLED 21
 #define PWR_OLED 36
+
+#define VBAT_PIN 1
+#define ADC_CTRL_PIN 37
+
+#define STATUS_LED_PIN 48
 #elif SX_CHIP_TYPE == RA_02_SX1278
 #define LORA_SCK 5
 #define LORA_MISO 19
