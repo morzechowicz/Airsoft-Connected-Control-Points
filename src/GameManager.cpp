@@ -30,6 +30,7 @@ void GameManager::onConfKoth(Event e)
     kothConfig.gameDurationMinutes = e.data2;
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
     kothConfig.captureTime = e.data4;
+    kothConfig.respawnTime = e.data5;
 #if NODE_TYPE != HEADLESS
     Event newNode;
     newNode.data1 = LORA_ADDRESS;
@@ -41,8 +42,8 @@ void GameManager::onConfKoth(Event e)
     int countdown = e.data1;
     selectedConfig = KOTH_CONFIG;
 
-    LOG_INFO("GAME_MANAGER", "Received KOTH configuration: maxPoints=%d, gameDurationMinutes=%d, captureTime=%d, scoreIntervalMs=%d",
-             kothConfig.maxPoints, kothConfig.gameDurationMinutes, kothConfig.captureTime, kothConfig.scoreIntervalMs);
+    LOG_INFO("GAME_MANAGER", "Received KOTH configuration: maxPoints=%d, gameDurationMinutes=%d, captureTime=%d, scoreIntervalMs=%d, respawnTime=%d",
+             kothConfig.maxPoints, kothConfig.gameDurationMinutes, kothConfig.captureTime, kothConfig.scoreIntervalMs, kothConfig.respawnTime);
     LOG_INFO("GAME_MANAGER", "Countdown started");
 
     String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
@@ -73,6 +74,7 @@ void GameManager::onConfigKothFromMaster(Event e)
     kothConfig.gameDurationMinutes = e.data2;
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
     kothConfig.captureTime = e.data4;
+    kothConfig.respawnTime = e.data5;
     int countdown = e.data1;
     selectedConfig = KOTH_CONFIG;
     startCountdownTask(countdown);

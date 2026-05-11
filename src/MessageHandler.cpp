@@ -95,17 +95,17 @@ void MessageHandler::handleConfigurationMessage(const String &cmd, const String 
     uint16_t gameDurationMinutes = Protocol::parseIntParam(params[2], 0);
     uint16_t maxPoints = Protocol::parseIntParam(params[3], 0);
     uint16_t captureTime = Protocol::parseIntParam(params[4], 0);
-    uint16_t teamsCount = Protocol::parseIntParam(params[5], 0);
+    uint16_t respawnTime = Protocol::parseIntParam(params[5], 0);
     switch (cmd.toInt())
     {
     case KOTH_CONFIG:
-        eventBus.publish(KOTH_CONFIG, countdown, gameDurationMinutes, maxPoints, captureTime);
+        eventBus.publish(KOTH_CONFIG, countdown, gameDurationMinutes, maxPoints, captureTime, respawnTime);
         break;
     case KOTH_CONF_UPDATED:
-        eventBus.publish(KOTH_CONF_UPDATED, countdown, gameDurationMinutes, maxPoints, captureTime);
+        eventBus.publish(KOTH_CONF_UPDATED, countdown, gameDurationMinutes, maxPoints, captureTime, respawnTime);
         break;
     case FLAG_CONFIG:
-        eventBus.publish(FLAG_CONFIG, countdown, gameDurationMinutes, maxPoints, captureTime, teamsCount);
+        // eventBus.publish(FLAG_CONFIG, countdown, gameDurationMinutes, maxPoints, captureTime, teamsCount);
     default:
         break;
     }

@@ -46,6 +46,7 @@ struct KOTHConfig {
     uint16_t gameDurationMinutes;
     uint16_t scoreIntervalMs;
     unsigned long captureTime;
+    uint16_t respawnTime;
     
     // Node configuration
     NodeInit nodeIds[10];     // Actual node IDs in game
@@ -58,8 +59,10 @@ struct KOTHConfig {
           scoreIntervalMs(30000),  // 30 seconds
           nodeCount(0),
           singleNodeMode(false),
-          captureTime(3000)  // 3 seconds to capture
-    {
+          captureTime(3000),  // 3 seconds to capture
+          respawnTime(5)   // 5 minutes respawn time
+    
+        {
         // Initialize node IDs to invalid
         for (int i = 0; i < 10; i++) {
             nodeIds[i] = {0xFF, 0xFF};

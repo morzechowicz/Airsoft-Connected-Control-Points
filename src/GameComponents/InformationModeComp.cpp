@@ -104,7 +104,7 @@ void InformationModeComp::handleGameOver(Team winner)
     eventBus->unsubscribe(BUTTON_RELEASED);
     eventBus->unsubscribe(NETWORK_MESSAGE_RECEIVED);
     eventBus->unsubscribe(KOTH_SCORE_UPDATE);
-    
+
     gameActive = false;
     deleteThis = true;
     updateDisplay();
@@ -153,4 +153,34 @@ String InformationModeComp::buildRow(int startIdx, int count, int totalNodes)
     }
     LOG_DEBUG("INFO_MODE", "buildRow result: %s", row.c_str());
     return row;
+}
+
+void InformationModeComp::respawnHelper()
+{
+    hardware->buzzer.beep(100, 5, 300);
+    hardware->lcd.clearScreen();
+    for (size_t i = 0; i < 5; i++)
+    {
+        hardware->lcd.displayText("RESPAWN", 0);
+        vTaskDelay(pdMS_TO_TICKS(300));
+        hardware->lcd.clearScreen();
+        vTaskDelay(pdMS_TO_TICKS(300));
+    }
+    
+    updateDisplay();
+}
+
+void InformationModeComp::respawnTask(void *pvParameters)
+{
+    LOG_DEBUG("INFO_MODE", "Respawn task started");
+    int respawnTime = static_cast<InformationModeComp *>(pvParameters)->config.respawnTime;
+
+    vTaskDelay(pdMS_TO_TICKS(respawnTime * 60 * 1000)); 
+    LOG_DEBUG("INFO_MODE", "Respawn time reached");
+    static_cast<InformationModeComp *>(pvParameters)->respawnHelper();
+}
+
+void InformationModeComp::startRespawnTask()
+{
+    xTaskCreate(respawnTask, "RespawnTask", 2048, this, 1, &respawnTaskHandle);
 }

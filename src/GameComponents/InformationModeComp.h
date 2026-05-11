@@ -49,5 +49,12 @@ private:
     void pauseGame(Event e);
     void resumeGame(Event e);
     String buildRow(int startIdx, int count, int totalNodes);
+
+    
+    // respawn Task
+    TaskHandle_t respawnTaskHandle;
+    static void respawnTask(void* pvParameters);
+    void startRespawnTask();
+    void respawnHelper();
 };
 #endif // INFORMATION_MODE_COMP_H
