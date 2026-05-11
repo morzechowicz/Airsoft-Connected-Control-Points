@@ -22,8 +22,6 @@ void NetworkManager::begin()
         LOG_INFO("NETWORK", "Enabling repeater mode");
         SComm.setRepeaterMode(true);
     #endif
-    eventBus.subscribe(NETWORK_DISCOVER, [this](Event e)
-                       { this->networkDiscoverCallback(e); });
     eventBus.subscribe(FORWARD, [this](Event e) 
     { this->forwardMsgCallback(e);});
 }
@@ -156,21 +154,6 @@ void NetworkManager::handleReceived(const ReceivedPacket &packet)
     }
 }
 
-void NetworkManager::networkDiscoverCallback(Event e)
-{
-    if (s_instance)
-    {
-        #if NODE_TYPE == FORWARDER
-            LOG_ERROR("NETWORK", "Received discovery event but this is a forwarder node");
-            return;
-        #endif
-        s_instance->setAsClient(e.data1);
-        String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
-        LOG_INFO("NETWORK", "Responding with: %s", response.c_str());
-        vTaskDelay(pdMS_TO_TICKS(200) * LORA_ADDRESS); // small delay times node id to avoid collisons
-        s_instance->sendToMain(response);
-    }
-}
 
 void NetworkManager::forwardMsgCallback(Event e)
 {
