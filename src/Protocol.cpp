@@ -44,12 +44,13 @@ String Protocol::buildDiscoverRequest()
     return buffer;
 }
 
-String Protocol::buildDiscoverResponse(uint8_t nodeID)
+String Protocol::buildDiscoverResponse(uint8_t nodeID,uint8_t nodeType)
 {
     String buffer;
     buffer = String(SYS) + ";";
     buffer += String(NETWROK_REPORT) + ";";
     buffer += String(nodeID) + ";";
+    buffer += String(nodeType) + ";";
     return buffer;
 }
 

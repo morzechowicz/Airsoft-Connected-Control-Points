@@ -273,14 +273,18 @@ GameManager::~GameManager()
 
 void GameManager::onNewNode(Event e)
 {
+    if(e.data2 != CAPTURE_POINT)
+    {
+        return;
+    }
     if (!kothConfig.hasNode(e.data1))
     {
-        kothConfig.addNode(e.data1);
+        kothConfig.addNode(e.data1,e.data2);
         eventBus->publish(DEBUG, SEARCH, "Node" + String(e.data1) + " added \n");
         String nodes = "";
         for (int i = 0; i < kothConfig.nodeCount; i++)
         {
-            nodes += "N" + String(kothConfig.nodeIds[i]);
+            nodes += "N" + String(kothConfig.nodeIds[i].Id);
         }
 
         hardwareManager->lcd.clearScreen();
@@ -312,11 +316,13 @@ void GameManager::onDiscovered(Event e)
             LOG_ERROR("GAME_MANAGER", "Received discovery event but this is a forwarder node");
             return;
         #endif
+        #ifdef NODE_TYPE
         networkManager->setAsClient(e.data1);
-        String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
+        String response = Protocol::buildDiscoverResponse(LORA_ADDRESS, NODE_TYPE);
         LOG_INFO("GAME_MANAGER", "Responding with: %s", response.c_str());
         vTaskDelay(pdMS_TO_TICKS(200) * LORA_ADDRESS); // small delay times node id to avoid collisons
         networkManager->sendToMain(response);
+        #endif
     }
 }
 

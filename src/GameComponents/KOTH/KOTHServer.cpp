@@ -14,7 +14,7 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
     // Initialize nodes from config
     for (uint8_t i = 0; i < nodeCount; i++)
     {
-        nodes[i].nodeId = config.nodeIds[i];
+        nodes[i].nodeId = config.nodeIds[i].Id;
         nodes[i].controllingTeam = Team::NONE;
         nodes[i].capturedAt = 0;
         LOG_INFO("KOTH_SERVER", "Configured node %d with ID %d", i, nodes[i].nodeId);

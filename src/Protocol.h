@@ -25,7 +25,7 @@ public:
     static String buildPause();
     static String buildResume();
     static String buildDiscoverRequest();
-    static String buildDiscoverResponse(uint8_t nodeID);
+    static String buildDiscoverResponse(uint8_t nodeID,uint8_t nodeType);
     static String buildPowerResetMsg();
     static String buildReqeustScoreUpdate(uint8_t nodeID);
     static String buildConfRequest(uint8_t nodeID);
