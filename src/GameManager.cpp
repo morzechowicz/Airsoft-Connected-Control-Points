@@ -33,6 +33,7 @@ void GameManager::onConfKoth(Event e)
 #if NODE_TYPE != HEADLESS
     Event newNode;
     newNode.data1 = LORA_ADDRESS;
+    newNode.data2 = NODE_TYPE;
     // add itself to the table
     onNewNode(newNode);
 #endif
@@ -277,10 +278,18 @@ void GameManager::onNewNode(Event e)
     {
         return;
     }
+    if( e.data2 != INFORMATION)
+    {
+        return;
+    }
     if (!kothConfig.hasNode(e.data1))
     {
         kothConfig.addNode(e.data1,e.data2);
         eventBus->publish(DEBUG, SEARCH, "Node" + String(e.data1) + " added \n");
+        if(NODE_TYPE == INFORMATION)
+        {
+            return;
+        }
         String nodes = "";
         for (int i = 0; i < kothConfig.nodeCount; i++)
         {

@@ -68,6 +68,19 @@ void KOTHServer::enterMode()
     // Broadcast game start
 
     String startMsg = Protocol::buildGameStart();
+    // send start message to information nodes first before other nodes start asking
+    for(int nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++)
+    {
+        if(config.nodeIds[nodeIndex].Id == 0xFF)
+        {
+            break;
+        }
+        if(config.nodeIds[nodeIndex].type == INFORMATION)
+        {
+            networkManager->sendTo(config.nodeIds[nodeIndex].Id, startMsg);
+        }
+    }
+
     if (networkManager)
     {
         networkManager->broadcast(startMsg);
@@ -249,6 +262,18 @@ void KOTHServer::endGame(Team winner)
         vEventGroupDelete(ackEvents);
         // networkManager->sendTo(nodes[i].nodeId, msg);
         vTaskDelay(500);
+    }
+    //send to information node
+    for(int nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++)
+    {
+        if(config.nodeIds[nodeIndex].Id == 0xFF)
+        {
+            break;
+        }
+        if(config.nodeIds[nodeIndex].type == INFORMATION)
+        {
+            networkManager->sendTo(config.nodeIds[nodeIndex].Id, msg);
+        }
     }
     vTaskDelay(1000); // assume thats enough and then broadcast fin to everyone else
     networkManager->broadcast(msg);
