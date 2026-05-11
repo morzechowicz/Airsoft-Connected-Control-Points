@@ -305,6 +305,19 @@ void GameManager::onDiscovered(Event e)
     hardwareManager->buzzer.beep(200, 2, 200);
     hardwareManager->lcd.clearScreen();
     hardwareManager->lcd.displayText(msg.c_str(), 1);
+
+    if (networkManager)
+    {
+        #if NODE_TYPE == FORWARDER
+            LOG_ERROR("GAME_MANAGER", "Received discovery event but this is a forwarder node");
+            return;
+        #endif
+        networkManager->setAsClient(e.data1);
+        String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
+        LOG_INFO("GAME_MANAGER", "Responding with: %s", response.c_str());
+        vTaskDelay(pdMS_TO_TICKS(200) * LORA_ADDRESS); // small delay times node id to avoid collisons
+        networkManager->sendToMain(response);
+    }
 }
 
 void GameManager::onGameStartconfRequest(Event e)
