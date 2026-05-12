@@ -4,21 +4,26 @@
 KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, const KOTHConfig &cfg)
     : BaseComponent(eb, hw, net),
       config(cfg),
-      nodeCount(cfg.nodeCount),
       gameStartTime(0),
       lastScoreUpdate(0),
       gameRunning(false)
 {
-    LOG_INFO("KOTH_SERVER", "Initializing KOTH Server with %d nodes", nodeCount);
-
+    
     // Initialize nodes from config
-    for (uint8_t i = 0; i < nodeCount; i++)
+    for (uint8_t i = 0; i < cfg.nodeCount; i++)
     {
+        if(config.nodeIds[i].type == INFORMATION)
+        {
+            LOG_DEBUG("KOTH_SERVER", "Node %d is an INFORMATION node, skipping initialization", config.nodeIds[i].Id);
+            continue; // Skip information nodes
+        }
         nodes[i].nodeId = config.nodeIds[i].Id;
         nodes[i].controllingTeam = Team::NONE;
         nodes[i].capturedAt = 0;
+        nodeCount++;
         LOG_INFO("KOTH_SERVER", "Configured node %d with ID %d", i, nodes[i].nodeId);
     }
+    LOG_INFO("KOTH_SERVER", "Initializing KOTH Server with %d nodes", nodeCount);
 }
 
 KOTHServer::~KOTHServer()
@@ -69,7 +74,7 @@ void KOTHServer::enterMode()
 
     String startMsg = Protocol::buildGameStart();
     // send start message to information nodes first before other nodes start asking
-    for(int nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++)
+    for(int nodeIndex = 0; nodeIndex < config.nodeCount; nodeIndex++)
     {
         if(config.nodeIds[nodeIndex].Id == 0xFF)
         {
@@ -264,7 +269,7 @@ void KOTHServer::endGame(Team winner)
         vTaskDelay(500);
     }
     //send to information node
-    for(int nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++)
+    for(int nodeIndex = 0; nodeIndex < config.nodeCount; nodeIndex++)
     {
         if(config.nodeIds[nodeIndex].Id == 0xFF)
         {
