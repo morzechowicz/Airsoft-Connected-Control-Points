@@ -344,12 +344,8 @@ void GameManager::onGameStartconfRequest(Event e)
 #endif
     if (!isMain)
     {
-#if NODE_TYPE == INFORMATION
-        LOG_INFO("GAME_MANAGER", "Received game start request but this is an information node, ignoring");
-        return;
-#else
-        LOG_INFO("GAME_MANAGER", "Trying to connect to existing game");
-#endif
+#if NODE_TYPE == CAPTURE_POINT
+LOG_INFO("GAME_MANAGER", "Trying to connect to existing game");
         if (e.data1 < 0x02)
         {
             LOG_ERROR("GAME_MANAGER", "Connecting to existing game");
@@ -361,6 +357,10 @@ void GameManager::onGameStartconfRequest(Event e)
             LOG_INFO("GAME_MANAGER", "Received game start request from node %d", e.data1);
             startAfterCountdownTask(10);
         }
+#else
+LOG_INFO("GAME_MANAGER", "Received game start request but this isnt capture node, ignoring");
+return;
+#endif
     }
 }
 
