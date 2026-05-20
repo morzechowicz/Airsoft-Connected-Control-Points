@@ -45,6 +45,7 @@ private:
     void onButtonPressed(Event e);
     void onButtonReleased(Event e);
     void onNetworkMessage(Event e);
+    void onScoreUpdate(Event e);
 
     void pauseGame(Event e);
     void resumeGame(Event e);
@@ -53,8 +54,10 @@ private:
     
     // respawn Task
     TaskHandle_t respawnTaskHandle;
+    static volatile bool respawnTaskBit;
     static void respawnTask(void* pvParameters);
     void startRespawnTask();
     void respawnHelper();
+    void killRespawnTask();
 };
 #endif // INFORMATION_MODE_COMP_H

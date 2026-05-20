@@ -34,18 +34,10 @@ void InformationModeComp::start()
 
     // Subscribe to score updates
     eventBus->subscribe(KOTH_SCORE_UPDATE, [this](Event e)
-                        {
-        gameTime = e.data1;
-        lastKnownScore.yellowPoints = e.data2;
-        lastKnownScore.bluePoints = e.data3;
-        nodeCount = e.data4;
-        for (int i = 0; i < nodeCount; i++) {
-            lastKnownNodeStates[i].nodeId = e.teamPoints[i].nodeId;
-            lastKnownNodeStates[i].controllingTeam = e.teamPoints[i].controllingTeam;
-        }
-        updateDisplay(); });
+                        { this->onScoreUpdate(e); });
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
+    startRespawnTask();
 }
 
 void InformationModeComp::stop()
@@ -85,6 +77,7 @@ void InformationModeComp::updateDisplay()
 
     if (!gameActive)
     {
+
         hardware->lcd.kothDisplayEnd(lastKnownScore.getWinner(),
                                      lastKnownScore.yellowPoints,
                                      lastKnownScore.bluePoints,
@@ -104,7 +97,8 @@ void InformationModeComp::handleGameOver(Team winner)
     eventBus->unsubscribe(BUTTON_RELEASED);
     eventBus->unsubscribe(NETWORK_MESSAGE_RECEIVED);
     eventBus->unsubscribe(KOTH_SCORE_UPDATE);
-
+    
+    killRespawnTask();
     gameActive = false;
     deleteThis = true;
     updateDisplay();
@@ -127,9 +121,24 @@ void InformationModeComp::onNetworkMessage(Event e)
 {
 }
 
+void InformationModeComp::onScoreUpdate(Event e)
+{
+    gameTime = e.data1;
+    lastKnownScore.yellowPoints = e.data2;
+    lastKnownScore.bluePoints = e.data3;
+    nodeCount = e.data4;
+    for (int i = 0; i < nodeCount; i++)
+    {
+        lastKnownNodeStates[i].nodeId = e.teamPoints[i].nodeId;
+        lastKnownNodeStates[i].controllingTeam = e.teamPoints[i].controllingTeam;
+    }
+    updateDisplay();
+}
+
 void InformationModeComp::pauseGame(Event e)
 {
     gamePaused = true;
+    killRespawnTask(); // this is such a bandaid solution
     hardware->buzzer.beep(2000, 2, 1000);
     updateDisplay();
 }
@@ -137,6 +146,7 @@ void InformationModeComp::pauseGame(Event e)
 void InformationModeComp::resumeGame(Event e)
 {
     gamePaused = false;
+    startRespawnTask(); // its gonna be funny when it fails
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
 }
@@ -161,23 +171,34 @@ void InformationModeComp::respawnHelper()
     hardware->lcd.clearScreen();
     for (size_t i = 0; i < 5; i++)
     {
-        hardware->lcd.displayText("RESPAWN", 0);
+        hardware->lcd.displayText("      RESPAWN", 0);
+        hardware->lcd.displayText("      RESPAWN", 1);
         vTaskDelay(pdMS_TO_TICKS(300));
         hardware->lcd.clearScreen();
         vTaskDelay(pdMS_TO_TICKS(300));
     }
-    
+
     updateDisplay();
+}
+
+void InformationModeComp::killRespawnTask()
+{
+    respawnTaskBit = false;
 }
 
 void InformationModeComp::respawnTask(void *pvParameters)
 {
     LOG_DEBUG("INFO_MODE", "Respawn task started");
+    respawnTaskBit = true;
     int respawnTime = static_cast<InformationModeComp *>(pvParameters)->config.respawnTime;
+    while (respawnTaskBit)
+    {
+        vTaskDelay(pdMS_TO_TICKS(respawnTime * 60 * 1000));
+        LOG_INFO("INFO_MODE", "Respawn time reached");
+        static_cast<InformationModeComp *>(pvParameters)->respawnHelper();
+    }
 
-    vTaskDelay(pdMS_TO_TICKS(respawnTime * 60 * 1000)); 
-    LOG_DEBUG("INFO_MODE", "Respawn time reached");
-    static_cast<InformationModeComp *>(pvParameters)->respawnHelper();
+    vTaskDelete(NULL);
 }
 
 void InformationModeComp::startRespawnTask()
