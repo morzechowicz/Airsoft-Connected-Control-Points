@@ -3,6 +3,13 @@
 
 #include <Arduino.h>
 #include "../lib/Logging/LogManager.h"
+// even the fokin beeper needs to be thread safe in this economy
+struct BeepCommand {
+    unsigned long duration;
+    unsigned long pause;
+    int           count;
+    bool          abort;
+};
 
 class Buzzer
 {
@@ -14,13 +21,14 @@ private:
     unsigned long duration = 0;
 
     TaskHandle_t BeepTaskHandle = nullptr;
+    xQueueHandle commandQueue;
 
     void beepTask();
 
 public:
     Buzzer(int pin, bool generator = false);
 
-    void createBeepTask();
+    // void createBeepTask();
     void beepOnce(unsigned long duration = 200);
     void beep(unsigned long duration = 200, int count = 1, unsigned long pause = 100);
     void abortBeep();
