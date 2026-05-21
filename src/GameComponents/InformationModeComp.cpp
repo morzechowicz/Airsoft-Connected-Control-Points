@@ -1,4 +1,5 @@
 #include "InformationModeComp.h"
+static volatile bool respawnTaskBit;
 
 InformationModeComp::InformationModeComp(EventBus *eventBus, HardwareManager *hardware, NetworkManager *network, KOTHConfig config) : eventBus(eventBus),
                                                                                                                                       hardware(hardware),
@@ -54,20 +55,10 @@ void InformationModeComp::updateDisplay()
     {
         return;
     }
-    hardware->lcd.clearScreen();
 
     if (gameActive)
     {
-        String timer = "T: " + String(gameTime) + "/" + String(config.gameDurationMinutes);
-        String score = ("Y: " + String(lastKnownScore.yellowPoints) + " B: " + String(lastKnownScore.bluePoints));
-        String line1 = buildRow(0, 4, nodeCount);
-        String line2 = buildRow(4, 4, nodeCount);
-
-        // display on LCD
-        hardware->lcd.displayText(timer.c_str(), 0);
-        hardware->lcd.displayText(score.c_str(), 1);
-        hardware->lcd.displayText(line1.c_str(), 2);
-        hardware->lcd.displayText(line2.c_str(), 3);
+        hardware->lcd.kothDisplayInformation(lastKnownNodeStates,gameTime,config.gameDurationMinutes,lastKnownScore,nodeCount);
     }
 
     if (gamePaused)
@@ -151,33 +142,10 @@ void InformationModeComp::resumeGame(Event e)
     updateDisplay();
 }
 
-String InformationModeComp::buildRow(int startIdx, int count, int totalNodes)
-{
-    LOG_DEBUG("INFO_MODE", "buildRow: startIdx=%d, count=%d, totalNodes=%d", startIdx, count, totalNodes);
-    String row = "";
-    for (int i = startIdx; i < startIdx + count && i < totalNodes; i++)
-    {
-        if (i > startIdx)
-            row += " ";
-        row += "P" + String(lastKnownNodeStates[i].nodeId) + ":" + teamChar(lastKnownNodeStates[i].controllingTeam);
-    }
-    LOG_DEBUG("INFO_MODE", "buildRow result: %s", row.c_str());
-    return row;
-}
-
 void InformationModeComp::respawnHelper()
 {
     hardware->buzzer.beep(100, 5, 300);
-    hardware->lcd.clearScreen();
-    for (size_t i = 0; i < 5; i++)
-    {
-        hardware->lcd.displayText("      RESPAWN", 0);
-        hardware->lcd.displayText("      RESPAWN", 1);
-        vTaskDelay(pdMS_TO_TICKS(300));
-        hardware->lcd.clearScreen();
-        vTaskDelay(pdMS_TO_TICKS(300));
-    }
-
+    hardware->lcd.displayRespawn();
     updateDisplay();
 }
 
@@ -188,16 +156,24 @@ void InformationModeComp::killRespawnTask()
 
 void InformationModeComp::respawnTask(void *pvParameters)
 {
-    LOG_DEBUG("INFO_MODE", "Respawn task started");
-    respawnTaskBit = true;
     int respawnTime = static_cast<InformationModeComp *>(pvParameters)->config.respawnTime;
+    LOG_DEBUG("INFO_MODE", "Respawn task started %d",respawnTime);
+    respawnTaskBit = true;
+
+    if(respawnTime <= 0)
+    {
+        LOG_ERROR("INFO_MODE","Respawn time is zero or less");
+        vTaskDelete(NULL);
+        return;
+    }
+
     while (respawnTaskBit)
     {
         vTaskDelay(pdMS_TO_TICKS(respawnTime * 60 * 1000));
         LOG_INFO("INFO_MODE", "Respawn time reached");
         static_cast<InformationModeComp *>(pvParameters)->respawnHelper();
     }
-
+    LOG_DEBUG("INFO_MODE", "Respawn task aborted");
     vTaskDelete(NULL);
 }
 

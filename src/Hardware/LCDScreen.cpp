@@ -1,90 +1,204 @@
 #include "LCDScreen.h"
 #include <Wire.h>
 
+// TODO: rework direct displayLine calls to use LcdDisplayMessage queue
+// see LCDScreen::showScore, showPause, showGameOver for the pattern
+// kill all tasks on game over, reset LcdDisplay priority on new game
+
 LCDScreen::LCDScreen()
 {
     // Do not initialize hardware in the constructor. Call begin() from setup().
 }
 
-void LCDScreen::begin(int id,int width,int height)
+void LCDScreen::runDisplayTask()
 {
-    lcd = LiquidCrystal_I2C(id,width,height);
+    LcdDisplayMessage current;        // what's showing now
+    LcdDisplayMessage lastPersistent; // fallback after transients expire
+    bool hasContent = false;
+
+    LcdDisplayMessage incoming;
+    for (;;)
+    {
+        TickType_t waitTime = hasContent && current.durationMs > 0
+                                  ? pdMS_TO_TICKS(current.durationMs)
+                                  : portMAX_DELAY;
+
+        if (xQueueReceive(displayQueue, &incoming, waitTime) == pdTRUE)
+        {
+            if (incoming.priority >= current.priority || !hasContent)
+            {
+                current = incoming;
+                hasContent = true;
+                if (incoming.durationMs == 0)
+                {
+                    lastPersistent = incoming; // remember for fallback
+                }
+                render(current);
+            }
+            // else discard — lower priority than what's showing
+        }
+        else
+        {
+            // queue timed out — transient expired, restore persistent
+            if (current.durationMs > 0)
+            {
+                current = lastPersistent;
+                current.durationMs = 0;
+                render(current);
+            }
+        }
+    }
+}
+
+void LCDScreen::begin(int id, int width, int height)
+{
+    lcd = LiquidCrystal_I2C(id, width, height);
     lcd.init();
     lcd.backlight();
+    runDisplayTask();
 }
 
 void LCDScreen::kothDisplayScore(int yellowScore, int blueScore)
 {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Y: ");
-    lcd.print(yellowScore);
-    lcd.print(" | ");
-    lcd.print("B: ");
-    lcd.print(blueScore);
+    LcdDisplayMessage msg{};
+    snprintf(msg.lines[1], sizeof(msg.lines[1]), "Y: %d : B: %d", yellowScore, blueScore);
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
 }
 
-void LCDScreen::kothDisplayCapturing(Team capturingTeam, float progress)
+void LCDScreen::kothDisplayCapturing(Team capturingTeam)
 {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("CAP: ");
-    lcd.print(capturingTeam == Team::YELLOW ? "YELLOW" : "BLUE");
-    lcd.setCursor(0, 1);
-    lcd.print("PROGRESS: ");
-    lcd.print(progress * 100, 0);
-    lcd.print("%");
+    LcdDisplayMessage msg{};
+    msg.priority = DisplayPriority::MEDIUM_PR;
+    snprintf(msg.lines[0], sizeof(msg.lines[0]), "CAP: %s", (capturingTeam == Team::YELLOW ? "YELLOW" : "BLUE"));
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+}
+
+void LCDScreen::kothDisplayCapturingProgress(float progress)
+{
+    LcdDisplayMessage msg{};
+    snprintf(msg.lines[1], sizeof(msg.lines[1]), "PROGRESS: %3.2f%", progress * 100);
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
 }
 
 void LCDScreen::kothDisplayController(Team controller)
 {
-    lcd.setCursor(0, 1);
-    lcd.print("CTRL: ");
+    LcdDisplayMessage msg{};
+    char ctrl[8];
     if (controller == Team::NONE)
     {
-        lcd.print("NONE");
+        strcpy(ctrl, "NONE");
     }
-    else
+    if (controller == Team::YELLOW)
     {
-        lcd.print(controller == Team::YELLOW ? "YELLOW" : "BLUE");
+        strcpy(ctrl, "YELLOW");
     }
+    if (controller == Team::BLUE)
+    {
+        strcpy(ctrl, "BLUE");
+    }
+    snprintf(msg.lines[1], sizeof(msg.lines[1]), "CTRL : %s", ctrl);
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+}
+
+void LCDScreen::displayLogo()
+{
+    LcdDisplayMessage msg{};
+    msg.setLine(0, "      SPAS");
+    msg.setLine(1, "INITIALAZING");
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
 }
 
 void LCDScreen::displayPause()
 {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("  GAME  PAUSED  ");
-    lcd.setCursor(0, 1);
-    lcd.print("  GAME  PAUSED  ");
-    #ifdef LCD_CHONKY_SCREEN
-    lcd.setCursor(0, 2);
-    lcd.print("  GAME  PAUSED  ");
-    lcd.setCursor(0, 3);
-    lcd.print("  GAME  PAUSED  ");
-    #endif
+    LcdDisplayMessage msg{};
+    for (int i = 0; i < 4; i++)
+    {
+        msg.setLine(i, "     GAME PAUSED    ");
+    }
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+}
 
+void LCDScreen::displayRespawn()
+{
+    LcdDisplayMessage msg{};
+    msg.priority = DisplayPriority::MEDIUM_PR;
+    msg.durationMs = 5000;
+    for (int i = 0; i < 4; i++)
+    {
+        msg.setLine(i, "     RESPAWN    ");
+    }
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+}
+
+void LCDScreen::displayCountdown(int count)
+{
+    LcdDisplayMessage msg{};
+    msg.setLine(0, "Countdown:");
+    snprintf(msg.lines[1], sizeof(msg.lines[1]), "%d S", count);
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+}
+
+void LCDScreen::displayText(LcdDisplayMessage msg)
+{
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+}
+
+void LCDScreen::render(const LcdDisplayMessage msg)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (msg.lines[i][0] != '\0')
+        { // only touch lines that are set
+            lcd.setCursor(0, i);
+            lcd.print("                   "); // i have no better idea how to clear line first
+            lcd.setCursor(0, i);
+            lcd.print(msg.lines[i]);
+        }
+    }
 }
 
 void LCDScreen::kothDisplayEnd(Team winner, int yellowScore, int blueScore, bool isDraw)
 {
-    lcd.clear();
-    lcd.setCursor(0, 0);
+    LcdDisplayMessage msg{};
     if (isDraw)
     {
-        lcd.print("GAME OVER: DRAW");
+        msg.setLine(0, "GAME OVER: DRAW");
     }
     else
     {
-        lcd.print("WINNER: ");
-        lcd.print(winner == Team::YELLOW ? "YELLOW" : "BLUE");
+        snprintf(msg.lines[0], sizeof(msg.lines[0]), "WINNER: %s", (winner == Team::YELLOW ? "YELLOW" : "BLUE"));
     }
-    lcd.setCursor(0, 1);
-    lcd.print("Y: ");
-    lcd.print(yellowScore);
-    lcd.print(" | ");
-    lcd.print("B: ");
-    lcd.print(blueScore);
+    snprintf(msg.lines[1], sizeof(msg.lines[1]), "Y: %d : B: %d", yellowScore, blueScore);
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+}
+
+void LCDScreen::kothDisplayInformation(NodeState lastKnownNodeStates[], int gameTime, int durration, KOTHGameScore lastKnownScore, int nodeCount)
+{
+    String timer = "T: " + String(gameTime) + "/" + String(durration);
+    String score = ("Y: " + String(lastKnownScore.yellowPoints) + " B: " + String(lastKnownScore.bluePoints));
+    String line1 = buildRow(0, 4, nodeCount, lastKnownNodeStates);
+    String line2 = buildRow(4, 4, nodeCount, lastKnownNodeStates);
+    LcdDisplayMessage msg{};
+    // display on LCD
+    msg.setLine(0, timer.c_str());
+    msg.setLine(1, score.c_str());
+    msg.setLine(2, line1.c_str());
+    msg.setLine(3, line2.c_str());
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+}
+
+String LCDScreen::buildRow(int startIdx, int count, int totalNodes, NodeState lastKnownNodeStates[])
+{
+    LOG_DEBUG("INFO_MODE", "buildRow: startIdx=%d, count=%d, totalNodes=%d", startIdx, count, totalNodes);
+    String row = "";
+    for (int i = startIdx; i < startIdx + count && i < totalNodes; i++)
+    {
+        if (i > startIdx)
+            row += " ";
+        row += "P" + String(lastKnownNodeStates[i].nodeId) + ":" + teamChar(lastKnownNodeStates[i].controllingTeam);
+    }
+    LOG_DEBUG("INFO_MODE", "buildRow result: %s", row.c_str());
+    return row;
 }
 
 void LCDScreen::flagDisplayController(FlagTeam controller)
@@ -126,15 +240,4 @@ void LCDScreen::flagDisplayEnd(FlagTeam winner)
     lcd.setCursor(0, 1);
     lcd.print("WINNER: ");
     lcd.print(getFlagTeamName(winner));
-}
-
-void LCDScreen::displayText(const char *text, int line)
-{
-    lcd.setCursor(0, line);
-    lcd.print(text);
-}
-
-void LCDScreen::clearScreen()
-{
-    lcd.clear();
 }

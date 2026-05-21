@@ -101,7 +101,7 @@ String Protocol::buildDebugResponseMessage()
     return buffer;
 }
 
-String Protocol::buildKothConfigClient(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime)
+String Protocol::buildKothConfigClient(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime, uint8_t respawnTime)
 {
     String buffer;
     buffer = String(CONF) + ";";
@@ -110,10 +110,11 @@ String Protocol::buildKothConfigClient(uint8_t maxPoints, uint8_t countdown, uin
     buffer += String(maxTime) + ";";
     buffer += String(maxPoints) + ";";
     buffer += String(captureTime) + ";";
+    buffer += String(respawnTime) + ";";
     return buffer;
 }
 
-String Protocol::buildKothConfig(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime)
+String Protocol::buildKothConfig(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime,uint8_t respawnTime)
 {
     String buffer;
     buffer = String(CONF) + ";";
@@ -122,6 +123,7 @@ String Protocol::buildKothConfig(uint8_t maxPoints, uint8_t countdown, uint8_t c
     buffer += String(maxTime) + ";";
     buffer += String(maxPoints) + ";";
     buffer += String(captureTime) + ";";
+    buffer += String(respawnTime) + ";";
     return buffer;
 }
 

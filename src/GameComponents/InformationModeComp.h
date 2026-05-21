@@ -10,7 +10,7 @@ class InformationModeComp
 {
 public:
     InformationModeComp(EventBus* eventBus, HardwareManager* hardware, NetworkManager* network, KOTHConfig config);
-    
+
     void start();
     void stop();
     void update();
@@ -24,14 +24,6 @@ private:
     bool deleteThis = false;
     bool gameActive;
     bool gamePaused = false;
-    
-    const char teamChar(Team t) {
-    switch(t) {
-        case Team::YELLOW: return 'Y';
-        case Team::BLUE:   return 'B';
-        default:           return 'N';
-    }
-}
 
     KOTHConfig config;
     KOTHGameScore lastKnownScore;
@@ -54,7 +46,6 @@ private:
     
     // respawn Task
     TaskHandle_t respawnTaskHandle;
-    static volatile bool respawnTaskBit;
     static void respawnTask(void* pvParameters);
     void startRespawnTask();
     void respawnHelper();

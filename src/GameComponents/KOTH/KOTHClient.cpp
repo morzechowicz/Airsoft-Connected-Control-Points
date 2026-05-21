@@ -213,6 +213,7 @@ void KOTHClient::startCapture(Team team)
         capturing = true;
         capturingTeam = team;
         captureStartTime = millis();
+        hardware->lcd.kothDisplayCapturing(capturingTeam);
         LOG_INFO("KOTH_CLIENT", "Started capturing for %s team", team == Team::YELLOW ? "YELLOW" : "BLUE");
     }
 }
@@ -329,7 +330,7 @@ void KOTHClient::updateDisplay()
 
     if (capturing)
     {
-        hardware->lcd.kothDisplayCapturing(capturingTeam, getCaptureProgress());
+        hardware->lcd.kothDisplayCapturingProgress(getCaptureProgress());
     }
     else
     {
