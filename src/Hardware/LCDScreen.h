@@ -57,6 +57,7 @@ public:
     // Initialize I2C and LCD hardware. Call from `setup()` (after Serial.begin()).
     void begin(int id, int width, int height);
     void runDisplayTask();
+    void startDisplayTask();
 
     // koth specific methods
     void kothDisplayScore(int yellowScore, int blueScore);
@@ -79,6 +80,7 @@ public:
     void displayCountdown(int count);
     void displayText(LcdDisplayMessage msg);
     void render(LcdDisplayMessage content);
+    void addToQueue(LcdDisplayMessage msg);
 
     String buildRow(int startIdx, int count, int totalNodes, NodeState lastKnownNodeStates[]);
 };

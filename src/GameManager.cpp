@@ -277,7 +277,7 @@ GameManager::~GameManager()
 
 void GameManager::onNewNode(Event e)
 {
-    if (e.data2 == 2 || e.data2 == 3)
+    if (e.data2 == INFORMATION || e.data2 == CAPTURE_POINT)
     {
         return;
     }
@@ -301,7 +301,7 @@ void GameManager::onNewNode(Event e)
     }
     else
     {
-        LOG_WARN("GAME_MANAGER", "Node already exists");
+        LOG_WARN("GAME_MANAGER", "Node %d already exists",e.data1);
     }
 }
 

@@ -134,7 +134,9 @@ void setup()
     dsp.setLine(1,"INF MODE");
 #endif
 #endif
+#if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
     hardware.lcd.displayText(dsp);
+#endif
 }
 
 void loop()

@@ -50,19 +50,28 @@ void LCDScreen::runDisplayTask()
     }
 }
 
+void LCDScreen::startDisplayTask()
+{
+    xTaskCreate(
+        [](void *param)
+        { static_cast<LCDScreen *>(param)->runDisplayTask(); },
+        "LCDDisplay", 2048, this, 1, &displayTask);
+}
+
 void LCDScreen::begin(int id, int width, int height)
 {
     lcd = LiquidCrystal_I2C(id, width, height);
     lcd.init();
     lcd.backlight();
-    runDisplayTask();
+    displayQueue = xQueueCreate(8, sizeof(LcdDisplayMessage));
+    startDisplayTask();
 }
 
 void LCDScreen::kothDisplayScore(int yellowScore, int blueScore)
 {
     LcdDisplayMessage msg{};
     snprintf(msg.lines[1], sizeof(msg.lines[1]), "Y: %d : B: %d", yellowScore, blueScore);
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::kothDisplayCapturing(Team capturingTeam)
@@ -70,14 +79,14 @@ void LCDScreen::kothDisplayCapturing(Team capturingTeam)
     LcdDisplayMessage msg{};
     msg.priority = DisplayPriority::MEDIUM_PR;
     snprintf(msg.lines[0], sizeof(msg.lines[0]), "CAP: %s", (capturingTeam == Team::YELLOW ? "YELLOW" : "BLUE"));
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::kothDisplayCapturingProgress(float progress)
 {
     LcdDisplayMessage msg{};
     snprintf(msg.lines[1], sizeof(msg.lines[1]), "PROGRESS: %3.2f%", progress * 100);
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::kothDisplayController(Team controller)
@@ -97,7 +106,7 @@ void LCDScreen::kothDisplayController(Team controller)
         strcpy(ctrl, "BLUE");
     }
     snprintf(msg.lines[1], sizeof(msg.lines[1]), "CTRL : %s", ctrl);
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::displayLogo()
@@ -105,7 +114,7 @@ void LCDScreen::displayLogo()
     LcdDisplayMessage msg{};
     msg.setLine(0, "      SPAS");
     msg.setLine(1, "INITIALAZING");
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::displayPause()
@@ -115,7 +124,7 @@ void LCDScreen::displayPause()
     {
         msg.setLine(i, "     GAME PAUSED    ");
     }
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::displayRespawn()
@@ -127,7 +136,7 @@ void LCDScreen::displayRespawn()
     {
         msg.setLine(i, "     RESPAWN    ");
     }
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::displayCountdown(int count)
@@ -135,12 +144,12 @@ void LCDScreen::displayCountdown(int count)
     LcdDisplayMessage msg{};
     msg.setLine(0, "Countdown:");
     snprintf(msg.lines[1], sizeof(msg.lines[1]), "%d S", count);
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::displayText(LcdDisplayMessage msg)
 {
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::render(const LcdDisplayMessage msg)
@@ -157,6 +166,13 @@ void LCDScreen::render(const LcdDisplayMessage msg)
     }
 }
 
+void LCDScreen::addToQueue(LcdDisplayMessage msg)
+{
+#if (SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN)
+    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+#endif
+}
+
 void LCDScreen::kothDisplayEnd(Team winner, int yellowScore, int blueScore, bool isDraw)
 {
     LcdDisplayMessage msg{};
@@ -169,7 +185,7 @@ void LCDScreen::kothDisplayEnd(Team winner, int yellowScore, int blueScore, bool
         snprintf(msg.lines[0], sizeof(msg.lines[0]), "WINNER: %s", (winner == Team::YELLOW ? "YELLOW" : "BLUE"));
     }
     snprintf(msg.lines[1], sizeof(msg.lines[1]), "Y: %d : B: %d", yellowScore, blueScore);
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 void LCDScreen::kothDisplayInformation(NodeState lastKnownNodeStates[], int gameTime, int durration, KOTHGameScore lastKnownScore, int nodeCount)
@@ -184,7 +200,7 @@ void LCDScreen::kothDisplayInformation(NodeState lastKnownNodeStates[], int game
     msg.setLine(1, score.c_str());
     msg.setLine(2, line1.c_str());
     msg.setLine(3, line2.c_str());
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
+    addToQueue(msg);
 }
 
 String LCDScreen::buildRow(int startIdx, int count, int totalNodes, NodeState lastKnownNodeStates[])
