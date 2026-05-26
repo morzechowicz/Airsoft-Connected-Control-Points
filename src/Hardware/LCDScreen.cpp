@@ -55,7 +55,7 @@ void LCDScreen::startDisplayTask()
     xTaskCreate(
         [](void *param)
         { static_cast<LCDScreen *>(param)->runDisplayTask(); },
-        "LCDDisplay", 2048, this, 1, &displayTask);
+        "LCDDisplay", 4096, this, 1, &displayTask);
 }
 
 void LCDScreen::begin(int id, int width, int height)
@@ -195,6 +195,11 @@ void LCDScreen::kothDisplayInformation(NodeState lastKnownNodeStates[], int game
     String line1 = buildRow(0, 4, nodeCount, lastKnownNodeStates);
     String line2 = buildRow(4, 4, nodeCount, lastKnownNodeStates);
     LcdDisplayMessage msg{};
+    //clear before render
+    msg.clearLine(0);
+    msg.clearLine(1);
+    msg.clearLine(2);
+    msg.clearLine(3);
     // display on LCD
     msg.setLine(0, timer.c_str());
     msg.setLine(1, score.c_str());

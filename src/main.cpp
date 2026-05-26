@@ -108,9 +108,9 @@ void setup()
 #else
 #error "Unknown SCREEN_TYPE, please define it as LCD_CHONKY_SCREEN or LCD_SMOLL_SCREEN"
 #endif
-#if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
+
     hardware.lcd.displayLogo();
-#endif
+    
     vTaskDelay(500);
     ble.BleStart();
     vTaskDelay(500);
@@ -134,9 +134,8 @@ void setup()
     dsp.setLine(1,"INF MODE");
 #endif
 #endif
-#if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
+
     hardware.lcd.displayText(dsp);
-#endif
 }
 
 void loop()
