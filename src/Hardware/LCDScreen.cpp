@@ -10,41 +10,42 @@ LCDScreen::LCDScreen()
     // Do not initialize hardware in the constructor. Call begin() from setup().
 }
 
-void LCDScreen::runDisplayTask()
-{
-    LcdDisplayMessage current;        // what's showing now
-    LcdDisplayMessage lastPersistent; // fallback after transients expire
-    bool hasContent = false;
+void LCDScreen::runDisplayTask() {
+    LcdDisplayMessage lastNormal{};
+    LcdDisplayMessage incoming{};
+    bool hasNormal = false;
 
-    LcdDisplayMessage incoming;
-    for (;;)
-    {
-        TickType_t waitTime = hasContent && current.durationMs > 0
-                                  ? pdMS_TO_TICKS(current.durationMs)
-                                  : portMAX_DELAY;
+    for (;;) {
+        // check if overwrite queue has anything
+        if (uxQueueMessagesWaiting(overwriteQueue) > 0) {
+            LcdDisplayMessage overwrite{};
+            xQueueReceive(overwriteQueue, &overwrite, 0);
+            render(overwrite);
 
-        if (xQueueReceive(displayQueue, &incoming, waitTime) == pdTRUE)
-        {
-            if (incoming.priority >= current.priority || !hasContent)
-            {
-                current = incoming;
-                hasContent = true;
-                if (incoming.durationMs == 0)
-                {
-                    lastPersistent = incoming; // remember for fallback
+            if (overwrite.durationMs > 0) {
+                // wait for duration but keep accepting normal msgs silently
+                TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(overwrite.durationMs);
+                while (xTaskGetTickCount() < deadline) {
+                    if (xQueueReceive(normalSlot, &incoming, pdMS_TO_TICKS(100)) == pdTRUE) {
+                        lastNormal = incoming;  // store silently, dont render
+                        hasNormal = true;
+                    }
                 }
-                render(current);
+                // duration expired, fall through to check overwrite queue again
+            } else {
+                // permanent, just drain normal msgs forever
+                for (;;) {
+                    xQueueReceive(normalSlot, &incoming, portMAX_DELAY);
+                    lastNormal = incoming;  // game over is showing, just keep updating lastNormal
+                    hasNormal = true;
+                }
             }
-            // else discard — lower priority than what's showing
-        }
-        else
-        {
-            // queue timed out — transient expired, restore persistent
-            if (current.durationMs > 0)
-            {
-                current = lastPersistent;
-                current.durationMs = 0;
-                render(current);
+        } else {
+            // no overwrites — display lastNormal if we have it
+            if (xQueueReceive(normalSlot, &incoming, portMAX_DELAY) == pdTRUE) {
+                lastNormal = incoming;
+                hasNormal = true;
+                render(lastNormal);
             }
         }
     }
@@ -63,7 +64,8 @@ void LCDScreen::begin(int id, int width, int height)
     lcd = LiquidCrystal_I2C(id, width, height);
     lcd.init();
     lcd.backlight();
-    displayQueue = xQueueCreate(8, sizeof(LcdDisplayMessage));
+    overwriteQueue = xQueueCreate(4, sizeof(LcdDisplayMessage));
+    normalSlot     = xQueueCreate(4, sizeof(LcdDisplayMessage));    
     startDisplayTask();
 }
 
@@ -71,22 +73,24 @@ void LCDScreen::kothDisplayScore(int yellowScore, int blueScore)
 {
     LcdDisplayMessage msg{};
     snprintf(msg.lines[1], sizeof(msg.lines[1]), "Y: %d : B: %d", yellowScore, blueScore);
-    addToQueue(msg);
+    postNormal(msg);
+    LOG_DEBUG("LCD_SCREEN", "Displayed score update: Y: %d : B: %d", yellowScore, blueScore);
 }
 
 void LCDScreen::kothDisplayCapturing(Team capturingTeam)
 {
     LcdDisplayMessage msg{};
-    msg.priority = DisplayPriority::MEDIUM_PR;
     snprintf(msg.lines[0], sizeof(msg.lines[0]), "CAP: %s", (capturingTeam == Team::YELLOW ? "YELLOW" : "BLUE"));
-    addToQueue(msg);
+    postNormal(msg);
+    LOG_DEBUG("LCD_SCREEN", "Displayed capturing update: %s capturing", (capturingTeam == Team::YELLOW ? "YELLOW" : "BLUE"));
 }
 
 void LCDScreen::kothDisplayCapturingProgress(float progress)
 {
     LcdDisplayMessage msg{};
-    snprintf(msg.lines[1], sizeof(msg.lines[1]), "PROGRESS: %3.2f%", progress * 100);
-    addToQueue(msg);
+    snprintf(msg.lines[1], sizeof(msg.lines[1]), "PROGRESS: %3.0f%", progress * 100);
+    postNormal(msg);
+    LOG_DEBUG("LCD_SCREEN", "Displayed capturing progress: %3.0f%%", progress * 100);
 }
 
 void LCDScreen::kothDisplayController(Team controller)
@@ -105,8 +109,9 @@ void LCDScreen::kothDisplayController(Team controller)
     {
         strcpy(ctrl, "BLUE");
     }
-    snprintf(msg.lines[1], sizeof(msg.lines[1]), "CTRL : %s", ctrl);
-    addToQueue(msg);
+    snprintf(msg.lines[0], sizeof(msg.lines[0]), "CTRL : %s", ctrl);
+    postNormal(msg);
+    LOG_DEBUG("LCD_SCREEN", "Displayed controller update: %s controlling", ctrl);
 }
 
 void LCDScreen::displayLogo()
@@ -114,7 +119,7 @@ void LCDScreen::displayLogo()
     LcdDisplayMessage msg{};
     msg.setLine(0, "      SPAS");
     msg.setLine(1, "INITIALAZING");
-    addToQueue(msg);
+    postNormal(msg);
 }
 
 void LCDScreen::displayPause()
@@ -124,19 +129,18 @@ void LCDScreen::displayPause()
     {
         msg.setLine(i, "     GAME PAUSED    ");
     }
-    addToQueue(msg);
+    postNormal(msg);
 }
 
 void LCDScreen::displayRespawn()
 {
     LcdDisplayMessage msg{};
-    msg.priority = DisplayPriority::MEDIUM_PR;
     msg.durationMs = 5000;
     for (int i = 0; i < 4; i++)
     {
         msg.setLine(i, "     RESPAWN    ");
     }
-    addToQueue(msg);
+    postNormal(msg);
 }
 
 void LCDScreen::displayCountdown(int count)
@@ -144,12 +148,12 @@ void LCDScreen::displayCountdown(int count)
     LcdDisplayMessage msg{};
     msg.setLine(0, "Countdown:");
     snprintf(msg.lines[1], sizeof(msg.lines[1]), "%d S", count);
-    addToQueue(msg);
+    postNormal(msg);
 }
 
 void LCDScreen::displayText(LcdDisplayMessage msg)
 {
-    addToQueue(msg);
+    postNormal(msg);
 }
 
 void LCDScreen::render(const LcdDisplayMessage msg)
@@ -166,11 +170,17 @@ void LCDScreen::render(const LcdDisplayMessage msg)
     }
 }
 
-void LCDScreen::addToQueue(LcdDisplayMessage msg)
-{
-#if (SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN)
-    xQueueSend(displayQueue, &msg, pdMS_TO_TICKS(20));
-#endif
+void LCDScreen::postNormal(const LcdDisplayMessage& msg) {
+    // latest wins — reset queue and post fresh
+    #if (SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN)
+    xQueueSend(normalSlot, &msg, pdMS_TO_TICKS(20));
+    #endif
+}
+
+void LCDScreen::postOverwrite(const LcdDisplayMessage& msg) {
+    #if (SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN)
+    xQueueSend(overwriteQueue, &msg, pdMS_TO_TICKS(20));
+    #endif
 }
 
 void LCDScreen::kothDisplayEnd(Team winner, int yellowScore, int blueScore, bool isDraw)
@@ -185,7 +195,7 @@ void LCDScreen::kothDisplayEnd(Team winner, int yellowScore, int blueScore, bool
         snprintf(msg.lines[0], sizeof(msg.lines[0]), "WINNER: %s", (winner == Team::YELLOW ? "YELLOW" : "BLUE"));
     }
     snprintf(msg.lines[1], sizeof(msg.lines[1]), "Y: %d : B: %d", yellowScore, blueScore);
-    addToQueue(msg);
+    postNormal(msg);
 }
 
 void LCDScreen::kothDisplayInformation(NodeState lastKnownNodeStates[], int gameTime, int durration, KOTHGameScore lastKnownScore, int nodeCount)
@@ -205,7 +215,7 @@ void LCDScreen::kothDisplayInformation(NodeState lastKnownNodeStates[], int game
     msg.setLine(1, score.c_str());
     msg.setLine(2, line1.c_str());
     msg.setLine(3, line2.c_str());
-    addToQueue(msg);
+    postNormal(msg);
 }
 
 String LCDScreen::buildRow(int startIdx, int count, int totalNodes, NodeState lastKnownNodeStates[])

@@ -8,34 +8,27 @@
 #include <GameComponents/FLAG/FLAGTypes.h>
 #include "../lib/Logging/LogManager.h"
 
-enum class DisplayPriority : uint8_t
-{
-    LOW_PR = 0,
-    MEDIUM_PR = 1,
-    HIGH_PR = 2,
-};
-
-struct LcdDisplayMessage
-{
-    DisplayPriority priority = DisplayPriority::LOW_PR; // default should be like this
-    int durationMs = 0;                                 // 0 = persistent, >0 = transient
+struct LcdDisplayMessage {
+    int durationMs = 0;      // only relevant if overwrite = true, 0 = permanent
     char lines[4][21];
-
-    void setLine(int line, const char *text)
-    {
-        if (line < 0 || line > 3)
-            return;
+    
+    void setLine(int line, const char* text) {
+        if (line < 0 || line > 3) return;
         strncpy(lines[line], text, 20);
         lines[line][20] = '\0';
     }
-    void clearLine(int line) { setLine(line, "                    "); }
+    void clearLine(int line) {
+        if (line < 0 || line > 3) return;
+        snprintf(lines[line], sizeof(lines[line]), "                    ");
+    }
 };
 
 class LCDScreen
 {
 private:
     LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2);
-    xQueueHandle displayQueue;
+    xQueueHandle overwriteQueue;
+    xQueueHandle normalSlot;
     xTaskHandle displayTask;
 
     const char teamChar(Team t)
@@ -80,7 +73,8 @@ public:
     void displayCountdown(int count);
     void displayText(LcdDisplayMessage msg);
     void render(LcdDisplayMessage content);
-    void addToQueue(LcdDisplayMessage msg);
+    void postNormal(const LcdDisplayMessage &msg);
+    void postOverwrite(const LcdDisplayMessage &msg);
 
     String buildRow(int startIdx, int count, int totalNodes, NodeState lastKnownNodeStates[]);
 };

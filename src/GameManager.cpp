@@ -176,7 +176,7 @@ void GameManager::afterCountdownTask(int time)
     LcdDisplayMessage dsp{};
     dsp.setLine(0,"NET ERROR");
     dsp.setLine(1,"CALL GAME ORG");
-    dsp.priority = DisplayPriority::HIGH_PR;
+    dsp.durationMs = 10;
     hardwareManager->lcd.displayText(dsp);
 }
 
@@ -188,7 +188,7 @@ void GameManager::countdownTask(int time)
         vTaskDelay(pdMS_TO_TICKS(1000));
         countdown--;
         LOG_DEBUG("GAME_MANAGER", "Countdown: %d", countdown);
-        
+        //make it update time only and set screen countdown once
         hardwareManager->lcd.displayCountdown(countdown);
     }
     LOG_INFO("GAME_MANAGER", "Countdown ended");
@@ -319,6 +319,7 @@ void GameManager::onDiscovered(Event e)
     dsp.setLine(0,msg.c_str());
     dsp.clearLine(1);
 
+    hardwareManager->lcd.displayText(dsp);
     if (networkManager)
     {
         #if NODE_TYPE == FORWARDER

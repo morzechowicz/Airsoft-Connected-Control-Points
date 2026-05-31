@@ -157,15 +157,16 @@ void InformationModeComp::killRespawnTask()
 void InformationModeComp::respawnTask(void *pvParameters)
 {
     int respawnTime = static_cast<InformationModeComp *>(pvParameters)->config.respawnTime;
-    LOG_DEBUG("INFO_MODE", "Respawn task started %d",respawnTime);
     respawnTaskBit = true;
-
+    
     if(respawnTime <= 0)
     {
-        LOG_ERROR("INFO_MODE","Respawn time is zero or less");
+        LOG_ERROR("INFO_MODE","Respawn time is zero or less, exiting");
         vTaskDelete(NULL);
         return;
     }
+    
+    LOG_DEBUG("INFO_MODE", "Respawn task started %d",respawnTime);
 
     while (respawnTaskBit)
     {

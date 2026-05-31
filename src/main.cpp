@@ -130,8 +130,11 @@ void setup()
     
 #if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
     dsp.setLine(0,"WAITING");
+    dsp.clearLine(1);
 #if NODE_TYPE == INFORMATION
     dsp.setLine(1,"INF MODE");
+    dsp.clearLine(2);
+    dsp.clearLine(3);
 #endif
 #endif
 
