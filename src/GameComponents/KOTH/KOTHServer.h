@@ -24,7 +24,7 @@ public:
 private:
     KOTHConfig config;
     NodeState nodes[10];  // Max 10 nodes
-    uint8_t nodeCount;
+    uint8_t nodeCount = 0;
     KOTHGameScore score;
     int scoringInterval = 0;
 

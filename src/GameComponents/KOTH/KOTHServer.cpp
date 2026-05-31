@@ -4,21 +4,26 @@
 KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, const KOTHConfig &cfg)
     : BaseComponent(eb, hw, net),
       config(cfg),
-      nodeCount(cfg.nodeCount),
       gameStartTime(0),
       lastScoreUpdate(0),
       gameRunning(false)
 {
-    LOG_INFO("KOTH_SERVER", "Initializing KOTH Server with %d nodes", nodeCount);
-
+    
     // Initialize nodes from config
-    for (uint8_t i = 0; i < nodeCount; i++)
+    for (uint8_t i = 0; i < cfg.nodeCount; i++)
     {
-        nodes[i].nodeId = config.nodeIds[i];
+        if(config.nodeIds[i].type == INFORMATION)
+        {
+            LOG_DEBUG("KOTH_SERVER", "Node %d is an INFORMATION node, skipping initialization", config.nodeIds[i].Id);
+            continue; // Skip information nodes
+        }
+        nodes[i].nodeId = config.nodeIds[i].Id;
         nodes[i].controllingTeam = Team::NONE;
         nodes[i].capturedAt = 0;
+        nodeCount++;
         LOG_INFO("KOTH_SERVER", "Configured node %d with ID %d", i, nodes[i].nodeId);
     }
+    LOG_INFO("KOTH_SERVER", "Initializing KOTH Server with %d nodes", nodeCount);
 }
 
 KOTHServer::~KOTHServer()
@@ -68,6 +73,19 @@ void KOTHServer::enterMode()
     // Broadcast game start
 
     String startMsg = Protocol::buildGameStart();
+    // send start message to information nodes first before other nodes start asking
+    for(int nodeIndex = 0; nodeIndex < config.nodeCount; nodeIndex++)
+    {
+        if(config.nodeIds[nodeIndex].Id == 0xFF)
+        {
+            break;
+        }
+        if(config.nodeIds[nodeIndex].type == INFORMATION)
+        {
+            networkManager->sendTo(config.nodeIds[nodeIndex].Id, startMsg);
+        }
+    }
+
     if (networkManager)
     {
         networkManager->broadcast(startMsg);
@@ -250,6 +268,18 @@ void KOTHServer::endGame(Team winner)
         // networkManager->sendTo(nodes[i].nodeId, msg);
         vTaskDelay(500);
     }
+    //send to information node
+    for(int nodeIndex = 0; nodeIndex < config.nodeCount; nodeIndex++)
+    {
+        if(config.nodeIds[nodeIndex].Id == 0xFF)
+        {
+            break;
+        }
+        if(config.nodeIds[nodeIndex].type == INFORMATION)
+        {
+            networkManager->sendTo(config.nodeIds[nodeIndex].Id, msg);
+        }
+    }
     vTaskDelay(1000); // assume thats enough and then broadcast fin to everyone else
     networkManager->broadcast(msg);
     // spamming netwrok a little arent we?
@@ -335,7 +365,7 @@ void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
 
     EventGroupHandle_t ackforConfig = xEventGroupCreate();
     LOG_INFO("KOTH_SERVER", "Received game config request, sending current config");
-    String configMsg = Protocol::buildKothConfigClient(config.maxPoints, 10, config.captureTime, config.gameDurationMinutes);
+    String configMsg = Protocol::buildKothConfigClient(config.maxPoints, 10, config.captureTime, config.gameDurationMinutes,config.respawnTime);
     networkManager->sendToAndWait(nodeId, configMsg, ackforConfig, expectedBits);
 
     LOG_DEBUG("KOTH_SERVER", "Waiting for ACK from node %d", nodeId);

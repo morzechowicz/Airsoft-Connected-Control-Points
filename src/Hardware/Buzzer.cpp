@@ -1,80 +1,84 @@
 #include "Buzzer.h"
 
-Buzzer::Buzzer(int pin, bool generator)
-{
+Buzzer::Buzzer(int pin, bool generator) {
     this->generator = generator;
     buzzerPin = pin;
     pinMode(buzzerPin, OUTPUT);
+    
+    commandQueue = xQueueCreate(8, sizeof(BeepCommand));
+    xTaskCreate(
+        [](void* param) {
+            static_cast<Buzzer*>(param)->beepTask();
+            vTaskDelete(nullptr);
+        },
+        "BuzzerTask", 2048, this, 1, &BeepTaskHandle
+    );
 }
 
-void Buzzer::beepTask(void)
-{
+void Buzzer::beepTask() {
     LOG_INFO("Buzzer", "Buzzer task started");
-    while (true)
-    {
-        if (beepCount)
-        {
+    BeepCommand cmd;
+
+    for (;;) {
+        if (xQueueReceive(commandQueue, &cmd, portMAX_DELAY) != pdTRUE) continue;
+        if (cmd.abort) { off(); continue; }
+
+        for (int i = 0; i < cmd.count; i++) {
             on();
-            vTaskDelay(duration / portTICK_PERIOD_MS);
+            vTaskDelay(pdMS_TO_TICKS(cmd.duration));
             off();
-            vTaskDelay(pause / portTICK_PERIOD_MS);
-            beepCount--;
+
+            if (i < cmd.count - 1) {
+                vTaskDelay(pdMS_TO_TICKS(cmd.pause));
+            }
+
+            BeepCommand peek;
+            if (xQueuePeek(commandQueue, &peek, 0) == pdTRUE && peek.abort) {
+                xQueueReceive(commandQueue, &peek, 0);
+                off();
+                goto next;   // yes, a goto - not mine idea i just stole it from someone
+            }
         }
-        vTaskDelay(100);
-    }
-    BeepTaskHandle = nullptr;
-    LOG_INFO("Buzzer", "Buzzer task ended");
-}
-
-void Buzzer::createBeepTask()
-{
-    if (BeepTaskHandle == nullptr)
-    {
-        LOG_DEBUG("Buzzer", "Creating beep task");
-        xTaskCreate(
-            [](void *param)
-            {
-                Buzzer *buzzer = static_cast<Buzzer *>(param);
-                buzzer->beepTask();
-                vTaskDelete(nullptr); // Delete this task when done
-                LOG_DEBUG("Buzzer", "Beep task deleted");
-            },
-            "BuzzerBeepTask",
-            2048,
-            this,
-            1,
-            &BeepTaskHandle);
+        next:;
     }
 }
 
-void Buzzer::beepOnce(unsigned long duration)
-{
-    //this should be skipped if its already working
-    if(!beepCount)
-    {
-        this->duration = duration;
-        this->beepCount += 1;
-        this->pause = 500;
-        createBeepTask();
+// void Buzzer::createBeepTask()
+// {
+//     if (BeepTaskHandle == nullptr)
+//     {
+//         LOG_DEBUG("Buzzer", "Creating beep task");
+//         xTaskCreate(
+//             [](void *param)
+//             {
+//                 Buzzer *buzzer = static_cast<Buzzer *>(param);
+//                 buzzer->beepTask();
+//                 vTaskDelete(nullptr); // Delete this task when done
+//                 LOG_DEBUG("Buzzer", "Beep task deleted");
+//             },
+//             "BuzzerBeepTask",
+//             2048,
+//             this,
+//             1,
+//             &BeepTaskHandle);
+//     }
+// }
+
+void Buzzer::beep(unsigned long duration, int count, unsigned long pause) {
+    BeepCommand cmd{ duration, pause, count, false };
+    xQueueSend(commandQueue, &cmd, pdMS_TO_TICKS(20));
+}
+
+void Buzzer::beepOnce(unsigned long duration) {
+    if (uxQueueMessagesWaiting(commandQueue) == 0) {
+        beep(duration, 1, 500);
     }
 }
 
-void Buzzer::beep(unsigned long duration, int count, unsigned long pause)
-{
-    this->duration = duration;
-    this->beepCount += count;
-    this->pause = pause;
-    createBeepTask();
-}
-
-void Buzzer::abortBeep()
-{
-    if (BeepTaskHandle != nullptr)
-    {
-        vTaskDelete(BeepTaskHandle);
-        BeepTaskHandle = nullptr;
-    }
-    off();
+void Buzzer::abortBeep() {
+    xQueueReset(commandQueue);              // drop pending commands
+    BeepCommand abort{ 0, 0, 0, true };
+    xQueueSend(commandQueue, &abort, pdMS_TO_TICKS(20));  // signal task to stop
 }
 
 void Buzzer::on()

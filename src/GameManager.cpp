@@ -30,9 +30,11 @@ void GameManager::onConfKoth(Event e)
     kothConfig.gameDurationMinutes = e.data2;
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
     kothConfig.captureTime = e.data4;
+    kothConfig.respawnTime = e.data5;
 #if NODE_TYPE != HEADLESS
     Event newNode;
     newNode.data1 = LORA_ADDRESS;
+    newNode.data2 = NODE_TYPE;
     // add itself to the table
     onNewNode(newNode);
 #endif
@@ -40,11 +42,11 @@ void GameManager::onConfKoth(Event e)
     int countdown = e.data1;
     selectedConfig = KOTH_CONFIG;
 
-    LOG_INFO("GAME_MANAGER", "Received KOTH configuration: maxPoints=%d, gameDurationMinutes=%d, captureTime=%d, scoreIntervalMs=%d",
-             kothConfig.maxPoints, kothConfig.gameDurationMinutes, kothConfig.captureTime, kothConfig.scoreIntervalMs);
+    LOG_INFO("GAME_MANAGER", "Received KOTH configuration: maxPoints=%d, gameDurationMinutes=%d, captureTime=%d, scoreIntervalMs=%d, respawnTime=%d",
+             kothConfig.maxPoints, kothConfig.gameDurationMinutes, kothConfig.captureTime, kothConfig.scoreIntervalMs, kothConfig.respawnTime);
     LOG_INFO("GAME_MANAGER", "Countdown started");
 
-    String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes);
+    String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes,kothConfig.respawnTime);
     networkManager->broadcast(configBroadcast);
 
     startCountdownTask(countdown);
@@ -72,6 +74,7 @@ void GameManager::onConfigKothFromMaster(Event e)
     kothConfig.gameDurationMinutes = e.data2;
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
     kothConfig.captureTime = e.data4;
+    kothConfig.respawnTime = e.data5;
     int countdown = e.data1;
     selectedConfig = KOTH_CONFIG;
     startCountdownTask(countdown);
@@ -170,9 +173,11 @@ void GameManager::afterCountdownTask(int time)
         responseWait--;
     }
     LOG_INFO("GAME_MANAGER", "No response received PANIC MODE");
-    hardwareManager->lcd.clearScreen();
-    hardwareManager->lcd.displayText("NET ERROR", 0);
-    hardwareManager->lcd.displayText("CALL GAME ORG", 1);
+    LcdDisplayMessage dsp{};
+    dsp.setLine(0,"NET ERROR");
+    dsp.setLine(1,"CALL GAME ORG");
+    dsp.durationMs = 10;
+    hardwareManager->lcd.displayText(dsp);
 }
 
 void GameManager::countdownTask(int time)
@@ -183,9 +188,8 @@ void GameManager::countdownTask(int time)
         vTaskDelay(pdMS_TO_TICKS(1000));
         countdown--;
         LOG_DEBUG("GAME_MANAGER", "Countdown: %d", countdown);
-        hardwareManager->lcd.clearScreen();
-        hardwareManager->lcd.displayText("COUNTDOWN", 0);
-        hardwareManager->lcd.displayText(String(countdown).c_str(), 1);
+        //make it update time only and set screen countdown once
+        hardwareManager->lcd.displayCountdown(countdown);
     }
     LOG_INFO("GAME_MANAGER", "Countdown ended");
     if (isMain)
@@ -273,23 +277,31 @@ GameManager::~GameManager()
 
 void GameManager::onNewNode(Event e)
 {
+    if (e.data2 == INFORMATION || e.data2 == CAPTURE_POINT)
+    {
+        return;
+    }
     if (!kothConfig.hasNode(e.data1))
     {
-        kothConfig.addNode(e.data1);
+        kothConfig.addNode(e.data1,e.data2);
         eventBus->publish(DEBUG, SEARCH, "Node" + String(e.data1) + " added \n");
+        if(NODE_TYPE == INFORMATION)
+        {
+            return;
+        }
         String nodes = "";
         for (int i = 0; i < kothConfig.nodeCount; i++)
         {
-            nodes += "N" + String(kothConfig.nodeIds[i]);
+            nodes += "N" + String(kothConfig.nodeIds[i].Id);
         }
-
-        hardwareManager->lcd.clearScreen();
-        hardwareManager->lcd.displayText("REMOTE NODES :", 0);
-        hardwareManager->lcd.displayText(nodes.c_str(), 1);
+        LcdDisplayMessage dsp{};
+        dsp.setLine(0,"REMOTE NODES :");
+        dsp.setLine(1,nodes.c_str());
+        hardwareManager->lcd.displayText(dsp);
     }
     else
     {
-        LOG_WARN("GAME_MANAGER", "Node already exists");
+        LOG_WARN("GAME_MANAGER", "Node %d already exists",e.data1);
     }
 }
 
@@ -303,20 +315,24 @@ void GameManager::onDiscovered(Event e)
 {
     String msg = "CONNECTED: " + String(e.data1);
     hardwareManager->buzzer.beep(200, 2, 200);
-    hardwareManager->lcd.clearScreen();
-    hardwareManager->lcd.displayText(msg.c_str(), 1);
+    LcdDisplayMessage dsp {};
+    dsp.setLine(0,msg.c_str());
+    dsp.clearLine(1);
 
+    hardwareManager->lcd.displayText(dsp);
     if (networkManager)
     {
         #if NODE_TYPE == FORWARDER
             LOG_ERROR("GAME_MANAGER", "Received discovery event but this is a forwarder node");
             return;
         #endif
+        #ifdef NODE_TYPE
         networkManager->setAsClient(e.data1);
-        String response = Protocol::buildDiscoverResponse(LORA_ADDRESS);
+        String response = Protocol::buildDiscoverResponse(LORA_ADDRESS, NODE_TYPE);
         LOG_INFO("GAME_MANAGER", "Responding with: %s", response.c_str());
         vTaskDelay(pdMS_TO_TICKS(200) * LORA_ADDRESS); // small delay times node id to avoid collisons
         networkManager->sendToMain(response);
+        #endif
     }
 }
 
@@ -327,12 +343,8 @@ void GameManager::onGameStartconfRequest(Event e)
 #endif
     if (!isMain)
     {
-#if NODE_TYPE == INFORMATION
-        LOG_INFO("GAME_MANAGER", "Received game start request but this is an information node, ignoring");
-        return;
-#else
-        LOG_INFO("GAME_MANAGER", "Trying to connect to existing game");
-#endif
+#if NODE_TYPE == CAPTURE_POINT
+LOG_INFO("GAME_MANAGER", "Trying to connect to existing game");
         if (e.data1 < 0x02)
         {
             LOG_ERROR("GAME_MANAGER", "Connecting to existing game");
@@ -344,6 +356,10 @@ void GameManager::onGameStartconfRequest(Event e)
             LOG_INFO("GAME_MANAGER", "Received game start request from node %d", e.data1);
             startAfterCountdownTask(10);
         }
+#else
+LOG_INFO("GAME_MANAGER", "Received game start request but this isnt capture node, ignoring");
+return;
+#endif
     }
 }
 

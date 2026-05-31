@@ -1,4 +1,5 @@
 #include "InformationModeComp.h"
+static volatile bool respawnTaskBit;
 
 InformationModeComp::InformationModeComp(EventBus *eventBus, HardwareManager *hardware, NetworkManager *network, KOTHConfig config) : eventBus(eventBus),
                                                                                                                                       hardware(hardware),
@@ -34,18 +35,10 @@ void InformationModeComp::start()
 
     // Subscribe to score updates
     eventBus->subscribe(KOTH_SCORE_UPDATE, [this](Event e)
-                        {
-        gameTime = e.data1;
-        lastKnownScore.yellowPoints = e.data2;
-        lastKnownScore.bluePoints = e.data3;
-        nodeCount = e.data4;
-        for (int i = 0; i < nodeCount; i++) {
-            lastKnownNodeStates[i].nodeId = e.teamPoints[i].nodeId;
-            lastKnownNodeStates[i].controllingTeam = e.teamPoints[i].controllingTeam;
-        }
-        updateDisplay(); });
+                        { this->onScoreUpdate(e); });
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
+    startRespawnTask();
 }
 
 void InformationModeComp::stop()
@@ -62,20 +55,10 @@ void InformationModeComp::updateDisplay()
     {
         return;
     }
-    hardware->lcd.clearScreen();
 
     if (gameActive)
     {
-        String timer = "T: " + String(gameTime) + "/" + String(config.gameDurationMinutes);
-        String score = ("Y: " + String(lastKnownScore.yellowPoints) + " B: " + String(lastKnownScore.bluePoints));
-        String line1 = buildRow(0, 4, nodeCount);
-        String line2 = buildRow(4, 4, nodeCount);
-
-        // display on LCD
-        hardware->lcd.displayText(timer.c_str(), 0);
-        hardware->lcd.displayText(score.c_str(), 1);
-        hardware->lcd.displayText(line1.c_str(), 2);
-        hardware->lcd.displayText(line2.c_str(), 3);
+        hardware->lcd.kothDisplayInformation(lastKnownNodeStates,gameTime,config.gameDurationMinutes,lastKnownScore,nodeCount);
     }
 
     if (gamePaused)
@@ -85,6 +68,7 @@ void InformationModeComp::updateDisplay()
 
     if (!gameActive)
     {
+
         hardware->lcd.kothDisplayEnd(lastKnownScore.getWinner(),
                                      lastKnownScore.yellowPoints,
                                      lastKnownScore.bluePoints,
@@ -105,6 +89,7 @@ void InformationModeComp::handleGameOver(Team winner)
     eventBus->unsubscribe(NETWORK_MESSAGE_RECEIVED);
     eventBus->unsubscribe(KOTH_SCORE_UPDATE);
     
+    killRespawnTask();
     gameActive = false;
     deleteThis = true;
     updateDisplay();
@@ -127,9 +112,24 @@ void InformationModeComp::onNetworkMessage(Event e)
 {
 }
 
+void InformationModeComp::onScoreUpdate(Event e)
+{
+    gameTime = e.data1;
+    lastKnownScore.yellowPoints = e.data2;
+    lastKnownScore.bluePoints = e.data3;
+    nodeCount = e.data4;
+    for (int i = 0; i < nodeCount; i++)
+    {
+        lastKnownNodeStates[i].nodeId = e.teamPoints[i].nodeId;
+        lastKnownNodeStates[i].controllingTeam = e.teamPoints[i].controllingTeam;
+    }
+    updateDisplay();
+}
+
 void InformationModeComp::pauseGame(Event e)
 {
     gamePaused = true;
+    killRespawnTask(); // this is such a bandaid solution
     hardware->buzzer.beep(2000, 2, 1000);
     updateDisplay();
 }
@@ -137,20 +137,48 @@ void InformationModeComp::pauseGame(Event e)
 void InformationModeComp::resumeGame(Event e)
 {
     gamePaused = false;
+    startRespawnTask(); // its gonna be funny when it fails
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
 }
 
-String InformationModeComp::buildRow(int startIdx, int count, int totalNodes)
+void InformationModeComp::respawnHelper()
 {
-    LOG_DEBUG("INFO_MODE", "buildRow: startIdx=%d, count=%d, totalNodes=%d", startIdx, count, totalNodes);
-    String row = "";
-    for (int i = startIdx; i < startIdx + count && i < totalNodes; i++)
+    hardware->buzzer.beep(100, 5, 300);
+    hardware->lcd.displayRespawn();
+    updateDisplay();
+}
+
+void InformationModeComp::killRespawnTask()
+{
+    respawnTaskBit = false;
+}
+
+void InformationModeComp::respawnTask(void *pvParameters)
+{
+    int respawnTime = static_cast<InformationModeComp *>(pvParameters)->config.respawnTime;
+    respawnTaskBit = true;
+    
+    if(respawnTime <= 0)
     {
-        if (i > startIdx)
-            row += " ";
-        row += "P" + String(lastKnownNodeStates[i].nodeId) + ":" + teamChar(lastKnownNodeStates[i].controllingTeam);
+        LOG_ERROR("INFO_MODE","Respawn time is zero or less, exiting");
+        vTaskDelete(NULL);
+        return;
     }
-    LOG_DEBUG("INFO_MODE", "buildRow result: %s", row.c_str());
-    return row;
+    
+    LOG_DEBUG("INFO_MODE", "Respawn task started %d",respawnTime);
+
+    while (respawnTaskBit)
+    {
+        vTaskDelay(pdMS_TO_TICKS(respawnTime * 60 * 1000));
+        LOG_INFO("INFO_MODE", "Respawn time reached");
+        static_cast<InformationModeComp *>(pvParameters)->respawnHelper();
+    }
+    LOG_DEBUG("INFO_MODE", "Respawn task aborted");
+    vTaskDelete(NULL);
+}
+
+void InformationModeComp::startRespawnTask()
+{
+    xTaskCreate(respawnTask, "RespawnTask", 2048, this, 1, &respawnTaskHandle);
 }

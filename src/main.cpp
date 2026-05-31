@@ -108,10 +108,9 @@ void setup()
 #else
 #error "Unknown SCREEN_TYPE, please define it as LCD_CHONKY_SCREEN or LCD_SMOLL_SCREEN"
 #endif
-#if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
-    hardware.lcd.displayText("      SPAS", 0);
-    hardware.lcd.displayText("INITIALAZING", 1);
-#endif
+
+    hardware.lcd.displayLogo();
+    
     vTaskDelay(500);
     ble.BleStart();
     vTaskDelay(500);
@@ -122,19 +121,24 @@ void setup()
     // callbacks that i dont know what to do with
     eventBus.subscribe(POWER_RESET, powerResetCallback);
     eventBus.subscribe(TEST, testCallback);
-
-    hardware.buzzer.createBeepTask();
-    hardware.lcd.clearScreen();
+    
 #if SCREEN_TYPE == OLED_128x36_SCREEN
     hardware.oled.writeln("STATUS");
     hardware.oled.writeln("READY");
 #endif
+    LcdDisplayMessage dsp {};
+    
 #if SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN
-    hardware.lcd.displayText("WAITING", 0);
+    dsp.setLine(0,"WAITING");
+    dsp.clearLine(1);
 #if NODE_TYPE == INFORMATION
-    hardware.lcd.displayText("INF MODE", 1);
+    dsp.setLine(1,"INF MODE");
+    dsp.clearLine(2);
+    dsp.clearLine(3);
 #endif
 #endif
+
+    hardware.lcd.displayText(dsp);
 }
 
 void loop()
