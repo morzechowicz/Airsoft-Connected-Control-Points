@@ -10,39 +10,57 @@ LCDScreen::LCDScreen()
     // Do not initialize hardware in the constructor. Call begin() from setup().
 }
 
-void LCDScreen::runDisplayTask() {
+void LCDScreen::runDisplayTask()
+{
     LcdDisplayMessage lastNormal{};
     LcdDisplayMessage incoming{};
     bool hasNormal = false;
 
-    for (;;) {
+    for (;;)
+    {
         // check if overwrite queue has anything
-        if (uxQueueMessagesWaiting(overwriteQueue) > 0) {
+        if (uxQueueMessagesWaiting(overwriteQueue) > 0)
+        {
             LcdDisplayMessage overwrite{};
-            xQueueReceive(overwriteQueue, &overwrite, 0);
+            xQueueReceive(overwriteQueue, &overwrite, pdMS_TO_TICKS(1000));
             render(overwrite);
 
-            if (overwrite.durationMs > 0) {
+            if (overwrite.durationMs > 0)
+            {
                 // wait for duration but keep accepting normal msgs silently
+                LOG_DEBUG("LCD_SCREEN", "Displaying overwrite message for %d ms", overwrite.durationMs);
                 TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(overwrite.durationMs);
-                while (xTaskGetTickCount() < deadline) {
-                    if (xQueueReceive(normalSlot, &incoming, pdMS_TO_TICKS(100)) == pdTRUE) {
-                        lastNormal = incoming;  // store silently, dont render
+                while (xTaskGetTickCount() < deadline)
+                {
+                    if (xQueueReceive(normalSlot, &incoming, pdMS_TO_TICKS(100)) == pdTRUE)
+                    {
+                        lastNormal = incoming; // store silently, dont render
                         hasNormal = true;
                     }
                 }
+                if (hasNormal)
+                {
+                    clearScreen(); 
+                    render(lastNormal);
+                }
                 // duration expired, fall through to check overwrite queue again
-            } else {
+            }
+            else
+            {
                 // permanent, just drain normal msgs forever
-                for (;;) {
-                    xQueueReceive(normalSlot, &incoming, portMAX_DELAY);
-                    lastNormal = incoming;  // game over is showing, just keep updating lastNormal
+                for (;;)
+                {
+                    xQueueReceive(normalSlot, &incoming, pdMS_TO_TICKS(1000));
+                    lastNormal = incoming; // game over is showing, just keep updating lastNormal
                     hasNormal = true;
                 }
             }
-        } else {
+        }
+        else
+        {
             // no overwrites — display lastNormal if we have it
-            if (xQueueReceive(normalSlot, &incoming, portMAX_DELAY) == pdTRUE) {
+            if (xQueueReceive(normalSlot, &incoming, pdMS_TO_TICKS(1000)) == pdTRUE)
+            {
                 lastNormal = incoming;
                 hasNormal = true;
                 render(lastNormal);
@@ -56,7 +74,7 @@ void LCDScreen::startDisplayTask()
     xTaskCreate(
         [](void *param)
         { static_cast<LCDScreen *>(param)->runDisplayTask(); },
-        "LCDDisplay", 4096, this, 1, &displayTask);
+        "LCDDisplay", 8192, this, 1, &displayTask);
 }
 
 void LCDScreen::begin(int id, int width, int height)
@@ -65,7 +83,7 @@ void LCDScreen::begin(int id, int width, int height)
     lcd.init();
     lcd.backlight();
     overwriteQueue = xQueueCreate(4, sizeof(LcdDisplayMessage));
-    normalSlot     = xQueueCreate(4, sizeof(LcdDisplayMessage));    
+    normalSlot = xQueueCreate(4, sizeof(LcdDisplayMessage));
     startDisplayTask();
 }
 
@@ -125,7 +143,7 @@ void LCDScreen::displayLogo()
 void LCDScreen::displayPause()
 {
     LcdDisplayMessage msg{};
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 2; i++)
     {
         msg.setLine(i, "     GAME PAUSED    ");
     }
@@ -135,12 +153,12 @@ void LCDScreen::displayPause()
 void LCDScreen::displayRespawn()
 {
     LcdDisplayMessage msg{};
-    msg.durationMs = 5000;
+    msg.durationMs = 10000;
     for (int i = 0; i < 4; i++)
     {
         msg.setLine(i, "     RESPAWN    ");
     }
-    postNormal(msg);
+    postOverwrite(msg);
 }
 
 void LCDScreen::displayCountdown(int count)
@@ -170,17 +188,24 @@ void LCDScreen::render(const LcdDisplayMessage msg)
     }
 }
 
-void LCDScreen::postNormal(const LcdDisplayMessage& msg) {
-    // latest wins — reset queue and post fresh
-    #if (SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN)
+void LCDScreen::postNormal(const LcdDisplayMessage &msg)
+{
+// latest wins — reset queue and post fresh
+#if (SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN)
     xQueueSend(normalSlot, &msg, pdMS_TO_TICKS(20));
-    #endif
+#endif
 }
 
-void LCDScreen::postOverwrite(const LcdDisplayMessage& msg) {
-    #if (SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN)
+void LCDScreen::postOverwrite(const LcdDisplayMessage &msg)
+{
+#if (SCREEN_TYPE == LCD_CHONKY_SCREEN || SCREEN_TYPE == LCD_SMOLL_SCREEN)
     xQueueSend(overwriteQueue, &msg, pdMS_TO_TICKS(20));
-    #endif
+#endif
+}
+
+void LCDScreen::clearScreen()
+{
+    lcd.clear();
 }
 
 void LCDScreen::kothDisplayEnd(Team winner, int yellowScore, int blueScore, bool isDraw)
@@ -205,7 +230,7 @@ void LCDScreen::kothDisplayInformation(NodeState lastKnownNodeStates[], int game
     String line1 = buildRow(0, 4, nodeCount, lastKnownNodeStates);
     String line2 = buildRow(4, 4, nodeCount, lastKnownNodeStates);
     LcdDisplayMessage msg{};
-    //clear before render
+    // clear before render
     msg.clearLine(0);
     msg.clearLine(1);
     msg.clearLine(2);
