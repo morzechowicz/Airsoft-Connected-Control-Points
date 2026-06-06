@@ -75,6 +75,7 @@ public:
     void render(LcdDisplayMessage content);
     void postNormal(const LcdDisplayMessage &msg);
     void postOverwrite(const LcdDisplayMessage &msg);
+    void clearScreen();
 
     String buildRow(int startIdx, int count, int totalNodes, NodeState lastKnownNodeStates[]);
 };

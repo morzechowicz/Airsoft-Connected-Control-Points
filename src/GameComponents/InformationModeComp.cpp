@@ -58,7 +58,7 @@ void InformationModeComp::updateDisplay()
 
     if (gameActive)
     {
-        hardware->lcd.kothDisplayInformation(lastKnownNodeStates,gameTime,config.gameDurationMinutes,lastKnownScore,nodeCount);
+        hardware->lcd.kothDisplayInformation(lastKnownNodeStates, gameTime, config.gameDurationMinutes, lastKnownScore, nodeCount);
     }
 
     if (gamePaused)
@@ -88,7 +88,7 @@ void InformationModeComp::handleGameOver(Team winner)
     eventBus->unsubscribe(BUTTON_RELEASED);
     eventBus->unsubscribe(NETWORK_MESSAGE_RECEIVED);
     eventBus->unsubscribe(KOTH_SCORE_UPDATE);
-    
+
     killRespawnTask();
     gameActive = false;
     deleteThis = true;
@@ -139,6 +139,7 @@ void InformationModeComp::resumeGame(Event e)
     gamePaused = false;
     startRespawnTask(); // its gonna be funny when it fails
     hardware->buzzer.beepOnce(4000);
+    hardware->lcd.clearScreen();
     updateDisplay();
 }
 
@@ -158,21 +159,26 @@ void InformationModeComp::respawnTask(void *pvParameters)
 {
     int respawnTime = static_cast<InformationModeComp *>(pvParameters)->config.respawnTime;
     respawnTaskBit = true;
-    
-    if(respawnTime <= 0)
+    long lastRespawnTime = xTaskGetTickCount();
+
+    if (respawnTime <= 0)
     {
-        LOG_ERROR("INFO_MODE","Respawn time is zero or less, exiting");
+        LOG_ERROR("INFO_MODE", "Respawn time is zero or less, exiting");
         vTaskDelete(NULL);
         return;
     }
-    
-    LOG_DEBUG("INFO_MODE", "Respawn task started %d",respawnTime);
+
+    LOG_DEBUG("INFO_MODE", "Respawn task started %d", respawnTime);
 
     while (respawnTaskBit)
     {
-        vTaskDelay(pdMS_TO_TICKS(respawnTime * 60 * 1000));
-        LOG_INFO("INFO_MODE", "Respawn time reached");
-        static_cast<InformationModeComp *>(pvParameters)->respawnHelper();
+        if (xTaskGetTickCount() - lastRespawnTime >= pdMS_TO_TICKS(respawnTime * 60 * 1000))
+        {
+            LOG_INFO("INFO_MODE", "Respawn time reached");
+            static_cast<InformationModeComp *>(pvParameters)->respawnHelper();
+            lastRespawnTime = xTaskGetTickCount();
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000)); 
     }
     LOG_DEBUG("INFO_MODE", "Respawn task aborted");
     vTaskDelete(NULL);
@@ -180,5 +186,5 @@ void InformationModeComp::respawnTask(void *pvParameters)
 
 void InformationModeComp::startRespawnTask()
 {
-    xTaskCreate(respawnTask, "RespawnTask", 2048, this, 1, &respawnTaskHandle);
+    xTaskCreate(respawnTask, "RespawnTask", 4096, this, 1, &respawnTaskHandle);
 }
