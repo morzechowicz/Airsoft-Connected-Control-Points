@@ -98,13 +98,13 @@ void InformationModeComp::handleGameOver(Team winner)
 
 void InformationModeComp::onButtonPressed(Event e)
 {
-    LOG_INFO("INFO_MODE", "Button Pressed: %d", e.data1);
+    LOG_DEBUG("INFO_MODE", "Button Pressed: %d", e.data1);
     // Here you can add code to handle button presses, e.g., switch display modes
 }
 
 void InformationModeComp::onButtonReleased(Event e)
 {
-    LOG_INFO("INFO_MODE", "Button Released: %d", e.data1);
+    LOG_DEBUG("INFO_MODE", "Button Released: %d", e.data1);
     // Here you can add code to handle button releases if needed
 }
 
@@ -168,7 +168,7 @@ void InformationModeComp::respawnTask(void *pvParameters)
         return;
     }
 
-    LOG_DEBUG("INFO_MODE", "Respawn task started %d", respawnTime);
+    LOG_INFO("INFO_MODE", "Respawn task started %d", respawnTime);
 
     while (respawnTaskBit)
     {
@@ -180,7 +180,7 @@ void InformationModeComp::respawnTask(void *pvParameters)
         }
         vTaskDelay(pdMS_TO_TICKS(1000)); 
     }
-    LOG_DEBUG("INFO_MODE", "Respawn task aborted");
+    LOG_INFO("INFO_MODE", "Respawn task aborted");
     vTaskDelete(NULL);
 }
 
