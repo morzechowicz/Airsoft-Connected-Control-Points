@@ -109,7 +109,7 @@ void LCDScreen::kothDisplayCapturingProgress(float progress)
     int progressBarWidth = (int)(progress * 16);
     char progressStr[17]; 
     for(int i = 0; i < progressBarWidth; i++) {
-        progressStr[i] = '=';
+        progressStr[i] = '#';
     }
     progressStr[progressBarWidth] = '\0';
     snprintf(msg.lines[1], sizeof(msg.lines[1]), "%s", progressStr);
