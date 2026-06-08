@@ -1,3 +1,0 @@
-TO DO
-check all log msg and see if they make sense
-maybe add logging  storage later
