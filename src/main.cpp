@@ -78,7 +78,10 @@ void batVoltageTask(void *pvParameters)
 #endif
 void setup()
 {
-    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
+    #ifdef LOG_LEVEL
+    LOG.begin(LOG_LEVEL, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
+    
+    #endif
     LOG.enableColors(true);
     LOG.setTimestamps(true);
 
