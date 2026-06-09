@@ -269,6 +269,7 @@ void KOTHServer::endGame(Team winner)
         vTaskDelay(500);
     }
     //send to information node
+    //yes information node needs this info absolutly they cant relay on simple broadcast
     for(int nodeIndex = 0; nodeIndex < config.nodeCount; nodeIndex++)
     {
         if(config.nodeIds[nodeIndex].Id == 0xFF)

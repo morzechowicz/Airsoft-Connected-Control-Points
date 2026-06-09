@@ -72,9 +72,9 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     {
         LOG_INFO("HANDLER", "Received discovery request from master at address %s", params[1].c_str());
         uint8_t masterAddress = params[1].toInt();
-// If this is an information node, we do not want to respond to discovery messages
-#if NODE_TYPE == INFORMATION || NODE_TYPE == BLEToLoRa || NODE_TYPE == HEADLESS
-        LOG_DEBUG("HANDLER", "Not sending response because this is an information node or BLEToLoRa node or Headless node");
+        
+#if NODE_TYPE == BLEToLoRa || NODE_TYPE == HEADLESS
+        LOG_DEBUG("HANDLER", "Not sending response because this is an BLEToLoRa node or Headless node");
         return;
 #endif
         eventBus.publish(NETWORK_DISCOVER, masterAddress);

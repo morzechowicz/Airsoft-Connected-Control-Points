@@ -47,6 +47,7 @@ void GameManager::onConfKoth(Event e)
     LOG_INFO("GAME_MANAGER", "Countdown started");
 
     String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes,kothConfig.respawnTime);
+    //change it to smething that sends config to everyone and confirms it
     networkManager->broadcast(configBroadcast);
 
     startCountdownTask(countdown);
@@ -277,18 +278,15 @@ GameManager::~GameManager()
 
 void GameManager::onNewNode(Event e)
 {
-    if (e.data2 == INFORMATION || e.data2 == CAPTURE_POINT)
-    {
-        return;
-    }
+    //why i added this and what it does?
+    // if (e.data2 == INFORMATION || e.data2 == CAPTURE_POINT)
+    // {
+    //     return;
+    // }
     if (!kothConfig.hasNode(e.data1))
     {
         kothConfig.addNode(e.data1,e.data2);
-        eventBus->publish(DEBUG, SEARCH, "Node" + String(e.data1) + " added \n");
-        if(NODE_TYPE == INFORMATION)
-        {
-            return;
-        }
+        LOG_INFO("GAME_MANAGER", "New node added: %d, type: %d", e.data1, e.data2);
         String nodes = "";
         for (int i = 0; i < kothConfig.nodeCount; i++)
         {
@@ -326,13 +324,11 @@ void GameManager::onDiscovered(Event e)
             LOG_ERROR("GAME_MANAGER", "Received discovery event but this is a forwarder node");
             return;
         #endif
-        #ifdef NODE_TYPE
         networkManager->setAsClient(e.data1);
         String response = Protocol::buildDiscoverResponse(LORA_ADDRESS, NODE_TYPE);
         LOG_INFO("GAME_MANAGER", "Responding with: %s", response.c_str());
         vTaskDelay(pdMS_TO_TICKS(200) * LORA_ADDRESS); // small delay times node id to avoid collisons
         networkManager->sendToMain(response);
-        #endif
     }
 }
 
