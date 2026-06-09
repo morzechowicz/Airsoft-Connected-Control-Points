@@ -173,7 +173,9 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
     }
     case GAME_FORCE_RESPAWN:
     {
-        eventBus.publish(GAME_FORCE_RESPAWN);
+        // i have feeling i will need this int later
+        int controllInter = Protocol::parseIntParam(params[1], 0);
+        eventBus.publish(GAME_FORCE_RESPAWN, controllInter);
         break;
     }
     default:
