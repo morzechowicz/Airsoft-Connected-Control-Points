@@ -57,6 +57,7 @@ enum EventType
     UNKNOWN,
     FORWARD,
     TEST,
+    DEMO,
 
     //tests 
     TEST_BROADCAST,
