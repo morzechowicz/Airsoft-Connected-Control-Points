@@ -50,5 +50,6 @@ private:
     void startRespawnTask();
     void respawnHelper();
     void killRespawnTask();
+    void forceRespawn();
 };
 #endif // INFORMATION_MODE_COMP_H

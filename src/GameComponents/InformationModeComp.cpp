@@ -1,5 +1,6 @@
 #include "InformationModeComp.h"
 static volatile bool respawnTaskBit;
+static volatile unsigned long lastRespawnTime;
 
 InformationModeComp::InformationModeComp(EventBus *eventBus, HardwareManager *hardware, NetworkManager *network, KOTHConfig config) : eventBus(eventBus),
                                                                                                                                       hardware(hardware),
@@ -38,7 +39,7 @@ void InformationModeComp::start()
                         { this->onScoreUpdate(e); });
     // Subscribe to force respawn event
     eventBus->subscribe(GAME_FORCE_RESPAWN, [this](Event e)
-                        { this->respawnHelper(); });
+                        { this->forceRespawn(); });
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
     startRespawnTask();
@@ -158,11 +159,17 @@ void InformationModeComp::killRespawnTask()
     respawnTaskBit = false;
 }
 
+void InformationModeComp::forceRespawn()
+{
+    lastRespawnTime = millis();
+    respawnHelper();
+}
+
 void InformationModeComp::respawnTask(void *pvParameters)
 {
     int respawnTime = static_cast<InformationModeComp *>(pvParameters)->config.respawnTime;
     respawnTaskBit = true;
-    long lastRespawnTime = xTaskGetTickCount();
+    lastRespawnTime = millis();
 
     if (respawnTime <= 0)
     {
@@ -175,11 +182,11 @@ void InformationModeComp::respawnTask(void *pvParameters)
     uint64_t respawnTimeInTicks = pdMS_TO_TICKS(respawnTime * 60 * 1000);
     while (respawnTaskBit)
     {
-        if (xTaskGetTickCount() - lastRespawnTime >= respawnTimeInTicks)
+        if (millis() - lastRespawnTime >= respawnTimeInTicks)
         {
             LOG_INFO("INFO_MODE", "Respawn time reached");
             static_cast<InformationModeComp *>(pvParameters)->respawnHelper();
-            lastRespawnTime = xTaskGetTickCount();
+            lastRespawnTime = millis();
         }
         vTaskDelay(pdMS_TO_TICKS(1000)); 
     }

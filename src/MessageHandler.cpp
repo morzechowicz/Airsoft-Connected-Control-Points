@@ -171,6 +171,11 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
         eventBus.publish(GAME_REQUEST_START_CONF, nodeID);
         break;
     }
+    case GAME_FORCE_RESPAWN:
+    {
+        eventBus.publish(GAME_FORCE_RESPAWN);
+        break;
+    }
     default:
         break;
     }
