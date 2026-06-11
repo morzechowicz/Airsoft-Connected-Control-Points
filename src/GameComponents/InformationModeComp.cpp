@@ -1,5 +1,6 @@
 #include "InformationModeComp.h"
 static volatile bool respawnTaskBit;
+static volatile unsigned long lastRespawnTime;
 
 InformationModeComp::InformationModeComp(EventBus *eventBus, HardwareManager *hardware, NetworkManager *network, KOTHConfig config) : eventBus(eventBus),
                                                                                                                                       hardware(hardware),
@@ -36,6 +37,9 @@ void InformationModeComp::start()
     // Subscribe to score updates
     eventBus->subscribe(KOTH_SCORE_UPDATE, [this](Event e)
                         { this->onScoreUpdate(e); });
+    // Subscribe to force respawn event
+    eventBus->subscribe(GAME_FORCE_RESPAWN, [this](Event e)
+                        { this->forceRespawn(); });
     hardware->buzzer.beepOnce(4000);
     updateDisplay();
     startRespawnTask();
@@ -155,11 +159,17 @@ void InformationModeComp::killRespawnTask()
     respawnTaskBit = false;
 }
 
+void InformationModeComp::forceRespawn()
+{
+    lastRespawnTime = millis();
+    respawnHelper();
+}
+
 void InformationModeComp::respawnTask(void *pvParameters)
 {
     int respawnTime = static_cast<InformationModeComp *>(pvParameters)->config.respawnTime;
     respawnTaskBit = true;
-    long lastRespawnTime = xTaskGetTickCount();
+    lastRespawnTime = millis();
 
     if (respawnTime <= 0)
     {
@@ -169,14 +179,14 @@ void InformationModeComp::respawnTask(void *pvParameters)
     }
 
     LOG_DEBUG("INFO_MODE", "Respawn task started %d", respawnTime);
-
+    uint64_t respawnTimeInTicks = pdMS_TO_TICKS(respawnTime * 60 * 1000);
     while (respawnTaskBit)
     {
-        if (xTaskGetTickCount() - lastRespawnTime >= pdMS_TO_TICKS(respawnTime * 60 * 1000))
+        if (millis() - lastRespawnTime >= respawnTimeInTicks)
         {
             LOG_INFO("INFO_MODE", "Respawn time reached");
             static_cast<InformationModeComp *>(pvParameters)->respawnHelper();
-            lastRespawnTime = xTaskGetTickCount();
+            lastRespawnTime = millis();
         }
         vTaskDelay(pdMS_TO_TICKS(1000)); 
     }
