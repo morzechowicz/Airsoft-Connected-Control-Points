@@ -230,6 +230,11 @@ void GameManager::onGameStarted(Event e)
 #endif
 #if NODE_TYPE == INFORMATION
     LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
+    //check if info node exists before creating new one
+    if(infoNode)    {
+        LOG_WARN("GAME_MANAGER", "Information node already exists, not creating another one");
+        return;
+    }
     infoNode = new InformationModeComp(eventBus, hardwareManager, networkManager, kothConfig);
     infoNode->start();
     return;
