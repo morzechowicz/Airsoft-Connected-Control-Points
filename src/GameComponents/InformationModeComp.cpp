@@ -149,7 +149,7 @@ void InformationModeComp::resumeGame(Event e)
 
 void InformationModeComp::respawnHelper()
 {
-    hardware->buzzer.beep(100, 5, 300);
+    hardware->buzzer.beep(600, 5, 500);
     hardware->lcd.displayRespawn();
     updateDisplay();
 }
