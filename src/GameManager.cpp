@@ -120,7 +120,7 @@ void GameManager::startCountdownTask(int countdown)
             mgr->countdownHandler = nullptr;
             vTaskDelete(NULL);
         },
-        "CountdownTask", 2048, params, 1, &countdownHandler);
+        "CountdownTask", 4096, params, 1, &countdownHandler);
 
     LOG_DEBUG("GAME_MANAGER", "Created countdown task: %p", (void *)countdownHandler);
 }
