@@ -72,16 +72,16 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     {
         LOG_INFO("HANDLER", "Received discovery request from main node at address %s", params[1].c_str());
         uint8_t masterAddress = params[1].toInt();
-// If this is an information node, we do not want to respond to discovery messages
-#if NODE_TYPE == INFORMATION || NODE_TYPE == BLEToLoRa || NODE_TYPE == HEADLESS
-        LOG_DEBUG("HANDLER", "Not sending response because this is an information node or BLEToLoRa node or Headless node");
+        
+#if NODE_TYPE == BLEToLoRa || NODE_TYPE == HEADLESS
+        LOG_DEBUG("HANDLER", "Not sending response because this is an BLEToLoRa node or Headless node");
         return;
 #endif
         eventBus.publish(NETWORK_DISCOVER, masterAddress);
     }
     if (cmd.toInt() == NETWROK_REPORT)
     {
-        eventBus.publish(NETWROK_REPORT, params[1].toInt());
+        eventBus.publish(NETWROK_REPORT, params[1].toInt(), params[2].toInt());
     }
     if (cmd.toInt() == POWER_RESET)
     {
@@ -169,6 +169,13 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
     {
         int nodeID = Protocol::parseIntParam(params[1], 0);
         eventBus.publish(GAME_REQUEST_START_CONF, nodeID);
+        break;
+    }
+    case GAME_FORCE_RESPAWN:
+    {
+        // i have feeling i will need this int later
+        int controllInter = Protocol::parseIntParam(params[1], 0);
+        eventBus.publish(GAME_FORCE_RESPAWN, controllInter);
         break;
     }
     default:

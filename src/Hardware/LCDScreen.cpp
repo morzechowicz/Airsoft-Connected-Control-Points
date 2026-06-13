@@ -106,7 +106,14 @@ void LCDScreen::kothDisplayCapturing(Team capturingTeam)
 void LCDScreen::kothDisplayCapturingProgress(float progress)
 {
     LcdDisplayMessage msg{};
-    snprintf(msg.lines[1], sizeof(msg.lines[1]), "PROGRESS: %3.0f%", progress * 100);
+    int progressBarWidth = (int)(progress * 16);
+    char progressStr[17]; 
+    for(int i = 0; i < progressBarWidth; i++) {
+        progressStr[i] = '#';
+    }
+    progressStr[progressBarWidth] = '\0';
+    snprintf(msg.lines[1], sizeof(msg.lines[1]), "%s", progressStr);
+
     postNormal(msg);
     LOG_DEBUG("LCD_SCREEN", "Displayed capturing progress: %3.0f%%", progress * 100);
 }
