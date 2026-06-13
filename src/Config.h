@@ -108,4 +108,7 @@
 #define LOCALIZER_BEEP_FULL 9000UL
 #define SCORING_INTERVAL_MS 60000UL
 
+//Max Capture nodes
+#define MAX_CAPTURE_NODES 10
+
 #endif // CONFIG_H
