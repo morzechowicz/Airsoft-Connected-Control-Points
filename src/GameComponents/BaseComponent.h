@@ -54,20 +54,20 @@ protected:
             return;
         }
         
-        LOG_INFO("BASE_COMPONENT", "Task entry - calling enterMode()");
+        LOG_DEBUG("BASE_COMPONENT", "Task entry - calling enterMode()");
         self->enterMode();
         
-        LOG_INFO("BASE_COMPONENT", "Task entry - calling run()");
+        LOG_DEBUG("BASE_COMPONENT", "Task entry - calling run()");
         self->run();
         
-        LOG_INFO("BASE_COMPONENT", "Task entry - calling exitMode()");
+        LOG_DEBUG("BASE_COMPONENT", "Task entry - calling exitMode()");
         self->exitMode();
         
         // Clear handle before deleting
         self->modeTaskHandle = nullptr;
         self->taskRunning = false;
         
-        LOG_INFO("BASE_COMPONENT", "Task entry - deleting task");
+        LOG_DEBUG("BASE_COMPONENT", "Task entry - deleting task");
         vTaskDelete(NULL);
         self->~BaseComponent();  // Ensure destructor is called
     }

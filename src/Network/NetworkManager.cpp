@@ -42,7 +42,7 @@ void NetworkManager::sendToMain(const String &message)
     
     if (networkReady && role == ROLE_CLIENT)
     {
-        LOG_INFO("NETWORK", "Sending message to master (0x%02X)", masterAddress);
+        LOG_DEBUG("NETWORK", "Sending message to master (0x%02X)", masterAddress);
         sendTo(masterAddress, message);
     }
 }
@@ -120,7 +120,7 @@ bool NetworkManager::sendToAll(const std::vector<uint8_t> &addresses, const Stri
 
     if ((result & expectedBits) == expectedBits)
     {
-        LOG_INFO("NETWORK", "All nodes confirmed");
+        LOG_DEBUG("NETWORK", "All nodes confirmed");
         return true;
     }
 
@@ -208,7 +208,7 @@ void NetworkManager::addKnownNode(uint8_t address)
         info.isAlive = false;
 
         knownNodes.push_back(info);
-        LOG_INFO("NETWORK", "Added node 0x%02X to known list", address);
+        LOG_DEBUG("NETWORK", "Added node 0x%02X to known list", address);
 
         xSemaphoreGive(nodeListMutex);
     }
@@ -322,7 +322,7 @@ void NetworkManager::handlePollRequest(const ReceivedPacket &packet)
         {
             // Found my slot! Wait and respond
             uint32_t myDelay = pos * slotMs;
-            LOG_INFO("NETWORK", "TDMA poll: responding in slot %d (%dms)", pos, myDelay);
+            LOG_DEBUG("NETWORK", "TDMA poll: responding in slot %d (%dms)", pos, myDelay);
 
             vTaskDelay(pdMS_TO_TICKS(myDelay));
 

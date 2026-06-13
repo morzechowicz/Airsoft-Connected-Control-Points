@@ -49,7 +49,7 @@ bool LoRaSComm::begin(uint8_t address,
     // Validate address
     if (!LoRaSCommPacketCodec::isValidAddress(address) || address == LORASCOMM_BROADCAST_ADDR)
     {
-        LOG_INFO("LoRaSComm", "Invalid address: 0x%02X. Must be 0x01-0xFE (0xFF is broadcast)", address);
+        LOG_ERROR("LoRaSComm", "Invalid address: 0x%02X. Must be 0x01-0xFE (0xFF is broadcast)", address);
         return false;
     }
 
@@ -78,7 +78,7 @@ bool LoRaSComm::begin(uint8_t address,
     if (state != RADIOLIB_ERR_NONE)
     {
         LOG_ERROR("LoRaSComm", "Failed to set explicit header mode, code %d", state);
-        LOG_ERROR("LoRaSComm", "Error: %d", state);
+        LOG_ERROR("LoRaSComm", "%d", state);
         return false;
     }
 
@@ -96,14 +96,14 @@ bool LoRaSComm::begin(uint8_t address,
     rxQueue = xQueueCreate(LORASCOMM_RX_QUEUE_SIZE, sizeof(ReceivedPacket));
     if (rxQueue == nullptr)
     {
-        LOG_ERROR("LoRaSComm", "Error: Failed to create RX queue");
+        LOG_ERROR("LoRaSComm", "Failed to create RX queue");
         return false;
     }
 
     txQueue = xQueueCreate(LORASCOMM_TX_QUEUE_SIZE, sizeof(TxQueueItem));
     if (txQueue == nullptr)
     {
-        LOG_ERROR("LoRaSComm", "Error: Failed to create TX queue");
+        LOG_ERROR("LoRaSComm", "Failed to create TX queue");
         vQueueDelete(rxQueue);
         return false;
     }
@@ -111,7 +111,7 @@ bool LoRaSComm::begin(uint8_t address,
     ackPendingQueue = xQueueCreate(LORASCOMM_ACK_PENDING_SIZE, sizeof(PendingAck));
     if (ackPendingQueue == nullptr)
     {
-        LOG_ERROR("LoRaSComm", "Error: Failed to create ACK pending queue");
+        LOG_ERROR("LoRaSComm", "Failed to create ACK pending queue");
         vQueueDelete(rxQueue);
         vQueueDelete(txQueue);
         return false;
@@ -120,7 +120,7 @@ bool LoRaSComm::begin(uint8_t address,
     radioMutex = xSemaphoreCreateMutex();
     if (radioMutex == nullptr)
     {
-        LOG_ERROR("LoRaSComm", "Error: Failed to create radio mutex");
+        LOG_ERROR("LoRaSComm", "Failed to create radio mutex");
         vQueueDelete(rxQueue);
         vQueueDelete(txQueue);
         vQueueDelete(ackPendingQueue);
@@ -143,7 +143,7 @@ bool LoRaSComm::begin(uint8_t address,
 
     if (result != pdPASS)
     {
-        LOG_ERROR("LoRaSComm", "Error: Failed to create RX task");
+        LOG_ERROR("LoRaSComm", "Failed to create RX task");
         end();
         return false;
     }
@@ -159,7 +159,7 @@ bool LoRaSComm::begin(uint8_t address,
 
     if (result != pdPASS)
     {
-        LOG_ERROR("LoRaSComm", "Error: Failed to create TX task");
+        LOG_ERROR("LoRaSComm", "Failed to create TX task");
         end();
         return false;
     }
@@ -175,7 +175,7 @@ bool LoRaSComm::begin(uint8_t address,
 
     if (result != pdPASS)
     {
-        LOG_ERROR("LoRaSComm", "Error: Failed to create User task");
+        LOG_ERROR("LoRaSComm", "Failed to create User task");
         end();
         return false;
     }
@@ -275,19 +275,19 @@ bool LoRaSComm::sendUnreliable(uint8_t dest, const uint8_t *data, size_t len)
 {
     if (!initialized)
     {
-        LOG_ERROR("LoRaSComm", "Error: Not initialized");
+        LOG_ERROR("LoRaSComm", "Not initialized");
         return false;
     }
 
     if (len > LORASCOMM_MAX_PAYLOAD_SIZE)
     {
-        LOG_ERROR("LoRaSComm", "Error: Payload too large");
+        LOG_ERROR("LoRaSComm", "Payload too large");
         return false;
     }
 
     if (!LoRaSCommPacketCodec::isValidAddress(dest))
     {
-        LOG_ERROR("LoRaSComm", "Error: Invalid destination address");
+        LOG_ERROR("LoRaSComm", "Invalid destination address");
         return false;
     }
 
@@ -299,7 +299,7 @@ bool LoRaSComm::sendUnreliable(uint8_t dest, const uint8_t *data, size_t len)
 
     if (xQueueSend(txQueue, &item, pdMS_TO_TICKS(100)) != pdTRUE)
     {
-        LOG_ERROR("LoRaSComm", "Error: TX queue full");
+        LOG_ERROR("LoRaSComm", "TX queue full");
         return false;
     }
 
@@ -310,25 +310,25 @@ bool LoRaSComm::sendReliable(uint8_t dest, const uint8_t *data, size_t len, Even
 {
     if (!initialized)
     {
-        LOG_ERROR("LoRaSComm", "Error: Not initialized");
+        LOG_ERROR("LoRaSComm", "Not initialized");
         return false;
     }
 
     if (len > LORASCOMM_MAX_PAYLOAD_SIZE)
     {
-        LOG_ERROR("LoRaSComm", "Error: Payload too large");
+        LOG_ERROR("LoRaSComm", "Payload too large");
         return false;
     }
 
     if (!LoRaSCommPacketCodec::isValidAddress(dest))
     {
-        LOG_ERROR("LoRaSComm", "Error: Invalid destination address");
+        LOG_ERROR("LoRaSComm", "Invalid destination address");
         return false;
     }
 
     if (dest == LORASCOMM_BROADCAST_ADDR)
     {
-        LOG_ERROR("LoRaSComm", "Error: Cannot send reliable to broadcast address");
+        LOG_ERROR("LoRaSComm", "Cannot send reliable to broadcast address");
         return false;
     }
 
@@ -342,7 +342,7 @@ bool LoRaSComm::sendReliable(uint8_t dest, const uint8_t *data, size_t len, Even
 
     if (xQueueSend(txQueue, &item, pdMS_TO_TICKS(100)) != pdTRUE)
     {
-        LOG_ERROR("LoRaSComm", "Error: TX queue full");
+        LOG_ERROR("LoRaSComm", "TX queue full");
         return false;
     }
 
@@ -353,19 +353,19 @@ bool LoRaSComm::testSendAck(uint8_t dest)
 {
     if (!initialized)
     {
-        LOG_ERROR("LoRaSComm", "Error: Not initialized");
+        LOG_ERROR("LoRaSComm", "Not initialized");
         return false;
     }
 
     if (!LoRaSCommPacketCodec::isValidAddress(dest))
     {
-        LOG_ERROR("LoRaSComm", "Error: Invalid destination address");
+        LOG_ERROR("LoRaSComm", "Invalid destination address");
         return false;
     }
 
     if (dest == LORASCOMM_BROADCAST_ADDR)
     {
-        LOG_ERROR("LoRaSComm", "Error: Cannot send reliable to broadcast address");
+        LOG_ERROR("LoRaSComm", "Cannot send reliable to broadcast address");
         return false;
     }
 
@@ -438,7 +438,7 @@ void LoRaSComm::rxTask(void *params)
                         instance->lastRssi = instance->radio->getRSSI();
                         instance->lastSnr = instance->radio->getSNR();
 
-                        LOG_INFO("LoRaSComm", "[RX Task] Raw packet received, len=%d, RSSI=%d\n", len, instance->lastRssi);
+                        LOG_DEBUG("LoRaSComm", "[RX Task] Raw packet received, len=%d, RSSI=%d\n", len, instance->lastRssi);
 
                         // Decode packet
                         LoRaSCommPacket packet;
@@ -451,10 +451,10 @@ void LoRaSComm::rxTask(void *params)
                         else
                         {
                             LOG_ERROR("LoRaSComm", "CRC validation failed");
-                            LOG_INFO("LoRaSComm", "Raw data: ");
+                            LOG_DEBUG("LoRaSComm", "Raw data: ");
                             for (size_t i = 0; i < len && i < 32; i++)
                             {
-                                LOG_INFO("LoRaSComm", "%02X ", buffer[i]);
+                                LOG_DEBUG("LoRaSComm", "%02X ", buffer[i]);
                             }
                         }
                     }
@@ -512,7 +512,7 @@ void LoRaSComm::txTask(void *params)
                 if (packetSize > 0 && instance->transmitPacket(buffer, packetSize))
                 {
                     instance->txPacketCount++;
-                    LOG_INFO("LoRaSComm", "[TX Task] Sent ACK to 0x%02X seq=%d", txItem.destAddr, sequence);
+                    LOG_DEBUG("LoRaSComm", "[TX Task] Sent ACK to 0x%02X seq=%d", txItem.destAddr, sequence);
                 }
                 else if (packetSize > 0)
                 {
@@ -529,7 +529,7 @@ void LoRaSComm::txTask(void *params)
                 if (packetSize > 0 && instance->transmitPacket(buffer, packetSize))
                 {
                     instance->txPacketCount++;
-                    LOG_INFO("LoRaSComm", "[TX Task] Sent NACK to 0x%02X seq=%d", txItem.destAddr, sequence);
+                    LOG_DEBUG("LoRaSComm", "[TX Task] Sent NACK to 0x%02X seq=%d", txItem.destAddr, sequence);
                 }
                 else if (packetSize > 0)
                 {
@@ -557,7 +557,7 @@ void LoRaSComm::txTask(void *params)
                 if (packetSize > 0 && instance->transmitPacket(buffer, packetSize))
                 {
                     instance->txPacketCount++;
-                    LOG_INFO("LoRaSComm", "[TX Task] Forwarded packet from 0x%02X to 0x%02X seq=%d TTL=%d",
+                    LOG_DEBUG("LoRaSComm", "[TX Task] Forwarded packet from 0x%02X to 0x%02X seq=%d TTL=%d",
                              txItem.originalSrcAddr, txItem.destAddr, txItem.originalSequence, ttl);
                 }
                 else if (packetSize > 0)
@@ -609,7 +609,7 @@ void LoRaSComm::txTask(void *params)
                             }
                         }
 
-                        LOG_INFO("LoRaSComm", "[TX Task] Sent %s to 0x%02X seq=%d size=%d",
+                        LOG_DEBUG("LoRaSComm", "[TX Task] Sent %s to 0x%02X seq=%d size=%d",
                                  txItem.packetType == PACKET_DATA_RELIABLE ? "RELIABLE" : "UNRELIABLE",
                                  txItem.destAddr, sequence, packetSize);
                     }
@@ -684,7 +684,7 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
         {
             // Still send ACK — sender clearly didn't get it last time
             enqueueAck(packet.header.srcAddr, packet.header.sequence);
-            LOG_INFO("LoRaSComm", "[RX] Duplicate seq=%d from 0x%02X, ACK resent, discarded",
+            LOG_DEBUG("LoRaSComm", "[RX] Duplicate seq=%d from 0x%02X, ACK resent, discarded",
                      packet.header.sequence, packet.header.srcAddr);
             return;
         }
@@ -717,7 +717,7 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
             LOG_WARN("LoRaSComm", "[RX] Warning: RX queue full, packet dropped");
         }
 
-        LOG_INFO("LoRaSComm", "[RX] Received %s from 0x%02X, seq=%d, len=%d, RSSI=%d\n",
+        LOG_DEBUG("LoRaSComm", "[RX] Received %s from 0x%02X, seq=%d, len=%d, RSSI=%d\n",
                  packet.header.packetType == PACKET_DATA_RELIABLE ? "RELIABLE" : "UNRELIABLE",
                  packet.header.srcAddr, packet.header.sequence,
                  packet.header.payloadLen, lastRssi);
@@ -738,7 +738,7 @@ void LoRaSComm::handleReceivedPacket(const LoRaSCommPacket &packet)
                 if (pending.destAddr == packet.header.srcAddr &&
                     pending.sequence == packet.header.sequence)
                 {
-                    LOG_INFO("LoRaSComm", "[RX] Received %s from 0x%02X for seq=%d\n",
+                    LOG_DEBUG("LoRaSComm", "[RX] Received %s from 0x%02X for seq=%d\n",
                              packet.header.packetType == PACKET_ACK ? "ACK" : "NACK",
                              packet.header.srcAddr, packet.header.sequence);
                     // Match — don't put back, effectively removes it from queue
@@ -776,7 +776,7 @@ void LoRaSComm::forwardPacket(const LoRaSCommPacket &packet)
     // Deduplication — drop if we already forwarded this recently
     if (repeaterAlreadySeen(packet.header.srcAddr, packet.header.sequence))
     {
-        LOG_INFO("LoRaSComm", "[Repeater] Duplicate, dropping packet from 0x%02X seq=%d",
+        LOG_DEBUG("LoRaSComm", "[Repeater] Duplicate, dropping packet from 0x%02X seq=%d",
                  packet.header.srcAddr, packet.header.sequence);
         return;
     }
@@ -806,7 +806,7 @@ void LoRaSComm::forwardPacket(const LoRaSCommPacket &packet)
     }
 
     repeaterForwardCount++;
-    LOG_INFO("LoRaSComm", "[Repeater] Queued forward from 0x%02X to 0x%02X seq=%d TTL=%d",
+    LOG_DEBUG("LoRaSComm", "[Repeater] Queued forward from 0x%02X to 0x%02X seq=%d TTL=%d",
              packet.header.srcAddr, packet.header.destAddr,
              packet.header.sequence, packet.header.flags - 1);
 }
@@ -841,6 +841,7 @@ void LoRaSComm::sendAck(uint8_t dest, uint8_t sequence)
     if (packetSize > 0)
     {
         transmitPacket(buffer, packetSize);
+        //this will stay as info for now
         LOG_INFO("LoRaSComm", "[TX] Sent ACK to 0x%02X for seq=%d\n", dest, sequence);
     }
 }
@@ -852,6 +853,7 @@ void LoRaSComm::sendNack(uint8_t dest, uint8_t sequence)
     if (packetSize > 0)
     {
         transmitPacket(buffer, packetSize);
+        //this will stay as info for now
         LOG_INFO("LoRaSComm", "[TX] Sent NACK to 0x%02X for seq=%d\n", dest, sequence);
     }
 }
@@ -901,7 +903,7 @@ bool LoRaSComm::transmitPacket(const uint8_t *buffer, size_t len)
 
         if (cadResult == RADIOLIB_CHANNEL_FREE)
         {
-            LOG_INFO("LoRaSComm", "[LBT] Channel clear, transmitting");
+            LOG_DEBUG("LoRaSComm", "[LBT] Channel clear, transmitting");
             break;
         }
 
@@ -916,7 +918,8 @@ bool LoRaSComm::transmitPacket(const uint8_t *buffer, size_t len)
         }
 
         uint32_t backoff = (esp_random() % (LORASCOMM_LBT_MAX_BACKOFF_MS - LORASCOMM_LBT_MIN_BACKOFF_MS)) + LORASCOMM_LBT_MIN_BACKOFF_MS;
-        LOG_WARN("LoRaSComm", "[LBT] Preamble detected, backoff %dms", backoff);
+        // technicly a warn but its expected so stay in debug
+        LOG_DEBUG("LoRaSComm", "[LBT] Preamble detected, backoff %dms", backoff);
 
         xSemaphoreGive(radioMutex);
         vTaskDelay(pdMS_TO_TICKS(backoff));
@@ -972,7 +975,7 @@ void LoRaSComm::processAckTimeout()
 
                     if (transmitPacket(buffer, packetSize))
                     {
-                        LOG_INFO("LoRaSComm", "[TX] Retry %d/%d for seq=%d to 0x%02X\n",
+                        LOG_DEBUG("LoRaSComm", "[TX] Retry %d/%d for seq=%d to 0x%02X\n",
                                  pending.retryCount, maxRetries,
                                  pending.sequence, pending.destAddr);
 
