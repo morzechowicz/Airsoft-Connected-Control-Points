@@ -7,6 +7,7 @@
 #include "Config.h"
 #include "../lib/Logging/LogManager.h"
 #include "Network/ConnectionTester.h"
+#include "Hardware/AudioVisualDemo.h"
 
 EventBus eventBus;
 MessageHandler msgHandler(eventBus);
@@ -14,6 +15,7 @@ HardwareManager hardware(&eventBus);
 NetworkManager network(eventBus, msgHandler);
 ConnectionTester connectionTester(&network, &hardware, &eventBus);
 BleSetup ble(eventBus, msgHandler);
+AudioVisualDemo demo(&hardware, &eventBus);
 
 extern uint8_t myNodeId;
 
@@ -142,6 +144,7 @@ void setup()
 #endif
 
     hardware.lcd.displayText(dsp);
+    demo.init();
 }
 
 void loop()

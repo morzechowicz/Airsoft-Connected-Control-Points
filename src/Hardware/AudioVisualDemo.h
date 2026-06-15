@@ -25,7 +25,7 @@ public:
 
     void init();
     void demoEventListener(Event e);
-    void audioDemo(AudioSignalLenght signalLength, int numberOfSignals);
+    void audioDemo(AudioSignalLenght signalLength, int numberOfSignals = 1);
     void captureDemo(int captureTime = 5000);
     void respawnDemo();
 };

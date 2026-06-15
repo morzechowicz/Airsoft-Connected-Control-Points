@@ -38,7 +38,8 @@ void AudioVisualDemo::demoEventListener(Event e)
 
 void AudioVisualDemo::audioDemo(AudioSignalLenght signalLength, int numberOfSignals)
 {
-    int durration;
+    LOG_DEBUG("DEMO","audioDemo  type: %d", signalLength);
+    int durration = 1000;
     if(signalLength == SHORT)
     {
         durration = 200;
@@ -50,13 +51,12 @@ void AudioVisualDemo::audioDemo(AudioSignalLenght signalLength, int numberOfSign
     else if(signalLength == LONG)
     {
         durration = 4000;
+    }else{
+        LOG_ERROR("DEMO","Audio demo unspecified");
     }
 
-    for(int i = 0; i < numberOfSignals; i++)
-    {
-        hardwareManager->buzzer.beepOnce(durration);
-        vTaskDelay(pdMS_TO_TICKS(1000)); //TO DO: standarize delay for all audio signals
-    }
+    hardwareManager->buzzer.beep(durration,numberOfSignals,500);
+    vTaskDelay(pdMS_TO_TICKS(1000)); //TO DO: standarize delay for all audio signals
 
 }
 
@@ -84,5 +84,5 @@ void AudioVisualDemo::captureDemo(int captureTime)
 void AudioVisualDemo::respawnDemo()
 {
     hardwareManager->lcd.displayRespawn();
-    hardwareManager->buzzer.beep(100, 5, 300);
+    hardwareManager->buzzer.beep(600, 5, 500);
 }
