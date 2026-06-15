@@ -18,6 +18,9 @@ private:
     HardwareManager *hardwareManager;
     EventBus *eventBus;
 
+    void testConnection(Event e);
+    void testConnectionCommand(Event e);
+    void testConnectionResponse(Event e);
 };
 
 #endif // CONNECTION_TESTER_H

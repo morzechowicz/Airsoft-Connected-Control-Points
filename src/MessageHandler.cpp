@@ -225,15 +225,11 @@ void MessageHandler::handleTestMessage(const String &cmd, const String params[],
 {
     uint16_t fromNode = Protocol::parseIntParam(params[1], 0);
     uint8_t packetId = Protocol::parseIntParam(params[2], 0);
-    if (cmd.toInt() == TEST_BROADCAST)
+    if(cmd.toInt() == TEST_BEGIN)
     {
-        LOG_DEBUG("HANDLER", "Received TEST_BROADCAST message");
-        eventBus.publish(TEST_BROADCAST, fromNode, rssi, snr);
-    }
-    if (cmd.toInt() == TEST_BR_RESPONSE)
-    {
-        LOG_DEBUG("HANDLER", "Received TEST_BR_RESPONSE message");
-        eventBus.publish(TEST_BR_RESPONSE, fromNode, rssi, snr);
+        uint16_t targetNode = Protocol::parseIntParam(params[1], 0);
+        LOG_DEBUG("HANDLER", "Received TEST_BEGIN message");
+        eventBus.publish(TEST_BEGIN,targetNode);
     }
     if (cmd.toInt() == TEST_DIRECT)
     {

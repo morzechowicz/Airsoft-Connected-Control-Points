@@ -59,8 +59,7 @@ enum EventType
     TEST,
 
     //tests 
-    TEST_BROADCAST,
-    TEST_BR_RESPONSE,
+    TEST_BEGIN,
     TEST_DIRECT,
     TEST_DR_RESPONSE,
 

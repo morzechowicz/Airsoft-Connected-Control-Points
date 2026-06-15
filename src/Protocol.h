@@ -39,8 +39,6 @@ public:
     static String buildKothConfigClient(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime, uint8_t respawnTime);
 
     // Test message builders
-    static String buildTestBrMsg(uint8_t sourceId);
-    static String buildTestBrResponseMsg(uint8_t responderId);
     static String buildTestDrMsg(uint8_t targetNodeId, uint8_t packetId);
     static String buildTestDrResponseMsg(uint8_t responderId, uint8_t packetsReceived, uint8_t retryCount, int16_t rssi, float snr);
 
