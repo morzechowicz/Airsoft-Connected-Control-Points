@@ -33,10 +33,10 @@ public:
     static String buildDebugResponseMessage();;
 
     // KOTH Message builders
-    static String buildKothConfig(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime, uint8_t respawnTime);
+    static String buildKothConfig(uint16_t maxPoints, uint16_t countdown, uint16_t captureTime, uint16_t maxTime, uint16_t respawnTime);
     static String buildCaptureMessage(uint8_t nodeId, uint8_t teamId);
     static String buildScoreUpdateMessage(uint16_t time,uint16_t teamYPoints, uint16_t teamBPoints,uint16_t pairs,NodeState teamPoints[10]);
-    static String buildKothConfigClient(uint8_t maxPoints, uint8_t countdown, uint8_t captureTime, uint8_t maxTime, uint8_t respawnTime);
+    static String buildKothConfigClient(uint16_t maxPoints, uint16_t countdown, uint16_t captureTime, uint16_t maxTime, uint16_t respawnTime);
 
     // Test message builders
     static String buildTestBrMsg(uint8_t sourceId);
