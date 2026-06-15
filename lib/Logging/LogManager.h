@@ -32,6 +32,19 @@ enum LogLevel
 #define LOG_COLOR_WARN "\033[33m"  // Yellow
 #define LOG_COLOR_ERROR "\033[31m" // Red
 
+//Logs storage
+typedef struct {
+    uint64_t timestamp;
+    LogLevel  level;
+    char     msg[128];  
+} log_entry_t;
+
+#define LOG_DEPTH 512  // ~60KB?, remember power of 2
+static log_entry_t log_ring[LOG_DEPTH];
+static uint16_t log_head = 0;
+static uint16_t log_total = 0;  // saturates at LOG_DEPTH
+
+
 class LogManager
 {
 public:
@@ -55,6 +68,7 @@ public:
     void setTimestamps(bool enable);
     void setTags(bool enable);
     void setBLEStatus(bool connected);
+    void createBacklog();
 
     // Output callbacks (for BLE/LoRa)
     void setBLECallback(std::function<void(const char *)> callback);
@@ -96,6 +110,8 @@ private:
     bool useTimestamps;
     bool useTags;
     bool BLEConnected;
+    bool backLog = false;
+    QueueHandle_t logBacklogQueue;
 
     SemaphoreHandle_t logMutex;
 

@@ -41,7 +41,7 @@ void batVoltageTask(void *pvParameters);
 
 void batVoltStart()
 {
-    LOG_INFO("MAIN", "Starting battery voltage task for ");
+    LOG_DEBUG("MAIN", "Starting battery voltage task for ");
     // create test task
     xTaskCreate(
         batVoltageTask,   // Task function
@@ -78,9 +78,12 @@ void batVoltageTask(void *pvParameters)
 #endif
 void setup()
 {
-    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
+    #ifdef LOG_LEVEL
+    LOG.begin(LOG_LEVEL, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
+    
+    #endif
     LOG.enableColors(true);
-    LOG.setTimestamps(false);
+    LOG.setTimestamps(true);
 
     LOG_INFO("MAIN", "System starting...");
 

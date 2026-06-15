@@ -70,7 +70,7 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
 {
     if (cmd.toInt() == NETWORK_DISCOVER)
     {
-        LOG_INFO("HANDLER", "Received discovery request from master at address %s", params[1].c_str());
+        LOG_INFO("HANDLER", "Received discovery request from main node at address %s", params[1].c_str());
         uint8_t masterAddress = params[1].toInt();
         
 #if NODE_TYPE == BLEToLoRa || NODE_TYPE == HEADLESS
@@ -227,24 +227,24 @@ void MessageHandler::handleTestMessage(const String &cmd, const String params[],
     uint8_t packetId = Protocol::parseIntParam(params[2], 0);
     if (cmd.toInt() == TEST_BROADCAST)
     {
-        LOG_INFO("HANDLER", "Received TEST_BROADCAST message");
+        LOG_DEBUG("HANDLER", "Received TEST_BROADCAST message");
         eventBus.publish(TEST_BROADCAST, fromNode, rssi, snr);
     }
     if (cmd.toInt() == TEST_BR_RESPONSE)
     {
-        LOG_INFO("HANDLER", "Received TEST_BR_RESPONSE message");
+        LOG_DEBUG("HANDLER", "Received TEST_BR_RESPONSE message");
         eventBus.publish(TEST_BR_RESPONSE, fromNode, rssi, snr);
     }
     if (cmd.toInt() == TEST_DIRECT)
     {
-        LOG_INFO("HANDLER", "Received TEST_DIRECT message");
+        LOG_DEBUG("HANDLER", "Received TEST_DIRECT message");
         eventBus.publish(TEST_DIRECT, fromNode, rssi, snr);
     }
     if (cmd.toInt() == TEST_DR_RESPONSE)
     {
         uint8_t packetsReceived = Protocol::parseIntParam(params[2], 0);
         uint8_t retryCount = Protocol::parseIntParam(params[3], 0);
-        LOG_INFO("HANDLER", "Received TEST_DR_RESPONSE message");
+        LOG_DEBUG("HANDLER", "Received TEST_DR_RESPONSE message");
         eventBus.publish(TEST_DR_RESPONSE, fromNode, rssi, snr, packetId);
     }
 }

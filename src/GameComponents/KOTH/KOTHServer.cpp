@@ -29,7 +29,7 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
 
 KOTHServer::~KOTHServer()
 {
-    LOG_DEBUG("KOTH_SERVER", "Destroying KOTH Server");
+    LOG_INFO("KOTH_SERVER", "Destroying KOTH Server");
     eventBus->unsubscribe(KOTH_POINT_CAPTURED);
     eventBus->unsubscribe(PAUSE);
     eventBus->unsubscribe(RESUME);
@@ -113,7 +113,7 @@ void KOTHServer::exitMode()
 
 void KOTHServer::run()
 {
-    LOG_INFO("KOTH_SERVER", "KOTHServer::run() starting main loop");
+    LOG_INFO("KOTH_SERVER", "starting main loop");
 
     unsigned long lastUpdate = millis();
 
@@ -140,7 +140,7 @@ void KOTHServer::run()
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 
-    LOG_INFO("KOTH_SERVER", "KOTHServer::run() exiting loop");
+    LOG_INFO("KOTH_SERVER", "exiting main loop");
 }
 
 void KOTHServer::onCaptureRequest(Event e)
@@ -173,7 +173,7 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
     // Check if already controlled by this team
     if (node->controllingTeam == team)
     {
-        LOG_INFO("KOTH_SERVER", "Node %d already controlled by this team", nodeId);
+        LOG_WARN("KOTH_SERVER", "Node %d already controlled by this team", nodeId);
         return;
     }
 
@@ -390,7 +390,7 @@ void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
 void KOTHServer::gameScoreRequest(Event e)
 {
     uint8_t nodeId = e.data1;
-    LOG_DEBUG("KOTH_SERVER", "Received game score request from node %d", nodeId);
+    LOG_INFO("KOTH_SERVER", "Received game score request from node %d", nodeId);
     String msg = Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes);
     networkManager->sendTo(nodeId, msg);
 }
