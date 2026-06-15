@@ -7,6 +7,7 @@
 #include "Config.h"
 #include "../lib/Logging/LogManager.h"
 #include "Network/ConnectionTester.h"
+#include "Hardware/AudioVisualDemo.h"
 
 EventBus eventBus;
 MessageHandler msgHandler(eventBus);
@@ -14,6 +15,7 @@ HardwareManager hardware(&eventBus);
 NetworkManager network(eventBus, msgHandler);
 ConnectionTester connectionTester(&network, &hardware, &eventBus);
 BleSetup ble(eventBus, msgHandler);
+AudioVisualDemo demo(&hardware, &eventBus);
 
 extern uint8_t myNodeId;
 
@@ -41,7 +43,7 @@ void batVoltageTask(void *pvParameters);
 
 void batVoltStart()
 {
-    LOG_INFO("MAIN", "Starting battery voltage task for ");
+    LOG_DEBUG("MAIN", "Starting battery voltage task for ");
     // create test task
     xTaskCreate(
         batVoltageTask,   // Task function
@@ -78,9 +80,12 @@ void batVoltageTask(void *pvParameters)
 #endif
 void setup()
 {
-    LOG.begin(LOG_DEBUG, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
+    #ifdef LOG_LEVEL
+    LOG.begin(LOG_LEVEL, LOG_OUTPUT_SERIAL | LOG_OUTPUT_BLE);
+    
+    #endif
     LOG.enableColors(true);
-    LOG.setTimestamps(false);
+    LOG.setTimestamps(true);
 
     LOG_INFO("MAIN", "System starting...");
 
@@ -139,6 +144,7 @@ void setup()
 #endif
 
     hardware.lcd.displayText(dsp);
+    demo.init();
 }
 
 void loop()

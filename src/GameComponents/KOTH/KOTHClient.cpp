@@ -32,7 +32,7 @@ void KOTHClient::start()
     LOG_INFO("KOTH_CLIENT", "Game started!");
     LOG_INFO("KOTH_CLIENT", "Node ID: %d", myNodeId);
     LOG_INFO("KOTH_CLIENT", "Capture Time: %d ms", captureTimeMs);
-    captureTimeMs = captureTimeMs * 1000;
+    LOG_INFO("KOTH_CLIENT", "Max Game Time: %d minutes", maxGameTime);    captureTimeMs = captureTimeMs * 1000;
     currentController = Team::NONE;
     gameActive = true;
     locatingBeepSpacingUpdate = millis() + 5000;
@@ -214,7 +214,7 @@ void KOTHClient::startCapture(Team team)
         capturingTeam = team;
         captureStartTime = millis();
         hardware->lcd.kothDisplayCapturing(capturingTeam);
-        LOG_INFO("KOTH_CLIENT", "Started capturing for %s team", team == Team::YELLOW ? "YELLOW" : "BLUE");
+        LOG_DEBUG("KOTH_CLIENT", "Started capturing for %s team", team == Team::YELLOW ? "YELLOW" : "BLUE");
     }
 }
 
@@ -260,7 +260,7 @@ void KOTHClient::completeCapture()
     String msg = Protocol::buildCaptureMessage(myNodeId, (uint8_t)capturingTeam);
     if (network)
     {
-        LOG_INFO("KOTH_CLIENT", "Sending capture message to server");
+        LOG_DEBUG("KOTH_CLIENT", "Sending capture message to server");
         network->sendToMain(msg);
     }
 
@@ -285,7 +285,7 @@ void KOTHClient::cancelCapture()
 {
     capturing = false;
     capturingTeam = Team::NONE;
-    LOG_INFO("KOTH_CLIENT", "Capture cancelled");
+    LOG_DEBUG("KOTH_CLIENT", "Capture cancelled");
     updateLEDs();
     updateDisplay();
 }

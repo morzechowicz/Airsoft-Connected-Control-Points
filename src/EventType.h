@@ -57,6 +57,7 @@ enum EventType
     UNKNOWN,
     FORWARD,
     TEST,
+    DEMO,
 
     //tests 
     TEST_BEGIN,
@@ -70,6 +71,15 @@ enum EventType
     
     EVENT_MAX
 };
+
+enum DemoType
+{
+    CAPTURE_DEMO = 1, // data 2 should be capture time in seconds
+    RESPAWN_DEMO = 2,
+    AUDIO_DEMO = 3 // data 2 should be signal length, data 3 should be number of signals
+    // add more later maybe, maybe not
+};
+
 
 struct Event
 {

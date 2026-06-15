@@ -2,7 +2,9 @@
 #define MESSAGE_BUILDER_H
 
 #include <Arduino.h>
-
+//wtf is this?
+// is this even used any where?
+//TO DO: remove if unsused
 class MessageBuilder {
 public:
     static String buildCapture(uint8_t nodeId, uint8_t teamId) {

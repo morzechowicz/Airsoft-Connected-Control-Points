@@ -90,6 +90,13 @@ void LogManager::setBLEStatus(bool connected)
     BLEConnected = connected;
 }
 
+void LogManager::createBacklog()
+{
+    backLog = true;
+    //create debug queue
+    logBacklogQueue = xQueueCreate(LOG_DEPTH, sizeof(log_entry_t *));
+}
+
 void LogManager::setBLECallback(std::function<void(const char *)> callback)
 {
     bleCallback = callback;
@@ -196,6 +203,18 @@ void LogManager::log(LogLevel level, const char *tag, const char *format, ...)
 
     // Output to all enabled channels
     output(buffer, outputFlags);
+    
+    // add to backlog
+    if(backLog)
+    {
+        log_entry_t *entry = new log_entry_t();
+        entry->timestamp = millis();
+        entry->level = level;
+        strncpy(entry->msg, buffer, sizeof(entry->msg) - 1);
+        entry->msg[sizeof(entry->msg) - 1] = '\0';
+
+        xQueueSend(logBacklogQueue, &entry, portMAX_DELAY);
+    }
 
     xSemaphoreGive(logMutex);
 }

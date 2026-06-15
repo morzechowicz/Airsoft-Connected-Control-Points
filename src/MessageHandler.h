@@ -36,7 +36,7 @@ private:
     void handleForwardingMsg(const String& cmd, const String params[], int paramCount,String rawMsg);
     void handleDebugMessage(const String& cmd, const String params[], int paramCount);
     void handleTestMessage(const String& cmd, const String params[], int paramCount, uint8_t rssi, float snr);
-
+    void handleDemoMessage(const String& cmd, const String params[], int paramCount);
     // // Helpers
     // void setResult(bool success, const String& message);
 };
