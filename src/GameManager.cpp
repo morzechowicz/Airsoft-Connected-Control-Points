@@ -123,6 +123,8 @@ void GameManager::startCountdownTask(int countdown)
         "CountdownTask", 4096, params, 1, &countdownHandler);
 
     LOG_DEBUG("GAME_MANAGER", "Created countdown task: %p", (void *)countdownHandler);
+
+    hardwareManager->buzzer.beep(500, 2, 300); // beep 2 times so everyone know is about to begin
 }
 
 void GameManager::startAfterCountdownTask(int waitTime)
