@@ -63,6 +63,12 @@ bool MessageHandler::handleCommand(const Message &command, String rasMsg, uint8_
         LOG_DEBUG("HANDLER", "Received TEST message");
         return true;
     }
+    if (command.type == DEMO)
+    {
+        handleDemoMessage(command.params[0], command.params, command.paramCount);
+        LOG_DEBUG("HANDLER", "Received DEMO message");
+        return true;
+    }
     return false;
 }
 
@@ -247,4 +253,13 @@ void MessageHandler::handleTestMessage(const String &cmd, const String params[],
         LOG_DEBUG("HANDLER", "Received TEST_DR_RESPONSE message");
         eventBus.publish(TEST_DR_RESPONSE, fromNode, rssi, snr, packetId);
     }
+}
+
+void MessageHandler::handleDemoMessage(const String &cmd, const String params[], int paramCount)
+{
+    uint16_t demoId = Protocol::parseIntParam(params[1], 0);
+    uint8_t demoConf1 = Protocol::parseIntParam(params[2], 0);
+    uint8_t demoConf2 = Protocol::parseIntParam(params[2], 0);
+    LOG_DEBUG("HANDLER", "Received DEMO message");
+    eventBus.publish(DEMO,demoId,demoConf1,demoConf2);
 }
