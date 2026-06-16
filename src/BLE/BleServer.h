@@ -2,7 +2,7 @@
 #define BLE_SERVER_H
 
 #include <NimBLEDevice.h>
-#include <config.h>
+#include "Config.h"
 #include "BleCallback.h"
 
 class BleServer : public BLEServerCallbacks

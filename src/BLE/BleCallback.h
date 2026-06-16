@@ -2,7 +2,7 @@
 #define BLE_CALLBACK_H
 
 #include <NimBLEDevice.h>
-#include <config.h>
+#include "Config.h"
 #include <EventBus.h>
 #include <Protocol.h>
 #include "MessageHandler.h"
