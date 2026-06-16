@@ -8,19 +8,38 @@
 #include "EventBus.h"
 #include "Protocol.h"
 
+#define NUMBER_OF_PROBES 5
+#define WAITING_TIME 700 // ms
+
+struct responseProbe
+{
+    uint8_t probeId = 0;
+    bool responseStatus = false;
+    int rssi = 0;
+    float snr = 0.0;
+};
+
 class ConnectionTester
 {
 public:
-    ConnectionTester(NetworkManager* networkManager, HardwareManager* hardwareManager, EventBus* eventBus);
+    ConnectionTester(NetworkManager *networkManager, HardwareManager *hardwareManager, EventBus *eventBus);
 
 private:
     NetworkManager *networkManager;
     HardwareManager *hardwareManager;
     EventBus *eventBus;
+    responseProbe probes[NUMBER_OF_PROBES];
+    uint8_t probesHead = 0;
+
+    xQueueHandle responseQueue;
+    xTaskHandle testConTask;
+    void testConnectionTask(uint8_t target);
 
     void testConnection(Event e);
     void testConnectionCommand(Event e);
     void testConnectionResponse(Event e);
+
+    void sendProbe(uint8_t targetId, uint8_t probeId);
 };
 
 #endif // CONNECTION_TESTER_H
