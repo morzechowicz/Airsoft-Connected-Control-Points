@@ -1,10 +1,9 @@
 #ifndef BLE_TYPES_H
 #define BLE_TYPES_H
 
-#include <BLECharacteristic.h>
-#include <BLEServer.h>
+#include "BleServer.h"
 #include <NimBLEDevice.h>
-#include <Config.h>
+#include "Config.h"
 #include <EventBus.h>
 #include <MessageHandler.h>
 #include "BleServer.h"
