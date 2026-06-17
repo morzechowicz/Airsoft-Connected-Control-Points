@@ -13,10 +13,10 @@
 
 struct responseProbe
 {
-    uint8_t probeId = 0;
-    bool responseStatus = false;
-    int rssi = 0;
-    float snr = 0.0;
+    int   probeId        = 0;
+    int   rssi           = 0;
+    float snr            = 0.0f;
+    bool  responseStatus = false; 
 };
 
 class ConnectionTester
@@ -29,7 +29,6 @@ private:
     HardwareManager *hardwareManager;
     EventBus *eventBus;
     responseProbe probes[NUMBER_OF_PROBES];
-    uint8_t probesHead = 0;
 
     xQueueHandle responseQueue;
     xTaskHandle testConTask;

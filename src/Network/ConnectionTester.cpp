@@ -11,29 +11,60 @@ ConnectionTester::ConnectionTester(NetworkManager *networkManager, HardwareManag
     eventBus->subscribe(TEST_DR_RESPONSE, [this](Event e)
                         { testConnectionResponse(e); });
 
-    responseQueue = xQueueCreate(NUMBER_OF_PROBES, sizeof(bool));
+    responseQueue = xQueueCreate(NUMBER_OF_PROBES, sizeof(responseProbe));
 }
 
 void ConnectionTester::testConnectionTask(uint8_t target)
 {
     LOG_DEBUG("CONNECTION_TESTER", "Starting connection testing task");
 
-    responseProbe responseProbe;
-
-    for (uint8_t probe = 1; probe <= NUMBER_OF_PROBES; probe++)
+    for (uint8_t probe = 0; probe < NUMBER_OF_PROBES; probe++)
     {
+        responseProbe respProbe{};
         LOG_DEBUG("CONNECTION_TESTER", "sending probe %d", probe);
-        sendProbe(target, probe);
-        xQueueReceive(responseQueue, &responseProbe, pdMS_TO_TICKS(WAITING_TIME));
-        if (responseProbe.responseStatus)
+        respProbe.probeId = probe;
+        LOG_DEBUG("sizeof(responseProbe)", "%d", sizeof(responseProbe));
+        sendProbe(target, respProbe.probeId);
+        vTaskDelay(pdMS_TO_TICKS(1500)); // dramatic pause
+        if (xQueueReceive(responseQueue, &respProbe, pdMS_TO_TICKS(WAITING_TIME)))
         {
-            LOG_DEBUG("CONNECTION_TESTER", "recived response %d", probe);
+            LOG_DEBUG("CONNECTION_TESTER", "recived response %d status %d", probe, respProbe.responseStatus);
+            probes[probe] = respProbe;
         }
         else
         {
-            LOG_DEBUG("CONNECTION_TESTER", "lost response %d", probe);
+            LOG_DEBUG("CONNECTION_TESTER", "lost response %d status %d", probe, respProbe.responseStatus);
+            probes[probe] = respProbe;
         }
     }
+
+    LOG_DEBUG("CONNECTION_TESTER", "testing complete");
+    // calculate signal quality
+    uint8_t packetsConfimerd = 0;
+    float snrSum = 0;
+    int rssiSum = 0;
+    for (int i = 0; i < NUMBER_OF_PROBES; i++)
+    {
+        if (!probes[i].responseStatus)
+        {
+            LOG_DEBUG("CONNECTION_TESTER", "probe %d failed", i);
+            continue;
+        }
+        packetsConfimerd++;
+        rssiSum += probes[i].rssi;
+        snrSum += probes[i].snr;
+    }
+    if (packetsConfimerd == 0)
+    {
+        LOG_DEBUG("CONNECTION_TESTER", "Packet loss 100%");
+        return;
+    }
+    int rssiAvg = rssiSum / packetsConfimerd;
+    float snrAvg = snrSum / packetsConfimerd;
+
+    LOG_INFO("CONNECTION_TESTER", "Packet loss %d", NUMBER_OF_PROBES - packetsConfimerd);
+    LOG_INFO("CONNECTION_TESTER", "rssi %d", rssiAvg);
+    LOG_INFO("CONNECTION_TESTER", "snr %f", snrAvg);
 }
 
 void ConnectionTester::testConnection(Event e)
@@ -41,10 +72,6 @@ void ConnectionTester::testConnection(Event e)
     uint8_t targetNode = e.data1;
     uint16_t packetId = e.data2;
     LOG_INFO("CONNECTION_TESTER", "Starting test connection with node %d", targetNode);
-
-    // this thing above? oh it just for testing
-    // real deal will be a dedicated task that fires test packets
-    //  then wait for response and provides results
 
     struct TaskParams
     {
@@ -68,7 +95,7 @@ void ConnectionTester::testConnection(Event e)
             tester->testConTask = nullptr;
             vTaskDelete(NULL);
         },
-        "conTest", 8192, this, 1, &testConTask);
+        "conTest", 8192, params, 1, &testConTask);
 }
 
 void ConnectionTester::testConnectionCommand(Event e)
@@ -90,11 +117,15 @@ void ConnectionTester::testConnectionResponse(Event e)
 {
     LOG_INFO("CONNECTION_TESTER", "Received test connection probe %d from node %d with RSSI %d and SNR %.2f", e.data2, e.data1, e.data3, e.data4);
     responseProbe response;
-    response.rssi = e.data3;
-    response.snr = e.data4;
+    response.rssi = e.data2;
+    response.snr = e.data3;
     response.probeId = e.data2;
     response.responseStatus = true;
-    xQueueSend(responseQueue, &response, pdMS_TO_TICKS(10));
+    LOG_DEBUG("sizeof(responseProbe)", "%d", sizeof(responseProbe));
+    if (!xQueueSend(responseQueue, &response, pdMS_TO_TICKS(10000)))
+    {
+        LOG_ERROR("CONNECTION_TESTER", "send responseQueue failed");
+    };
 }
 
 void ConnectionTester::sendProbe(uint8_t targetId, uint8_t probeId)
