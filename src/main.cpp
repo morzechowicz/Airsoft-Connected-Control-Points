@@ -32,12 +32,6 @@ void powerResetCallback(Event e)
 
 void testRequestTask(void *pvParameters);
 
-void testCallback(Event e)
-{
-    uint8_t nodes = e.data1;
-    LOG_INFO("MAIN", "Received TEST event, starting connection test");
-    connectionTester.runTest(nodes);
-}
 
 void batVoltageTask(void *pvParameters);
 
@@ -125,7 +119,6 @@ void setup()
     network.begin();
     // callbacks that i dont know what to do with
     eventBus.subscribe(POWER_RESET, powerResetCallback);
-    eventBus.subscribe(TEST, testCallback);
     
 #if SCREEN_TYPE == OLED_128x36_SCREEN
     hardware.oled.writeln("STATUS");

@@ -8,56 +8,37 @@
 #include "EventBus.h"
 #include "Protocol.h"
 
-struct TestResponse {
-    uint8_t packetId = 0;
-    uint8_t retryCount = 0;
-    int rssi = 0;
-    float snr = 0.0f;
-};
+#define NUMBER_OF_PROBES 5
+#define WAITING_TIME 700 // ms
 
-struct NodeEntry {
-    uint8_t address = 0;
-    bool found = false;
-    int rssi = 0;
-    float snr = 0.0f;
-    uint8_t generatedPackets = 0;
-    uint8_t lastresponse = 0;
-    TestResponse responses[10];
+struct responseProbe
+{
+    int   probeId        = 0;
+    int   rssi           = 0;
+    float snr            = 0.0f;
+    bool  responseStatus = false; 
 };
 
 class ConnectionTester
 {
 public:
-    ConnectionTester(NetworkManager* networkManager, HardwareManager* hardwareManager, EventBus* eventBus);
-    
-    void runTest(uint8_t nodeCount);
+    ConnectionTester(NetworkManager *networkManager, HardwareManager *hardwareManager, EventBus *eventBus);
 
-    void addNewNode(uint8_t address, int16_t rssi, float snr);
 private:
     NetworkManager *networkManager;
     HardwareManager *hardwareManager;
     EventBus *eventBus;
+    responseProbe probes[NUMBER_OF_PROBES];
 
-    uint8_t nodeCount;
-    uint8_t nodesFound;
+    xQueueHandle responseQueue;
+    xTaskHandle testConTask;
+    void testConnectionTask(uint8_t target);
 
-    uint8_t currentNodeIndex;
-    NodeEntry Nodes[10];
+    void testConnection(Event e);
+    void testConnectionCommand(Event e);
+    void testConnectionResponse(Event e);
 
-    bool respondedToBroadcast = false;
-
-    void broadcastTestSearch();
-    void sendTestToNode(int nodeId);
-    void handleBroadcastResponse(Event e);
-    void handleBroadcast(Event e);
-    void handleDirectResponse(Event e);
-    void handleDirect(Event e);
-
-    void createTestTask();
-    void testTask(void *pvParameters);
-
-    //helpers
-    int findNodeIndexByAddress(uint8_t address);
+    void sendProbe(uint8_t targetId, uint8_t probeId);
 };
 
 #endif // CONNECTION_TESTER_H

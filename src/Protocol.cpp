@@ -156,24 +156,6 @@ String Protocol::buildScoreUpdateMessage(uint16_t time, uint16_t teamYPoints, ui
     return buffer;
 }
 
-String Protocol::buildTestBrMsg(uint8_t sourceId)
-{
-    String buffer;
-    buffer = String(TEST) + ";";
-    buffer += String(TEST_BROADCAST) + ";";
-    buffer += String(sourceId) + ";";
-    return buffer;
-}
-
-String Protocol::buildTestBrResponseMsg(uint8_t responderId)
-{
-    String buffer;
-    buffer = String(TEST) + ";";
-    buffer += String(TEST_BR_RESPONSE) + ";";
-    buffer += String(responderId) + ";";
-    return buffer;
-}
-
 String Protocol::buildTestDrMsg(uint8_t sourceNodeid, uint8_t packetId)
 {
     String buffer;
