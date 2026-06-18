@@ -91,7 +91,7 @@ void GameManager::onConfigKothFromMaster(Event e)
 void GameManager::startCountdownTask(int countdown)
 {
     LOG_DEBUG("GAME_MANAGER", "Starting countdown task");
-    if (kothClient != nullptr || flagClient != nullptr)
+    if (kothClient != nullptr || flagClient != nullptr || infoNode != nullptr)
     {
         LOG_WARN("GAME_MANAGER", "A client is already running, aborting");
         return;
