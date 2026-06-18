@@ -39,6 +39,9 @@ private:
     TaskHandle_t countdownHandler = nullptr;
     TaskHandle_t afterCountdownHandler = nullptr;
 
+    // time sync stuff
+    int syncTimeDelta = 0;
+
 public:
     GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net);
     ~GameManager();

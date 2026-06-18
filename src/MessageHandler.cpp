@@ -87,7 +87,7 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
     }
     if (cmd.toInt() == NETWROK_REPORT)
     {
-        eventBus.publish(NETWROK_REPORT, params[1].toInt(), params[2].toInt());
+        eventBus.publish(NETWROK_REPORT, params[1].toInt(), params[2].toInt(),params[3].toInt());
     }
     if (cmd.toInt() == POWER_RESET)
     {

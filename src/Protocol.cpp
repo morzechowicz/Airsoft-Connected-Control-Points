@@ -41,6 +41,7 @@ String Protocol::buildDiscoverRequest()
     buffer = String(SYS) + ";";
     buffer += String(NETWORK_DISCOVER) + ";";
     buffer += String(LORA_ADDRESS) + ";";
+    buffer += String(millis()/1000) + ";"; //send seconds since boot
     return buffer;
 }
 

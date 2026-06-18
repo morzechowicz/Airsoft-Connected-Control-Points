@@ -323,6 +323,11 @@ void GameManager::onDiscovered(Event e)
     LcdDisplayMessage dsp {};
     dsp.setLine(0,msg.c_str());
     dsp.clearLine(1);
+    
+    //synchronize time
+    int mainTime = e.data3; 
+    int localTime = millis()/1000; 
+    syncTimeDelta = localTime - mainTime; 
 
     hardwareManager->lcd.displayText(dsp);
     if (networkManager)
