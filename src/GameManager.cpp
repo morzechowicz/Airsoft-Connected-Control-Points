@@ -15,7 +15,7 @@ void GameManager::onConfigureFlag(Event e)
     newNode.data1 = LORA_ADDRESS;
 
     isMain = true;
-    int countdown = calCulateCoutdown(e.data1);
+    int countdown = e.data1;
     selectedConfig = FLAG_CONFIG;
     LOG_INFO("GAME_MANAGER", "Received FLAG configuration: maxPoints=%d, maxTime=%d, captureTime=%d, scoreIntervalMs=%d, initTeamCount=%d",
              flagConfig.maxPoints, flagConfig.maxTime, flagConfig.captureTime, flagConfig.scoreIntervalMs, flagConfig.initTeamCount);
@@ -39,7 +39,7 @@ void GameManager::onConfKoth(Event e)
     onNewNode(newNode);
 #endif
     isMain = true;
-    int countdown = calCulateCoutdown(e.data1);
+    int countdown = e.data1;
     selectedConfig = KOTH_CONFIG;
 
     LOG_INFO("GAME_MANAGER", "Received KOTH configuration: maxPoints=%d, gameDurationMinutes=%d, captureTime=%d, scoreIntervalMs=%d, respawnTime=%d",
@@ -56,7 +56,8 @@ void GameManager::onConfKoth(Event e)
 int GameManager::calCulateCoutdown(int remoteTime)
 {
     int localTime = millis()/1000;
-    int countdown =  localTime - (remoteTime + syncTimeDelta); 
+    int countdown = remoteTime - (localTime + syncTimeDelta); 
+    LOG_DEBUG("GAME MANAGER", "Calculated local %d remotestarting %d delta %d countdown %d",localTime,remoteTime,syncTimeDelta,countdown);
     return countdown;
 }
 
@@ -83,7 +84,7 @@ void GameManager::onConfigKothFromMaster(Event e)
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
     kothConfig.captureTime = e.data4;
     kothConfig.respawnTime = e.data5;
-    int countdown = e.data1;
+    int countdown = calCulateCoutdown(e.data1);
     selectedConfig = KOTH_CONFIG;
     startCountdownTask(countdown);
 }
@@ -224,14 +225,15 @@ void GameManager::countdownTask(int time)
     {
 #if NODE_TYPE == CAPTURE_POINT
         LOG_INFO("GAME_MANAGER", "Starting as CAPTURE POINT");
-        startAfterCountdownTask(10);
+        // startAfterCountdownTask(10); //i dont think it wil be needed any more
 #else
         LOG_INFO("GAME_MANAGER", "Not starting client because this is not a capture point node and not main");
 #endif
     }
+    onGameStarted();
 }
 
-void GameManager::onGameStarted(Event e)
+void GameManager::onGameStarted()
 {
 #if NODE_TYPE == HEADLESS
     LOG_INFO("GAME_MANAGER", "Received game start event but this is a headless node, ignoring");
@@ -274,8 +276,9 @@ GameManager::GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net)
                         { onDiscoverRequest(e); }); // broadcast discover request
     eventBus->subscribe(NETWROK_REPORT, [this](Event e)
                         { onNewNode(e); }); // add new node to the list when discovered
-    eventBus->subscribe(GAME_STARTED, [this](Event e)
-                        { onGameStarted(e); });
+    // this also wont be missed
+    // eventBus->subscribe(GAME_STARTED, [this](Event e)
+    //                     { onGameStarted(); });
     eventBus->subscribe(KOTH_CONF_UPDATED, [this](Event e)
                         { onConfigKothFromMaster(e); });
     eventBus->subscribe(KOTH_CONFIG, [this](Event e)
@@ -332,9 +335,10 @@ void GameManager::onDiscovered(Event e)
     dsp.clearLine(1);
     
     //synchronize time
-    int mainTime = e.data3; 
+    int mainTime = e.data2; 
     int localTime = millis()/1000; 
     syncTimeDelta = mainTime - localTime; 
+    LOG_DEBUG("GAME MANAGER", "Calculated mainTime %d localTime %d syncTimeDelta %d",mainTime,localTime,syncTimeDelta);
 
     hardwareManager->lcd.displayText(dsp);
     if (networkManager)

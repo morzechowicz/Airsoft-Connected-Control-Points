@@ -49,7 +49,7 @@ public:
     static GameManager* instance;
 
     void onNewNode(Event e);
-    void onGameStarted(Event e);
+    void onGameStarted();
     void onConfigKothFromMaster(Event e);
     void onConfKoth(Event e);
     void onConfigureFlag(Event e);

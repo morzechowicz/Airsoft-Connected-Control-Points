@@ -83,11 +83,11 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
         LOG_DEBUG("HANDLER", "Not sending response because this is an BLEToLoRa node or Headless node");
         return;
 #endif
-        eventBus.publish(NETWORK_DISCOVER, masterAddress);
+        eventBus.publish(NETWORK_DISCOVER, masterAddress,params[2].toInt());
     }
     if (cmd.toInt() == NETWROK_REPORT)
     {
-        eventBus.publish(NETWROK_REPORT, params[1].toInt(), params[2].toInt(),params[3].toInt());
+        eventBus.publish(NETWROK_REPORT, params[1].toInt(), params[2].toInt());
     }
     if (cmd.toInt() == POWER_RESET)
     {

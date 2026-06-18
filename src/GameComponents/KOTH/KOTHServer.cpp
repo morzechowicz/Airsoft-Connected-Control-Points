@@ -8,11 +8,11 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
       lastScoreUpdate(0),
       gameRunning(false)
 {
-    
+
     // Initialize nodes from config
     for (uint8_t i = 0; i < cfg.nodeCount; i++)
     {
-        if(config.nodeIds[i].type == INFORMATION)
+        if (config.nodeIds[i].type == INFORMATION)
         {
             LOG_DEBUG("KOTH_SERVER", "Node %d is an INFORMATION node, skipping initialization", config.nodeIds[i].Id);
             continue; // Skip information nodes
@@ -73,28 +73,37 @@ void KOTHServer::enterMode()
     eventBus->publish(GAME_STARTED, 0);
     // Broadcast game start
 
-    String startMsg = Protocol::buildGameStart();
-    // send start message to information nodes first before other nodes start asking
-    for(int nodeIndex = 0; nodeIndex < config.nodeCount; nodeIndex++)
-    {
-        if(config.nodeIds[nodeIndex].Id == 0xFF)
-        {
-            break;
-        }
-        if(config.nodeIds[nodeIndex].type == INFORMATION)
-        {
-            networkManager->sendTo(config.nodeIds[nodeIndex].Id, startMsg);
-        }
-    }
+    
+    // send score update to initialize statistics with a little delay
+    //
+    TimerHandle_t timer = xTimerCreate(
+        "myTimer",
+        pdMS_TO_TICKS(5000), 
+        pdFALSE,            
+        (void*) this,
+        KOTHServer::startCallback);
+    xTimerStart(timer, 0);
 
-    if (networkManager)
-    {
-        networkManager->broadcast(startMsg);
-        networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
-    }
 
     LOG_INFO("KOTH_SERVER", "KOTH Server ready!");
     eventBus->publish(DEBUG, KOTH_CONFIG, 0, 0, nodeCount, nodes); // change later
+}
+
+void KOTHServer::startCallback(TimerHandle_t xtimer)
+{
+    KOTHServer* self = (KOTHServer*)pvTimerGetTimerID(xtimer);
+
+    String startMsg = Protocol::buildGameStart();
+    self->startCallbackHelper();
+}
+
+void KOTHServer::startCallbackHelper()
+{
+    if (networkManager)
+    {
+        networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
+        LOG_DEBUG("KOTH_SERVER", "Sent score update to clients");
+    }
 }
 
 void KOTHServer::exitMode()
@@ -189,12 +198,14 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
         networkManager->broadcast(msg);
     }
 
-    //TESTING 
-    // display nodes table
+    // TESTING
+    //  display nodes table
     LOG_DEBUG("KOTH_SERVER", "Current Node States:");
-    for (uint8_t i = 0; i < nodeCount; i++)    {
+    for (uint8_t i = 0; i < nodeCount; i++)
+    {
         LOG_DEBUG("KOTH_SERVER", "Node %d: Controlled by %s, Captured at %lu", nodes[i].nodeId,
-                  nodes[i].controllingTeam == Team::YELLOW ? "YELLOW" : nodes[i].controllingTeam == Team::BLUE ? "BLUE" : "NONE",
+                  nodes[i].controllingTeam == Team::YELLOW ? "YELLOW" : nodes[i].controllingTeam == Team::BLUE ? "BLUE"
+                                                                                                               : "NONE",
                   nodes[i].capturedAt);
     }
 }
@@ -330,15 +341,13 @@ void KOTHServer::gameConfRequest(Event e)
     }
     if (alreadyIn)
     {
-
         LOG_INFO("KOTH_SERVER", "Node %d already in game, reviving that node", nodeId);
-        addingNodeAfterStart(nodeId, e);
     }
     else
     {
         LOG_INFO("KOTH_SERVER", "Adding new node %d to game after start", nodeId);
-        addingNodeAfterStart(nodeId, e);
     }
+    addingNodeAfterStart(nodeId, e);
 }
 
 void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
@@ -364,7 +373,7 @@ void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
 
     EventGroupHandle_t ackforConfig = xEventGroupCreate();
     LOG_INFO("KOTH_SERVER", "Received game config request, sending current config");
-    String configMsg = Protocol::buildKothConfigClient(config.maxPoints, 10, config.captureTime, config.gameDurationMinutes,config.respawnTime);
+    String configMsg = Protocol::buildKothConfigClient(config.maxPoints, 0, config.captureTime, config.gameDurationMinutes, config.respawnTime);
     networkManager->sendToAndWait(nodeId, configMsg, ackforConfig, expectedBits);
 
     LOG_DEBUG("KOTH_SERVER", "Waiting for ACK from node %d", nodeId);
@@ -381,8 +390,6 @@ void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
     }
     vEventGroupDelete(ackforConfig);
 
-    String startMsg = Protocol::buildGameStart();
-    networkManager->sendTo(nodeId, startMsg);
     vTaskDelay(2000); // update can be sent even minutes later not gonna affect much
     networkManager->sendTo(nodeId, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
 }

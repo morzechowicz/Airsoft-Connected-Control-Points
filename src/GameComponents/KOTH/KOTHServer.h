@@ -13,6 +13,8 @@ public:
     
     // BaseComponent overrides
     void enterMode() override;
+    static void startCallback(TimerHandle_t xtimer);
+    void startCallbackHelper();
     void exitMode() override;
     void run() override;
     
