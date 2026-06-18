@@ -107,7 +107,7 @@ String Protocol::buildKothConfigClient(uint16_t maxPoints, uint16_t countdown, u
     String buffer;
     buffer = String(CONF) + ";";
     buffer += String(KOTH_CONF_UPDATED) + ";";
-    buffer += String(countdown) + ";";
+    buffer += String(countdown+(millis()/1000)) + ";"; // calculated for remote sync
     buffer += String(maxTime) + ";";
     buffer += String(maxPoints) + ";";
     buffer += String(captureTime) + ";";

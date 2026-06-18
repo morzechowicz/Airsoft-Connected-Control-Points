@@ -57,11 +57,14 @@ public:
     void onDiscovered(Event e);
     void onGameStartconfRequest(Event e);
     void update();
-
+    
     void startCountdownTask(int countdown);
     void countdownTask(int time);
     void startAfterCountdownTask(int waitTime);
     void afterCountdownTask(int time);
+    
+    private:
+    int calCulateCoutdown(int remoteStartinTime);
 };
 
 #endif // GameManager_h

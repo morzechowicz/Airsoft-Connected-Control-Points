@@ -15,7 +15,7 @@ void GameManager::onConfigureFlag(Event e)
     newNode.data1 = LORA_ADDRESS;
 
     isMain = true;
-    int countdown = e.data1;
+    int countdown = calCulateCoutdown(e.data1);
     selectedConfig = FLAG_CONFIG;
     LOG_INFO("GAME_MANAGER", "Received FLAG configuration: maxPoints=%d, maxTime=%d, captureTime=%d, scoreIntervalMs=%d, initTeamCount=%d",
              flagConfig.maxPoints, flagConfig.maxTime, flagConfig.captureTime, flagConfig.scoreIntervalMs, flagConfig.initTeamCount);
@@ -39,7 +39,7 @@ void GameManager::onConfKoth(Event e)
     onNewNode(newNode);
 #endif
     isMain = true;
-    int countdown = e.data1;
+    int countdown = calCulateCoutdown(e.data1);
     selectedConfig = KOTH_CONFIG;
 
     LOG_INFO("GAME_MANAGER", "Received KOTH configuration: maxPoints=%d, gameDurationMinutes=%d, captureTime=%d, scoreIntervalMs=%d, respawnTime=%d",
@@ -51,6 +51,13 @@ void GameManager::onConfKoth(Event e)
     networkManager->broadcast(configBroadcast);
 
     startCountdownTask(countdown);
+}
+
+int GameManager::calCulateCoutdown(int remoteTime)
+{
+    int localTime = millis()/1000;
+    int countdown =  localTime - (remoteTime + syncTimeDelta); 
+    return countdown;
 }
 
 void GameManager::onConfigKothFromMaster(Event e)
@@ -327,7 +334,7 @@ void GameManager::onDiscovered(Event e)
     //synchronize time
     int mainTime = e.data3; 
     int localTime = millis()/1000; 
-    syncTimeDelta = localTime - mainTime; 
+    syncTimeDelta = mainTime - localTime; 
 
     hardwareManager->lcd.displayText(dsp);
     if (networkManager)
