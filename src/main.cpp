@@ -51,24 +51,27 @@ void batVoltStart()
 #if SX_CHIP_TYPE == HELTECSX1262
 void batVoltageTask(void *pvParameters)
 {
+    int loop = 0;
     while (true)
     {
-        uint32_t raw = analogRead(VBAT_PIN);
-
-        float voltage = (raw / 4095.0) * 3.3 * 5.19;
-        LOG_DEBUG("MAIN", "Raw ADC: %d, Voltage: %.2f V", raw, voltage);
-        vTaskDelay(pdMS_TO_TICKS(5000));
-        hardware.oled.clear();
-        hardware.oled.writeln("Battery:");
-        hardware.oled.writeln((String(voltage, 2) + " V").c_str());
-        hardware.oled.display();
-        // Also pulse diode here why not
-        if (digitalRead(STATUS_LED_PIN) == LOW)
+        if(loop > 20)
         {
-            digitalWrite(STATUS_LED_PIN, HIGH);
-        }else{
-            digitalWrite(STATUS_LED_PIN, LOW);
+            loop = 0;
+            uint32_t raw = analogRead(VBAT_PIN);
+            
+            float voltage = (raw / 4095.0) * 3.3 * 5.19;
+            LOG_DEBUG("MAIN", "Raw ADC: %d, Voltage: %.2f V", raw, voltage);
+            hardware.oled.clear();
+            hardware.oled.writeln("Battery:");
+            hardware.oled.writeln((String(voltage, 2) + " V").c_str());
+            hardware.oled.display();
         }
+        // Also pulse diode here why not
+        digitalWrite(STATUS_LED_PIN, HIGH);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        digitalWrite(STATUS_LED_PIN, LOW);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        loop++;
     }
 }
 #endif
