@@ -46,9 +46,22 @@ void GameManager::onConfKoth(Event e)
              kothConfig.maxPoints, kothConfig.gameDurationMinutes, kothConfig.captureTime, kothConfig.scoreIntervalMs, kothConfig.respawnTime);
     LOG_INFO("GAME_MANAGER", "Countdown started");
 
-    String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes,kothConfig.respawnTime);
-    //change it to smething that sends config to everyone and confirms it
-    networkManager->broadcast(configBroadcast);
+    String configMsg = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes,kothConfig.respawnTime);
+
+    for (uint8_t i = 0; i < kothConfig.nodeCount; i++)
+    {
+        EventGroupHandle_t ackEvents = xEventGroupCreate();
+        EventBits_t expectedBits = (1 << kothConfig.nodeIds[i].Id);
+        networkManager->sendToAndWait(kothConfig.nodeIds[i].Id, configMsg, ackEvents, expectedBits);
+        EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
+        if (result & expectedBits)
+        {
+            LOG_DEBUG("KOTH_SERVER", "Node %d acknowledged game config", kothConfig.nodeIds[i].Id);
+        }
+        vEventGroupDelete(ackEvents);
+        // networkManager->sendTo(config.nodeIds[i].Id, msg);
+        vTaskDelay(500);
+    }
 
     startCountdownTask(countdown);
 }
