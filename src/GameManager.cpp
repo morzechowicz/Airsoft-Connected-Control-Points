@@ -71,6 +71,10 @@ int GameManager::calCulateCoutdown(int remoteTime)
     int localTime = millis()/1000;
     int countdown = remoteTime - (localTime + syncTimeDelta); 
     LOG_DEBUG("GAME MANAGER", "Calculated local %d remotestarting %d delta %d countdown %d",localTime,remoteTime,syncTimeDelta,countdown);
+    if(countdown < 0)
+    {
+        countdown = 0
+    }
     return countdown;
 }
 
