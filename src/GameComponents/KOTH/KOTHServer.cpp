@@ -77,7 +77,7 @@ void KOTHServer::enterMode()
     // send score update to initialize statistics with a little delay
     //
     TimerHandle_t timer = xTimerCreate(
-        "myTimer",
+        "startTimer",
         pdMS_TO_TICKS(5000), 
         pdFALSE,            
         (void*) this,
@@ -390,8 +390,31 @@ void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
     }
     vEventGroupDelete(ackforConfig);
 
-    vTaskDelay(2000); // update can be sent even minutes later not gonna affect much
+   TimerHandle_t timer = xTimerCreate(
+        "reconnectTimer",
+        pdMS_TO_TICKS(3000), 
+        pdFALSE,            
+        (void*) this,
+        KOTHServer::reconnectCallback);
+    xTimerStart(timer, 0);
     networkManager->sendTo(nodeId, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
+}
+
+void KOTHServer::reconnectCallback(TimerHandle_t xtimer)
+{
+    KOTHServer* self = (KOTHServer*)pvTimerGetTimerID(xtimer);
+
+    String startMsg = Protocol::buildGameStart();
+    self->reconnectCallbackHelper();
+}
+
+void KOTHServer::reconnectCallbackHelper()
+{
+    if (networkManager)
+    {
+        networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
+        LOG_DEBUG("KOTH_SERVER", "Sent score update to clients");
+    }
 }
 
 void KOTHServer::gameScoreRequest(Event e)

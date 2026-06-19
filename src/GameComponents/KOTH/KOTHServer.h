@@ -13,8 +13,6 @@ public:
     
     // BaseComponent overrides
     void enterMode() override;
-    static void startCallback(TimerHandle_t xtimer);
-    void startCallbackHelper();
     void exitMode() override;
     void run() override;
     
@@ -49,6 +47,13 @@ private:
     void addingNodeAfterStart(uint8_t nodeId, Event e);
     void onMainLookup(Event e);
     void gameScoreRequest(Event e);
+
+    //timer
+    static void reconnectCallback(TimerHandle_t xtimer);
+    void reconnectCallbackHelper();
+    static void startCallback(TimerHandle_t xtimer);
+    void startCallbackHelper();
+    
 
     // Helper functions
     NodeState* findNode(uint8_t nodeId);
