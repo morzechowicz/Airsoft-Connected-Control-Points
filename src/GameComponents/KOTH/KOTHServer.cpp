@@ -12,19 +12,31 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
     // Initialize nodes from config
     for (uint8_t i = 0; i < cfg.nodeCount; i++)
     {
-        if (config.nodeIds[i].type == INFORMATION)
-        {
-            LOG_DEBUG("KOTH_SERVER", "Node %d is an INFORMATION node, skipping initialization", config.nodeIds[i].Id);
-            continue; // Skip information nodes
-        }
-        nodeCount++;
-        int nodesIndex = nodeCount - 1;
-        nodes[nodesIndex].nodeId = config.nodeIds[i].Id;
-        nodes[nodesIndex].controllingTeam = Team::NONE;
-        nodes[nodesIndex].capturedAt = 0;
-        LOG_INFO("KOTH_SERVER", "Configured node %d with ID %d", nodeCount, nodes[nodesIndex].nodeId);
+        addNodeFromConfig(i);
     }
     LOG_INFO("KOTH_SERVER", "Initializing KOTH Server with %d nodes", nodeCount);
+}
+
+void KOTHServer::addNodeFromConfig(uint8_t i)
+{
+    if (config.nodeIds[i].type == INFORMATION)
+    {
+        LOG_DEBUG("KOTH_SERVER", "Node %d is an INFORMATION node, skipping initialization", config.nodeIds[i].Id);
+        {
+            return;
+        }; // Skip information nodes
+    }
+    if(findNode(i))
+    {
+        LOG_DEBUG("KOTH_SERVER", "Node %d exists, skipping initialization", config.nodeIds[i].Id);
+        return;
+    }
+    nodeCount++;
+    int nodesIndex = nodeCount - 1;
+    nodes[nodesIndex].nodeId = config.nodeIds[i].Id;
+    nodes[nodesIndex].controllingTeam = Team::NONE;
+    nodes[nodesIndex].capturedAt = 0;
+    LOG_INFO("KOTH_SERVER", "Configured node %d with ID %d", nodeCount, nodes[nodesIndex].nodeId);
 }
 
 KOTHServer::~KOTHServer()
@@ -66,24 +78,22 @@ void KOTHServer::enterMode()
     eventBus->subscribe(GAME_REQUEST_SCORE_UPDATE, [this](Event e)
                         { gameScoreRequest(e); });
     eventBus->subscribe(GAME_REQUEST_START_CONF, [this](Event e)
-                        { gameConfRequest(e); });
+                        { addingNodeAfterStart(e); });
     eventBus->subscribe(GAME_OVER_INTERUPT, [this](Event e)
                         { gameOverInterup(); });
 
     eventBus->publish(GAME_STARTED, 0);
     // Broadcast game start
 
-    
     // send score update to initialize statistics with a little delay
     //
     TimerHandle_t timer = xTimerCreate(
         "startTimer",
-        pdMS_TO_TICKS(5000), 
-        pdFALSE,            
-        (void*) this,
+        pdMS_TO_TICKS(5000),
+        pdFALSE,
+        (void *)this,
         KOTHServer::startCallback);
     xTimerStart(timer, 0);
-
 
     LOG_INFO("KOTH_SERVER", "KOTH Server ready!");
     eventBus->publish(DEBUG, KOTH_CONFIG, 0, 0, nodeCount, nodes); // change later
@@ -91,7 +101,7 @@ void KOTHServer::enterMode()
 
 void KOTHServer::startCallback(TimerHandle_t xtimer)
 {
-    KOTHServer* self = (KOTHServer*)pvTimerGetTimerID(xtimer);
+    KOTHServer *self = (KOTHServer *)pvTimerGetTimerID(xtimer);
 
     String startMsg = Protocol::buildGameStart();
     self->startCallbackHelper();
@@ -322,38 +332,12 @@ void KOTHServer::resumeGame(Event e)
     }
 }
 
-void KOTHServer::gameConfRequest(Event e)
-{
-    uint8_t nodeId = e.data1;
-    bool alreadyIn = false;
-    // add new node if it doesn't exist
-    LOG_DEBUG("KOTH_SERVER", "Received game config request from node %d", nodeId);
-    if (findNode(nodeId) == nullptr && nodeCount < MAX_CAPTURE_NODES)
-    {
-        nodes[nodeCount].nodeId = nodeId;
-        nodes[nodeCount].controllingTeam = Team::NONE;
-        nodes[nodeCount].capturedAt = 0;
-        nodeCount++;
-    }
-    else
-    {
-        alreadyIn = true;
-    }
-    if (alreadyIn)
-    {
-        LOG_INFO("KOTH_SERVER", "Node %d already in game, reviving that node", nodeId);
-    }
-    else
-    {
-        LOG_INFO("KOTH_SERVER", "Adding new node %d to game after start", nodeId);
-    }
-    addingNodeAfterStart(nodeId, e);
-}
-
-void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
+void KOTHServer::addingNodeAfterStart(Event e)
 {
     EventGroupHandle_t ackforDiscover = xEventGroupCreate();
     EventBits_t expectedBits = (1 << 2);
+    uint8_t nodeId = e.data1;
+    bool isInfo = e.data2;
 
     // send discover message to new node
     String discoverMsg = Protocol::buildDiscoverRequest();
@@ -362,6 +346,7 @@ void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
     if (resultDsc & expectedBits)
     {
         LOG_INFO("KOTH_SERVER", "Node %d responded to discover, sending game config", nodeId);
+        addNewNode(nodeId, isInfo);
     }
     else
     {
@@ -390,19 +375,46 @@ void KOTHServer::addingNodeAfterStart(uint8_t nodeId, Event e)
     }
     vEventGroupDelete(ackforConfig);
 
-   TimerHandle_t timer = xTimerCreate(
+    TimerHandle_t timer = xTimerCreate(
         "reconnectTimer",
-        pdMS_TO_TICKS(3000), 
-        pdFALSE,            
-        (void*) this,
+        pdMS_TO_TICKS(3000),
+        pdFALSE,
+        (void *)this,
         KOTHServer::reconnectCallback);
     xTimerStart(timer, 0);
     networkManager->sendTo(nodeId, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, nodeCount, nodes));
 }
 
+void KOTHServer::addNewNode(uint8_t nodeId, bool isInfo)
+{
+    bool alreadyIn = false;
+    // add new node if it doesn't exist
+    LOG_DEBUG("KOTH_SERVER", "Received game config request from node %d, type %s", nodeId, isInfo ? "INFO" : "CAPTURE");
+    uint8_t idx = 0;
+    if (!config.hasNode(nodeId))
+    {
+        config.addNode(nodeId, isInfo ? INFORMATION : CAPTURE_POINT);
+        idx = config.nodeCount - 1;
+        LOG_DEBUG("KOTH_SERVER", "added to array %d, type %d", config.nodeIds[idx].Id, config.nodeIds[idx].type);
+    }else{
+        alreadyIn = true;
+    }
+
+    addNodeFromConfig(idx);
+
+    if (alreadyIn)
+    {
+        LOG_INFO("KOTH_SERVER", "Node %d already in game, reviving that node", nodeId);
+    }
+    else
+    {
+        LOG_INFO("KOTH_SERVER", "Adding new node %d to game after start", nodeId);
+    }
+}
+
 void KOTHServer::reconnectCallback(TimerHandle_t xtimer)
 {
-    KOTHServer* self = (KOTHServer*)pvTimerGetTimerID(xtimer);
+    KOTHServer *self = (KOTHServer *)pvTimerGetTimerID(xtimer);
 
     String startMsg = Protocol::buildGameStart();
     self->reconnectCallbackHelper();

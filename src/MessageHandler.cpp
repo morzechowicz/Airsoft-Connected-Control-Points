@@ -174,7 +174,8 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
     case GAME_REQUEST_START_CONF:
     {
         int nodeID = Protocol::parseIntParam(params[1], 0);
-        eventBus.publish(GAME_REQUEST_START_CONF, nodeID);
+        int nodeType = Protocol::parseIntParam(params[2], 0);
+        eventBus.publish(GAME_REQUEST_START_CONF, nodeID,nodeType);
         break;
     }
     case GAME_FORCE_RESPAWN:
