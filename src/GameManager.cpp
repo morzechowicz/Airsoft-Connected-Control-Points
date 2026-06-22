@@ -385,7 +385,7 @@ void GameManager::onGameStartconfRequest(Event e)
         if (e.data1 == LORA_ADDRESS)
         {
             LOG_INFO("GAME_MANAGER", "Connecting to existing game");
-            String msg = Protocol::buildConfRequest(LORA_ADDRESS);
+            String msg = Protocol::buildConfRequest(LORA_ADDRESS, (NODE_TYPE == INFORMATION) );
             networkManager->broadcast(msg);
         }
 

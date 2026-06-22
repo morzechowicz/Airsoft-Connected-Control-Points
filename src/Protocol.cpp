@@ -73,12 +73,13 @@ String Protocol::buildReqeustScoreUpdate(uint8_t nodeID)
     return buffer;
 }
 
-String Protocol::buildConfRequest(uint8_t nodeID)
+String Protocol::buildConfRequest(uint8_t nodeID,bool isInfo)
 {
     String buffer;
     buffer = String(GAME) + ";";
     buffer += String(GAME_REQUEST_START_CONF) + ";";
     buffer += String(nodeID);
+    buffer += String(isInfo ? 1 : 0);
     return buffer;
 }
 
