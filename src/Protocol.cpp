@@ -41,6 +41,7 @@ String Protocol::buildDiscoverRequest()
     buffer = String(SYS) + ";";
     buffer += String(NETWORK_DISCOVER) + ";";
     buffer += String(LORA_ADDRESS) + ";";
+    buffer += String(millis()/1000) + ";"; //send seconds since boot
     return buffer;
 }
 
@@ -72,12 +73,13 @@ String Protocol::buildReqeustScoreUpdate(uint8_t nodeID)
     return buffer;
 }
 
-String Protocol::buildConfRequest(uint8_t nodeID)
+String Protocol::buildConfRequest(uint8_t nodeID,bool isInfo)
 {
     String buffer;
     buffer = String(GAME) + ";";
     buffer += String(GAME_REQUEST_START_CONF) + ";";
     buffer += String(nodeID);
+    buffer += String(isInfo ? 1 : 0);
     return buffer;
 }
 
@@ -106,7 +108,7 @@ String Protocol::buildKothConfigClient(uint16_t maxPoints, uint16_t countdown, u
     String buffer;
     buffer = String(CONF) + ";";
     buffer += String(KOTH_CONF_UPDATED) + ";";
-    buffer += String(countdown) + ";";
+    buffer += String(countdown+(millis()/1000)) + ";"; // calculated for remote sync
     buffer += String(maxTime) + ";";
     buffer += String(maxPoints) + ";";
     buffer += String(captureTime) + ";";

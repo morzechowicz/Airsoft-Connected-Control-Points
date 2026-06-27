@@ -8,7 +8,8 @@
 
 class KOTHServer : public BaseComponent {
 public:
-    KOTHServer(EventBus* eventBus, HardwareManager* hardware, NetworkManager* network, const KOTHConfig& config);
+    KOTHServer(EventBus *eventBus, HardwareManager *hardware, NetworkManager *network, const KOTHConfig &config);
+    void addNodeFromConfig(uint8_t i);
     ~KOTHServer();
     
     // BaseComponent overrides
@@ -39,14 +40,19 @@ private:
     void processCaptureRequest(uint8_t nodeId, Team team);
     void updateScore();
     void broadcastScoreUpdate();
-    void checkWinConditions();
     void endGame(Team winner);
     void pauseGame(Event e);
     void resumeGame(Event e);
-    void gameConfRequest(Event e);
-    void addingNodeAfterStart(uint8_t nodeId, Event e);
-    void onMainLookup(Event e);
+    void addingNodeAfterStart(Event e);
+    void addNewNode(uint8_t nodeId, bool isInfo);
     void gameScoreRequest(Event e);
+
+    //timer
+    static void reconnectCallback(TimerHandle_t xtimer);
+    void reconnectCallbackHelper();
+    static void startCallback(TimerHandle_t xtimer);
+    void startCallbackHelper();
+    
 
     // Helper functions
     NodeState* findNode(uint8_t nodeId);

@@ -83,7 +83,7 @@ void MessageHandler::handleSystemMessage(const String &cmd, const String params[
         LOG_DEBUG("HANDLER", "Not sending response because this is an BLEToLoRa node or Headless node");
         return;
 #endif
-        eventBus.publish(NETWORK_DISCOVER, masterAddress);
+        eventBus.publish(NETWORK_DISCOVER, masterAddress,params[2].toInt());
     }
     if (cmd.toInt() == NETWROK_REPORT)
     {
@@ -174,7 +174,8 @@ void MessageHandler::handleGameMessage(const String &cmd, const String params[],
     case GAME_REQUEST_START_CONF:
     {
         int nodeID = Protocol::parseIntParam(params[1], 0);
-        eventBus.publish(GAME_REQUEST_START_CONF, nodeID);
+        int nodeType = Protocol::parseIntParam(params[2], 0);
+        eventBus.publish(GAME_REQUEST_START_CONF, nodeID,nodeType);
         break;
     }
     case GAME_FORCE_RESPAWN:

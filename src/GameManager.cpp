@@ -44,13 +44,44 @@ void GameManager::onConfKoth(Event e)
 
     LOG_INFO("GAME_MANAGER", "Received KOTH configuration: maxPoints=%d, gameDurationMinutes=%d, captureTime=%d, scoreIntervalMs=%d, respawnTime=%d",
              kothConfig.maxPoints, kothConfig.gameDurationMinutes, kothConfig.captureTime, kothConfig.scoreIntervalMs, kothConfig.respawnTime);
+    
+    String configMsg = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes, kothConfig.respawnTime);
+    
     LOG_INFO("GAME_MANAGER", "Countdown started");
-
-    String configBroadcast = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes,kothConfig.respawnTime);
-    //change it to smething that sends config to everyone and confirms it
-    networkManager->broadcast(configBroadcast);
-
     startCountdownTask(countdown);
+    
+    for (uint8_t i = 0; i < kothConfig.nodeCount; i++)
+    {
+        uint8_t nodeId = kothConfig.nodeIds[i].Id;
+        if(nodeId == LORA_ADDRESS)
+        {
+            continue;
+        }
+        EventGroupHandle_t ackEvents = xEventGroupCreate();
+        EventBits_t expectedBits = (1 << nodeId);
+        networkManager->sendToAndWait(nodeId, configMsg, ackEvents, expectedBits);
+        EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
+        if (result & expectedBits)
+        {
+            LOG_DEBUG("KOTH_SERVER", "Node %d acknowledged game config", kothConfig.nodeIds[i].Id);
+        }
+        vEventGroupDelete(ackEvents);
+        // networkManager->sendTo(config.nodeIds[i].Id, msg);
+        vTaskDelay(500);
+    }
+
+}
+
+int GameManager::calCulateCoutdown(int remoteTime)
+{
+    int localTime = millis() / 1000;
+    int countdown = remoteTime - (localTime + syncTimeDelta);
+    LOG_DEBUG("GAME MANAGER", "Calculated local %d remotestarting %d delta %d countdown %d", localTime, remoteTime, syncTimeDelta, countdown);
+    if (countdown < 0)
+    {
+        countdown = 0;
+    }
+    return countdown;
 }
 
 void GameManager::onConfigKothFromMaster(Event e)
@@ -76,7 +107,7 @@ void GameManager::onConfigKothFromMaster(Event e)
     kothConfig.scoreIntervalMs = SCORING_INTERVAL_MS;
     kothConfig.captureTime = e.data4;
     kothConfig.respawnTime = e.data5;
-    int countdown = e.data1;
+    int countdown = calCulateCoutdown(e.data1);
     selectedConfig = KOTH_CONFIG;
     startCountdownTask(countdown);
 }
@@ -84,7 +115,7 @@ void GameManager::onConfigKothFromMaster(Event e)
 void GameManager::startCountdownTask(int countdown)
 {
     LOG_DEBUG("GAME_MANAGER", "Starting countdown task");
-    if (kothClient != nullptr || flagClient != nullptr)
+    if (kothClient != nullptr || flagClient != nullptr || infoNode != nullptr)
     {
         LOG_WARN("GAME_MANAGER", "A client is already running, aborting");
         return;
@@ -177,8 +208,8 @@ void GameManager::afterCountdownTask(int time)
     }
     LOG_INFO("GAME_MANAGER", "No response received PANIC MODE");
     LcdDisplayMessage dsp{};
-    dsp.setLine(0,"NET ERROR");
-    dsp.setLine(1,"CALL GAME ORG");
+    dsp.setLine(0, "NET ERROR");
+    dsp.setLine(1, "CALL GAME ORG");
     dsp.durationMs = 10;
     hardwareManager->lcd.displayText(dsp);
 }
@@ -191,7 +222,7 @@ void GameManager::countdownTask(int time)
         vTaskDelay(pdMS_TO_TICKS(1000));
         countdown--;
         LOG_DEBUG("GAME_MANAGER", "Countdown: %d", countdown);
-        //make it update time only and set screen countdown once
+        // make it update time only and set screen countdown once
         hardwareManager->lcd.displayCountdown(countdown);
     }
     LOG_INFO("GAME_MANAGER", "Countdown ended");
@@ -217,14 +248,15 @@ void GameManager::countdownTask(int time)
     {
 #if NODE_TYPE == CAPTURE_POINT
         LOG_INFO("GAME_MANAGER", "Starting as CAPTURE POINT");
-        startAfterCountdownTask(10);
+        // startAfterCountdownTask(10); //i dont think it wil be needed any more
 #else
         LOG_INFO("GAME_MANAGER", "Not starting client because this is not a capture point node and not main");
 #endif
     }
+    onGameStarted();
 }
 
-void GameManager::onGameStarted(Event e)
+void GameManager::onGameStarted()
 {
 #if NODE_TYPE == HEADLESS
     LOG_INFO("GAME_MANAGER", "Received game start event but this is a headless node, ignoring");
@@ -232,8 +264,9 @@ void GameManager::onGameStarted(Event e)
 #endif
 #if NODE_TYPE == INFORMATION
     LOG_INFO("GAME_MANAGER", "Starting as INFORMATION NODE");
-    //check if info node exists before creating new one
-    if(infoNode)    {
+    // check if info node exists before creating new one
+    if (infoNode)
+    {
         LOG_WARN("GAME_MANAGER", "Information node already exists, not creating another one");
         return;
     }
@@ -267,8 +300,9 @@ GameManager::GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net)
                         { onDiscoverRequest(e); }); // broadcast discover request
     eventBus->subscribe(NETWROK_REPORT, [this](Event e)
                         { onNewNode(e); }); // add new node to the list when discovered
-    eventBus->subscribe(GAME_STARTED, [this](Event e)
-                        { onGameStarted(e); });
+    // this also wont be missed
+    // eventBus->subscribe(GAME_STARTED, [this](Event e)
+    //                     { onGameStarted(); });
     eventBus->subscribe(KOTH_CONF_UPDATED, [this](Event e)
                         { onConfigKothFromMaster(e); });
     eventBus->subscribe(KOTH_CONFIG, [this](Event e)
@@ -285,14 +319,14 @@ GameManager::~GameManager()
 
 void GameManager::onNewNode(Event e)
 {
-    //why i added this and what it does?
-    // if (e.data2 == INFORMATION || e.data2 == CAPTURE_POINT)
-    // {
-    //     return;
-    // }
+    // why i added this and what it does?
+    //  if (e.data2 == INFORMATION || e.data2 == CAPTURE_POINT)
+    //  {
+    //      return;
+    //  }
     if (!kothConfig.hasNode(e.data1))
     {
-        kothConfig.addNode(e.data1,e.data2);
+        kothConfig.addNode(e.data1, e.data2);
         LOG_INFO("GAME_MANAGER", "New node added: %d, type: %d", e.data1, e.data2);
         String nodes = "";
         for (int i = 0; i < kothConfig.nodeCount; i++)
@@ -300,13 +334,13 @@ void GameManager::onNewNode(Event e)
             nodes += "N" + String(kothConfig.nodeIds[i].Id);
         }
         LcdDisplayMessage dsp{};
-        dsp.setLine(0,"REMOTE NODES :");
-        dsp.setLine(1,nodes.c_str());
+        dsp.setLine(0, "REMOTE NODES :");
+        dsp.setLine(1, nodes.c_str());
         hardwareManager->lcd.displayText(dsp);
     }
     else
     {
-        LOG_WARN("GAME_MANAGER", "Node %d already exists",e.data1);
+        LOG_WARN("GAME_MANAGER", "Node %d already exists", e.data1);
     }
 }
 
@@ -320,17 +354,23 @@ void GameManager::onDiscovered(Event e)
 {
     String msg = "CONNECTED: " + String(e.data1);
     hardwareManager->buzzer.beep(200, 2, 200);
-    LcdDisplayMessage dsp {};
-    dsp.setLine(0,msg.c_str());
+    LcdDisplayMessage dsp{};
+    dsp.setLine(0, msg.c_str());
     dsp.clearLine(1);
+
+    // synchronize time
+    int mainTime = e.data2;
+    int localTime = millis() / 1000;
+    syncTimeDelta = mainTime - localTime;
+    LOG_DEBUG("GAME MANAGER", "Calculated mainTime %d localTime %d syncTimeDelta %d", mainTime, localTime, syncTimeDelta);
 
     hardwareManager->lcd.displayText(dsp);
     if (networkManager)
     {
-        #if NODE_TYPE == FORWARDER
-            LOG_ERROR("GAME_MANAGER", "Received discovery event but this is a forwarder node");
-            return;
-        #endif
+#if NODE_TYPE == FORWARDER
+        LOG_ERROR("GAME_MANAGER", "Received discovery event but this is a forwarder node");
+        return;
+#endif
         networkManager->setAsClient(e.data1);
         String response = Protocol::buildDiscoverResponse(LORA_ADDRESS, NODE_TYPE);
         LOG_INFO("GAME_MANAGER", "Responding with: %s", response.c_str());
@@ -346,22 +386,18 @@ void GameManager::onGameStartconfRequest(Event e)
 #endif
     if (!isMain)
     {
-#if NODE_TYPE == CAPTURE_POINT
-LOG_INFO("GAME_MANAGER", "Trying to connect to existing game");
-        if (e.data1 < 0x02)
+#if NODE_TYPE == CAPTURE_POINT || NODE_TYPE == INFORMATION
+        LOG_INFO("GAME_MANAGER", "Trying to connect to existing game");
+        if (e.data1 == LORA_ADDRESS)
         {
-            LOG_ERROR("GAME_MANAGER", "Connecting to existing game");
-            String msg = Protocol::buildConfRequest(LORA_ADDRESS);
+            LOG_INFO("GAME_MANAGER", "Connecting to existing game");
+            String msg = Protocol::buildConfRequest(LORA_ADDRESS, (NODE_TYPE == INFORMATION) );
             networkManager->broadcast(msg);
         }
-        else
-        {
-            LOG_INFO("GAME_MANAGER", "Received game start request from node %d", e.data1);
-            startAfterCountdownTask(10);
-        }
+
 #else
-LOG_INFO("GAME_MANAGER", "Received game start request but this isnt capture node, ignoring");
-return;
+        LOG_INFO("GAME_MANAGER", "Received game start request but this isnt capture node, ignoring");
+        return;
 #endif
     }
 }

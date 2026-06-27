@@ -39,6 +39,9 @@ private:
     TaskHandle_t countdownHandler = nullptr;
     TaskHandle_t afterCountdownHandler = nullptr;
 
+    // time sync stuff
+    int syncTimeDelta = 0;
+
 public:
     GameManager(EventBus *eb, HardwareManager *hw, NetworkManager *net);
     ~GameManager();
@@ -46,7 +49,7 @@ public:
     static GameManager* instance;
 
     void onNewNode(Event e);
-    void onGameStarted(Event e);
+    void onGameStarted();
     void onConfigKothFromMaster(Event e);
     void onConfKoth(Event e);
     void onConfigureFlag(Event e);
@@ -54,11 +57,14 @@ public:
     void onDiscovered(Event e);
     void onGameStartconfRequest(Event e);
     void update();
-
+    
     void startCountdownTask(int countdown);
     void countdownTask(int time);
     void startAfterCountdownTask(int waitTime);
     void afterCountdownTask(int time);
+    
+    private:
+    int calCulateCoutdown(int remoteStartinTime);
 };
 
 #endif // GameManager_h
