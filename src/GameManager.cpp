@@ -44,15 +44,22 @@ void GameManager::onConfKoth(Event e)
 
     LOG_INFO("GAME_MANAGER", "Received KOTH configuration: maxPoints=%d, gameDurationMinutes=%d, captureTime=%d, scoreIntervalMs=%d, respawnTime=%d",
              kothConfig.maxPoints, kothConfig.gameDurationMinutes, kothConfig.captureTime, kothConfig.scoreIntervalMs, kothConfig.respawnTime);
-    LOG_INFO("GAME_MANAGER", "Countdown started");
-
+    
     String configMsg = Protocol::buildKothConfigClient(kothConfig.maxPoints, countdown, kothConfig.captureTime, kothConfig.gameDurationMinutes, kothConfig.respawnTime);
-
+    
+    LOG_INFO("GAME_MANAGER", "Countdown started");
+    startCountdownTask(countdown);
+    
     for (uint8_t i = 0; i < kothConfig.nodeCount; i++)
     {
+        uint8_t nodeId = kothConfig.nodeIds[i].Id;
+        if(nodeId == LORA_ADDRESS)
+        {
+            continue;
+        }
         EventGroupHandle_t ackEvents = xEventGroupCreate();
-        EventBits_t expectedBits = (1 << kothConfig.nodeIds[i].Id);
-        networkManager->sendToAndWait(kothConfig.nodeIds[i].Id, configMsg, ackEvents, expectedBits);
+        EventBits_t expectedBits = (1 << nodeId);
+        networkManager->sendToAndWait(nodeId, configMsg, ackEvents, expectedBits);
         EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
         if (result & expectedBits)
         {
@@ -63,7 +70,6 @@ void GameManager::onConfKoth(Event e)
         vTaskDelay(500);
     }
 
-    startCountdownTask(countdown);
 }
 
 int GameManager::calCulateCoutdown(int remoteTime)
