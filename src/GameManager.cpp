@@ -52,7 +52,7 @@ void GameManager::onConfKoth(Event e)
     
     for (uint8_t i = 0; i < kothConfig.nodeCount; i++)
     {
-        uint8_t nodeId = kothConfig.nodeIds[i].Id;
+        uint8_t nodeId = kothConfig.NodeStates[i].nodeId;
         if(nodeId == LORA_ADDRESS)
         {
             continue;
@@ -63,10 +63,10 @@ void GameManager::onConfKoth(Event e)
         EventBits_t result = xEventGroupWaitBits(ackEvents, expectedBits, pdTRUE, pdTRUE, pdMS_TO_TICKS(10000));
         if (result & expectedBits)
         {
-            LOG_DEBUG("KOTH_SERVER", "Node %d acknowledged game config", kothConfig.nodeIds[i].Id);
+            LOG_DEBUG("KOTH_SERVER", "Node %d acknowledged game config", kothConfig.NodeStates[i].nodeId);
         }
         vEventGroupDelete(ackEvents);
-        // networkManager->sendTo(config.nodeIds[i].Id, msg);
+        // networkManager->sendTo(config.NodeStates[i].Id, msg);
         vTaskDelay(500);
     }
 
@@ -331,7 +331,7 @@ void GameManager::onNewNode(Event e)
         String nodes = "";
         for (int i = 0; i < kothConfig.nodeCount; i++)
         {
-            nodes += "N" + String(kothConfig.nodeIds[i].Id);
+            nodes += "N" + String(kothConfig.NodeStates[i].nodeId);
         }
         LcdDisplayMessage dsp{};
         dsp.setLine(0, "REMOTE NODES :");

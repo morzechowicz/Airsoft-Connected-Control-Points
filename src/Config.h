@@ -4,6 +4,7 @@
 
 //define ini values
 //NODE TYPE
+#define UNDEFINED 0
 #define BLEToLoRa 1
 #define INFORMATION 2
 #define CAPTURE_POINT 3
@@ -109,6 +110,6 @@
 #define SCORING_INTERVAL_MS 60000UL
 
 //Max Capture nodes
-#define MAX_CAPTURE_NODES 10
+#define MAX_NODES_COUNT 20
 
 #endif // CONFIG_H
