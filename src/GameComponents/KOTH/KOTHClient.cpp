@@ -359,18 +359,20 @@ void KOTHClient::updateLEDs()
 
     if (currentController == Team::YELLOW)
     {
-        hardware->ledYellowButton.on();
-        hardware->ledBlueButton.off();
+        hardware->ledYellowButton.blink();
+        hardware->ledBlueButton.blinkOff();
     }
     else if (currentController == Team::BLUE)
     {
-        hardware->ledBlueButton.on();
-        hardware->ledYellowButton.off();
+        hardware->ledBlueButton.blink();
+        hardware->ledYellowButton.blinkOff();
     }
     else
     {
         hardware->ledYellowButton.off();
         hardware->ledBlueButton.off();
+        hardware->ledYellowButton.blinkOff();
+        hardware->ledBlueButton.blinkOff();
     }
 }
 
