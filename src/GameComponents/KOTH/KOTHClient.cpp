@@ -112,7 +112,7 @@ void KOTHClient::update()
     {
         if (now > locatingBeepSpacingUpdate)
         {
-            hardware->buzzer.beepOnce(100);
+            hardware->buzzer.beepOnce(300);
             locatingBeepSpacingUpdate = locatingBeepSpacingUpdate + calculateGameQuater(maxGameTime, timeElapsedSinceStart);
         }
     }
