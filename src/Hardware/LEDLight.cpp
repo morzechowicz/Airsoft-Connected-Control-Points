@@ -30,11 +30,7 @@ void LEDLight::update()
     {
         if(millis() > lastBlink + blinkHz)
         {
-            off();
-        }
-        if(millis() > lastBlink + blinkHz*2)
-        {
-            on();
+            toggle();
             lastBlink = millis();
         }
     }
