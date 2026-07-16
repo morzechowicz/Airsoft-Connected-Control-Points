@@ -112,7 +112,7 @@ void KOTHClient::update()
     {
         if (now > locatingBeepSpacingUpdate)
         {
-            hardware->buzzer.beepOnce(300);
+            hardware->buzzer.beepOnce(100);
             locatingBeepSpacingUpdate = locatingBeepSpacingUpdate + calculateGameQuater(maxGameTime, timeElapsedSinceStart);
         }
     }
@@ -359,20 +359,18 @@ void KOTHClient::updateLEDs()
 
     if (currentController == Team::YELLOW)
     {
-        hardware->ledYellowButton.blink();
-        hardware->ledBlueButton.blinkOff();
+        hardware->ledYellowButton.on();
+        hardware->ledBlueButton.off();
     }
     else if (currentController == Team::BLUE)
     {
-        hardware->ledBlueButton.blink();
-        hardware->ledYellowButton.blinkOff();
+        hardware->ledBlueButton.on();
+        hardware->ledYellowButton.off();
     }
     else
     {
         hardware->ledYellowButton.off();
         hardware->ledBlueButton.off();
-        hardware->ledYellowButton.blinkOff();
-        hardware->ledBlueButton.blinkOff();
     }
 }
 

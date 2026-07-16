@@ -13,29 +13,6 @@ bool LEDLight::getState()
     return state;
 }
 
-void LEDLight::blink(int herz = 200)
-{
-    blinkHz = herz;
-    blinking = true;
-}
-
-void LEDLight::blinkOff()
-{
-    blinking = false;
-}
-
-void LEDLight::update()
-{
-    if(blinking)
-    {
-        if(millis() > lastBlink + blinkHz)
-        {
-            toggle();
-            lastBlink = millis();
-        }
-    }
-}
-
 void LEDLight::on()
 {
     state = true;

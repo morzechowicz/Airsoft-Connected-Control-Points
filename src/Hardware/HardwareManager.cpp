@@ -30,8 +30,6 @@ void HardwareManager::update()
     buttonYellow.update();
     buttonSelect.update();
     buttonEnter.update();
-    ledBlueButton.update();
-    ledYellowButton.update();
 }
 
 void HardwareManager::reboot()
