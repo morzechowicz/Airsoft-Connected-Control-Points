@@ -8,36 +8,8 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
       lastScoreUpdate(0),
       gameRunning(false)
 {
-
-    // Initialize nodes from config
-    for (uint8_t i = 0; i < cfg.nodeCount; i++)
-    {
-        addNodeFromConfig(cfg.nodeIds[i]);
-    }
-    LOG_INFO("KOTH_SERVER", "Initializing KOTH Server with %d nodes", nodeCount);
-}
-
-void KOTHServer::addNodeFromConfig(NodeInit node)
-{
-    LOG_DEBUG("KOTH_SERVER","Adding node %d %d",node.Id, node.type);
-    if (node.type == INFORMATION)
-    {
-        LOG_DEBUG("KOTH_SERVER", "Node %d is an INFORMATION node, skipping initialization", node.Id);
-        {
-            return;
-        }; // Skip information nodes
-    }
-    if(findNode(node.Id))
-    {
-        LOG_DEBUG("KOTH_SERVER", "Node %d exists, skipping initialization", node.Id);
-        return;
-    }
-    nodeCount++;
-    int nodesIndex = nodeCount - 1;
-    nodes[nodesIndex].nodeId = node.Id;
-    nodes[nodesIndex].controllingTeam = Team::NONE;
-    nodes[nodesIndex].capturedAt = 0;
-    LOG_INFO("KOTH_SERVER", "Configured node %d with ID %d", nodeCount, nodes[nodesIndex].nodeId);
+    LOG_INFO("KOTH_SERVER", "Initializing KOTH Server with %d nodes", config.nodeCount);
+    LOG_DEBUG("KOTH_SERVER", "hwt: %d", uxTaskGetStackHighWaterMark(NULL));
 }
 
 KOTHServer::~KOTHServer()
@@ -422,8 +394,6 @@ void KOTHServer::addNewNode(uint8_t nodeId, bool isInfo)
     {
         alreadyIn = true;
     }
-
-    addNodeFromConfig(config.nodeIds[idx]);
 
     if (alreadyIn)
     {
