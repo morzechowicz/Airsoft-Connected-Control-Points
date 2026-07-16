@@ -9,7 +9,6 @@
 class KOTHServer : public BaseComponent {
 public:
     KOTHServer(EventBus *eventBus, HardwareManager *hardware, NetworkManager *network, const KOTHConfig &config);
-    void addNodeFromConfig(NodeInit node);
     ~KOTHServer();
     
     // BaseComponent overrides
