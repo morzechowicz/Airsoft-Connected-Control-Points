@@ -9,8 +9,8 @@ KOTHServer::KOTHServer(EventBus *eb, HardwareManager *hw, NetworkManager *net, c
       gameRunning(false)
 {
     LOG_INFO("KOTH_SERVER", "Initializing KOTH Server with %d nodes", config.nodeCount);
+    LOG_DEBUG("KOTH_SERVER", "hwt: %d", uxTaskGetStackHighWaterMark(NULL));
 }
-
 
 KOTHServer::~KOTHServer()
 {
@@ -84,7 +84,7 @@ void KOTHServer::startCallbackHelper()
 {
     if (networkManager)
     {
-        networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates));
+        networkManager->broadcast(buildScoreWithoutInfNodes(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates));
         LOG_DEBUG("KOTH_SERVER", "Sent score update to clients");
     }
 }
@@ -174,7 +174,7 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
     node->capturedAt = millis();
 
     LOG_INFO("KOTH_SERVER", "Node %d captured by %s team", nodeId, team == Team::YELLOW ? "YELLOW" : "BLUE");
-    String msg = Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates);
+    String msg = buildScoreWithoutInfNodes(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates);
     LOG_DEBUG("KOTH_SERVER", "Broadcasting capture update: %s", msg.c_str());
     if (networkManager)
     {
@@ -188,7 +188,7 @@ void KOTHServer::processCaptureRequest(uint8_t nodeId, Team team)
     {
         LOG_DEBUG("KOTH_SERVER", "Node %d: Controlled by %s, Captured at %lu", config.NodeStates[i].nodeId,
                   config.NodeStates[i].controllingTeam == Team::YELLOW ? "YELLOW" : config.NodeStates[i].controllingTeam == Team::BLUE ? "BLUE"
-                                                                                                               : "NONE",
+                                                                                                                                       : "NONE",
                   config.NodeStates[i].capturedAt);
     }
 }
@@ -213,7 +213,7 @@ void KOTHServer::updateScore()
 
 void KOTHServer::broadcastScoreUpdate()
 {
-    String msg = Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates);
+    String msg = buildScoreWithoutInfNodes(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates);
 
     if (networkManager)
     {
@@ -241,6 +241,26 @@ bool KOTHServer::isGameOver()
 Team KOTHServer::determineWinner()
 {
     return score.getWinner();
+}
+
+//i swear i will optimize this when i have more time this is just a band-aid
+String KOTHServer::buildScoreWithoutInfNodes(uint16_t time, uint16_t teamYPoints, uint16_t teamBPoints, uint16_t pairs, NodeState teamPoints[10])
+{
+    NodeState cap[10];
+    uint16_t capSize = 0;
+    for (size_t i = 0; i < pairs; i++)
+    {
+        LOG_DEBUG("KOTH_SERVER", "hwt: %d", uxTaskGetStackHighWaterMark(NULL));
+        if (teamPoints[i].type == CAPTURE_POINT)
+        {
+            cap[capSize] = teamPoints[i];
+            capSize++;
+            LOG_DEBUG("KOTH_SERVER", "Node %d is a capture point, adding to score update", teamPoints[i].nodeId);
+        }
+    }
+
+    String msg = Protocol::buildScoreUpdateMessage(time, teamYPoints, teamBPoints, capSize, cap);
+    return msg;
 }
 
 void KOTHServer::endGame(Team winner)
@@ -355,7 +375,7 @@ void KOTHServer::addingNodeAfterStart(Event e)
         (void *)this,
         KOTHServer::reconnectCallback);
     xTimerStart(timer, 0);
-    networkManager->sendTo(nodeId, Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates));
+    networkManager->sendTo(nodeId, buildScoreWithoutInfNodes(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates));
 }
 
 void KOTHServer::addNewNode(uint8_t nodeId, bool isInfo)
@@ -369,7 +389,9 @@ void KOTHServer::addNewNode(uint8_t nodeId, bool isInfo)
         config.addNode(nodeId, isInfo ? INFORMATION : CAPTURE_POINT);
         idx = config.nodeCount - 1;
         LOG_DEBUG("KOTH_SERVER", "added to array %d, type %d", config.NodeStates[idx].nodeId, config.NodeStates[idx].type);
-    }else{
+    }
+    else
+    {
         alreadyIn = true;
     }
 
@@ -395,7 +417,7 @@ void KOTHServer::reconnectCallbackHelper()
 {
     if (networkManager)
     {
-        networkManager->broadcast(Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates));
+        networkManager->broadcast(buildScoreWithoutInfNodes(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates));
         LOG_DEBUG("KOTH_SERVER", "Sent score update to clients");
     }
 }
@@ -404,7 +426,7 @@ void KOTHServer::gameScoreRequest(Event e)
 {
     uint8_t nodeId = e.data1;
     LOG_INFO("KOTH_SERVER", "Received game score request from node %d", nodeId);
-    String msg = Protocol::buildScoreUpdateMessage(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates);
+    String msg = buildScoreWithoutInfNodes(scoringInterval, score.yellowPoints, score.bluePoints, config.nodeCount, config.NodeStates);
     networkManager->sendTo(nodeId, msg);
 }
 

@@ -233,12 +233,12 @@ void GameManager::countdownTask(int time)
         case KOTH_CONFIG:
             LOG_INFO("GAME_MANAGER", "Starting KOTH as MASTER");
             kothServer = new KOTHServer(eventBus, hardwareManager, networkManager, kothConfig);
-            kothServer->startModeTask("KOTH-Server", 1, 8192);
+            kothServer->startModeTask("KOTH-Server", 1, 16384);
             break;
         case FLAG_CONFIG:
             LOG_INFO("GAME_MANAGER", "Starting FLAG as MASTER");
             flagServer = new FLAGServer(eventBus, hardwareManager, networkManager, flagConfig);
-            flagServer->startModeTask("FLAG-Server", 1, 8192);
+            flagServer->startModeTask("FLAG-Server", 1, 16384);
         default:
             LOG_INFO("GAME_MANAGER", "Nothing was selected aborting");
             break;

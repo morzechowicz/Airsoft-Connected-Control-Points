@@ -53,6 +53,7 @@ private:
     void gameOverInterup();
     bool isGameOver();
     Team determineWinner();
+    String buildScoreWithoutInfNodes(uint16_t time, uint16_t teamYPoints, uint16_t teamBPoints, uint16_t pairs, NodeState teamPoints[10]);
 };
 
 #endif
