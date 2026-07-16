@@ -41,7 +41,7 @@ void EventBus::publish(EventType eventName, int data1, int data2, int data3, int
     queueTail = nextTail;
 }
 // here with team points array max 3 data
-void EventBus::publish(EventType eventName, int data1, int data2, int data3, int len, NodeState teamPoints[10])
+void EventBus::publish(EventType eventName, int data1, int data2, int data3, int len, NodeState teamPoints[MAX_NODES_COUNT])
 {
     int nextTail = (queueTail + 1) % QUEUE_SIZE;
     
