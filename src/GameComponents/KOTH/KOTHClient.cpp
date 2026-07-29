@@ -316,6 +316,10 @@ void KOTHClient::handleGameOver(Team winner)
     if (hardware)
     {
         hardware->buzzer.beep(2000, 3, 1000);
+        hardware->ledYellowButton.off();
+        hardware->ledBlueButton.off();
+        hardware->ledYellowButton.blinkOff();
+        hardware->ledBlueButton.blinkOff();
     }
 
     deleteThis = true;
@@ -361,11 +365,13 @@ void KOTHClient::updateLEDs()
     {
         hardware->ledYellowButton.blink();
         hardware->ledBlueButton.blinkOff();
+        hardware->ledBlueButton.off();
     }
     else if (currentController == Team::BLUE)
     {
         hardware->ledBlueButton.blink();
         hardware->ledYellowButton.blinkOff();
+        hardware->ledYellowButton.off();
     }
     else
     {
